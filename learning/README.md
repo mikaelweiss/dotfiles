@@ -67,6 +67,8 @@ learning/
 │   ├── electron-app/       # Minimal app for prompt kata
 │   └── log.md              # Graded prompt history
 ├── electron-system/        # The scalable system you're building
+├── guides/
+│   └── prompts.md          # Prompting guide for coding
 ├── prompts/
 │   └── tested/             # Battle-tested prompts
 └── .claude/
