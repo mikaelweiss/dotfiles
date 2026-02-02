@@ -21,7 +21,7 @@ Practice writing effective prompts by attempting Electron tasks with a single pr
 
 Reset to baseline:
 ```bash
-cd /Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app && git checkout -- . && git clean -fd
+cd /Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app && git checkout -- . && git clean -fd .
 ```
 
 ### Step 2: Pick a challenge
@@ -322,7 +322,7 @@ Append to `/Users/mikaelweiss/code/dotfiles/learning/challenges/log.md`:
 
 Reset the app for next time:
 ```bash
-cd /Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app && git checkout -- . && git clean -fd
+cd /Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app && git checkout -- . && git clean -fd .
 ```
 
 Give brief feedback and encourage the user to continue with their build session.
