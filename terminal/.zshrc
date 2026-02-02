@@ -9,8 +9,6 @@ plugins=(git dotenv macos sudo rsync systemd xcode)
 source $ZSH/oh-my-zsh.sh
 
 # Alias'
-alias strive="cd ~/code/Strive/strive"
-alias s="cd ~/code/Strive/strive"
 alias gs="git status"
 alias lg='lazygit'
 alias gcm="git commit -m"

@@ -126,11 +126,13 @@
           "sqlite"
           "xcode-build-server"
           "watchman" # React Native dependancy
-          "oven-sh/bun"
+          # "oven-sh/bun"
+          "mole"
         ];
 
         # GUI Applications
         casks = [
+          "steipete/tap/codexbar"
           "1password"
           "rapidapi"
           # "android-commandlinetools"
