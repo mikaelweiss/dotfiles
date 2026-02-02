@@ -106,13 +106,14 @@ Let it run to completion.
 After the sub-agent finishes:
 1. Run `git diff` in the challenge app to see changes
 2. Run `git status` to see new files
-3. Run `bun start` to test the acceptance criteria
+3. Run lint and tests (`bun run lint && bun run test` or equivalent)
+4. Review the code to verify acceptance criteria are met
 
 **Grading:**
-- Check each acceptance criterion
+- Check each acceptance criterion by reading the code
 - Mark as ✓ (pass) or ✗ (fail)
-- **PASS**: All criteria met
-- **FAIL**: Any criterion not met
+- **PASS**: All criteria met, lint passes, tests pass
+- **FAIL**: Any criterion not met, or lint/test failures
 
 ### Step 7: Log the result
 

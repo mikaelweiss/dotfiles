@@ -64,3 +64,33 @@ Track your prompt grading over time.
 - The web/context7 search instruction was helpful but not strictly necessary for this task
 
 ---
+
+## 2026-02-02 - Keyboard Navigation
+
+**Prompt:**
+> Add the following:
+>
+> A button that increments a counter
+>
+> Update the code so that the user can navigate between the different UI elements using the tab button.
+> Make sure that there is a visible focus indicator
+> Users should be able to activate buttons using enter or space.
+>
+> Make sure that the app is accessible for users
+>
+> Don't add anything I didn't specify
+> Always remember: do the simplest thing that could possibly work
+
+**Result:** PASS
+
+**Criteria:**
+- [✓] User can tab between focusable elements in a logical order
+- [✓] Focused element has a visible focus indicator
+- [✓] User can activate buttons using Enter or Space key
+
+**Notes:**
+- Excellent use of native HTML semantics — the agent correctly used `<button>` which gets keyboard behavior for free
+- The "don't add anything I didn't specify" constraint worked well to prevent over-engineering
+- Clean 3-file change leveraging browser defaults rather than reinventing them
+
+---
