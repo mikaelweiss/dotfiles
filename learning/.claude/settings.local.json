@@ -4,7 +4,8 @@
       "mcp__context7__resolve-library-id",
       "mcp__peekaboo__see",
       "mcp__peekaboo__image",
-      "mcp__peekaboo__click"
+      "mcp__peekaboo__click",
+      "mcp__context7__query-docs"
     ]
   }
 }

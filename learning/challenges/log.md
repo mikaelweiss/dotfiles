@@ -44,3 +44,23 @@ Track your prompt grading over time.
 - The XML-style tags helped structure the prompt clearly
 
 ---
+
+## 2026-02-02 - Version Info (Beginner)
+
+**Prompt:**
+> Add a visual indicator in the UI of the Electron version number.
+> Keep it simple.
+> Search the web and context7 to make sure you're up to date and do it correctly
+
+**Result:** PASS
+
+**Criteria:**
+- [✓] Electron version is discoverable in the UI
+- [✓] Version number is accurate
+
+**Notes:**
+- Clean 4-file change using the correct `process.versions.electron` API
+- Good use of "keep it simple" constraint
+- The web/context7 search instruction was helpful but not strictly necessary for this task
+
+---
