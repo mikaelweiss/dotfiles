@@ -12,8 +12,8 @@ Practice writing effective prompts by attempting Electron tasks with a single pr
 
 - **One prompt only** — User gets one shot, no revisions
 - **No intervention** — Sub-agent runs to completion or failure
-- **Measure everything** — Grade on clarity, simplicity, autonomy, correctness
-- **Simplicity wins** — "What's the simplest thing that could possibly work?"
+- **Outcome-based** — Challenges describe WHAT, you figure out HOW
+- **Pass/Fail** — Either the acceptance criteria are met, or they aren't
 
 ## Flow
 
@@ -29,25 +29,94 @@ cd /Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app && git chec
 Select ONE challenge the user hasn't done recently (check challenges/log.md).
 
 **Beginner:**
-- Add a button that shows the current time in an alert
-- Change the window title to include the current date
-- Add a "Quit" button that closes the app
-- Display the Electron version number prominently in the UI
-- Add a counter that increments when clicking a button
+
+1. **Time Check**
+   > The user can discover the current time from within the app
+   - ✓ Current time is visible or accessible
+   - ✓ Time is accurate (within 1 minute)
+
+2. **Version Info**
+   > The user can verify which Electron version the app is running
+   - ✓ Electron version is discoverable in the UI
+   - ✓ Version number is accurate
+
+3. **Quick Exit**
+   > The user can close the application using the UI
+   - ✓ A UI element exists that closes the app
+   - ✓ Clicking/activating it terminates the process
+
+4. **Click Counter**
+   > The user can track how many times they've performed an action
+   - ✓ A count is displayed
+   - ✓ Count increments on user interaction
+   - ✓ Count starts at 0
+
+5. **Window Identity**
+   > The user can see today's date in the window chrome
+   - ✓ Date appears in the window title
+   - ✓ Date is accurate
 
 **Intermediate:**
-- Add a menu bar with File > Exit option
-- Persist window size and position between launches
-- Add a dark/light mode toggle that persists across restarts
-- Create a second window that opens from a button click
-- Add keyboard shortcut (Cmd/Ctrl+Q) to quit the app
+
+6. **Menu Navigation**
+   > The user can exit the app using the system menu bar
+   - ✓ Menu bar exists with appropriate structure
+   - ✓ An exit option exists and works
+
+7. **Remembered Layout**
+   > The app remembers where the user left it
+   - ✓ Window position persists across restarts
+   - ✓ Window size persists across restarts
+
+8. **Theme Preference**
+   > The user can switch between light and dark appearance
+   - ✓ Toggle mechanism exists
+   - ✓ Visual change is apparent
+   - ✓ Preference persists across restarts
+
+9. **Multi-Window**
+   > The user can spawn additional windows
+   - ✓ Action to create new window exists
+   - ✓ New window actually appears
+   - ✓ Multiple windows can coexist
+
+10. **Keyboard Power User**
+    > The user can quit the app without touching the mouse
+    - ✓ Keyboard shortcut exists
+    - ✓ Shortcut uses platform conventions (Cmd on Mac, Ctrl on Windows)
+    - ✓ App terminates when triggered
 
 **Advanced:**
-- Add a system tray icon with a context menu
-- Implement a simple clipboard history showing last 5 copied items
-- Add auto-update check on launch (mock the API response)
-- Create an IPC channel that streams live data from main to renderer
-- Add a native file dialog to save text content to disk
+
+11. **Background Presence**
+    > The app can live in the system tray
+    - ✓ Tray icon appears
+    - ✓ Right-click shows context menu
+    - ✓ At least one menu action works
+
+12. **Clipboard Memory**
+    > The user can review their recent clipboard history
+    - ✓ Shows last 5 copied items
+    - ✓ Updates when new items are copied
+    - ✓ Items are clickable/selectable
+
+13. **Update Awareness**
+    > The app checks for updates on launch
+    - ✓ Update check occurs automatically
+    - ✓ User is informed of result (even if mocked)
+    - ✓ Works without crashing on network failure
+
+14. **Live Data Stream**
+    > The renderer receives continuous updates from the main process
+    - ✓ IPC channel established
+    - ✓ Data flows from main to renderer
+    - ✓ Updates are visible in real-time
+
+15. **File Export**
+    > The user can save content to their filesystem
+    - ✓ Native save dialog appears
+    - ✓ User can choose location
+    - ✓ File is actually written
 
 ### Step 3: Present the challenge
 
@@ -56,7 +125,10 @@ Tell the user:
 ```
 ## Challenge: [Name]
 
-[Clear description of what needs to be built]
+[The outcome statement - what the user should be able to do]
+
+**Acceptance Criteria:**
+[List the criteria as checkboxes]
 
 Write your prompt below. This exact text will be given to a fresh Claude agent.
 Remember: ONE prompt. Make it count.
@@ -82,45 +154,20 @@ Working directory: /Users/mikaelweiss/code/dotfiles/learning/challenges/electron
 
 Let it run to completion.
 
-### Step 6: Review the result
+### Step 6: Review and Grade
 
 After the sub-agent finishes:
 1. Run `git diff` in the challenge app to see changes
 2. Run `git status` to see new files
-3. Optionally run `bun start` to test if it works
+3. Run `bun start` to test the acceptance criteria
 
-### Step 7: Grade the prompt
+**Grading:**
+- Check each acceptance criterion
+- Mark as ✓ (pass) or ✗ (fail)
+- **PASS**: All criteria met
+- **FAIL**: Any criterion not met
 
-Score 1-10 on each criterion:
-
-**Clarity**: Was the prompt unambiguous? Could it be misinterpreted?
-- 1-3: Multiple interpretations possible, AI had to guess
-- 4-6: Some ambiguity, but intent was mostly clear
-- 7-10: Crystal clear, only one reasonable interpretation
-
-**Simplicity**: Did the prompt encourage the simplest solution?
-- 1-3: Led to over-engineered solution
-- 4-6: Some unnecessary complexity
-- 7-10: Resulted in the simplest thing that works
-
-**Autonomy**: Did the agent complete without getting stuck?
-- 1-3: Got stuck, made wrong assumptions, needed intervention
-- 4-6: Minor issues but mostly completed
-- 7-10: Ran to completion smoothly
-
-**Correctness**: Does the code actually work?
-- 1-3: Doesn't work or wrong behavior
-- 4-6: Partially works
-- 7-10: Fully correct
-
-**Total**: X/40
-- 36-40: A
-- 32-35: B
-- 28-31: C
-- 24-27: D
-- Below 24: F
-
-### Step 8: Log the result
+### Step 7: Log the result
 
 Append to `/Users/mikaelweiss/code/dotfiles/learning/challenges/log.md`:
 
@@ -130,21 +177,20 @@ Append to `/Users/mikaelweiss/code/dotfiles/learning/challenges/log.md`:
 **Prompt:**
 > [Their exact prompt]
 
-**Scores:**
-| Clarity | Simplicity | Autonomy | Correctness | Total |
-|---------|------------|----------|-------------|-------|
-| X/10    | X/10       | X/10     | X/10        | X/40 (Grade) |
+**Result:** PASS / FAIL
 
-**What worked:**
-- [Observation]
+**Criteria:**
+- [✓/✗] Criterion 1
+- [✓/✗] Criterion 2
+- [✓/✗] Criterion 3
 
-**What could improve:**
-- [Specific suggestion for next time]
+**Notes:**
+- [Brief observation about what worked or didn't]
 
 ---
 ```
 
-### Step 9: Reset and wrap up
+### Step 8: Reset and wrap up
 
 Reset the app for next time:
 ```bash
