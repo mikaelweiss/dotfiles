@@ -69,7 +69,7 @@ Wait for user to provide their prompt. Do not offer suggestions or improvements.
 ### Step 5: Run the sub-agent
 
 Use the Task tool to spawn an agent:
-- **subagent_type**: `james` (implementation agent)
+- **subagent_type**: `general-purpose`
 - **prompt**: The user's EXACT prompt, prefixed with the working directory
 - **Working context**: `/Users/mikaelweiss/code/dotfiles/learning/challenges/electron-app`
 
