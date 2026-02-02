@@ -1,0 +1,13 @@
+{
+  "name": "electron-system",
+  "version": "0.1.0",
+  "description": "Building a scalable Electron architecture for AI leverage",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "bun run electron .",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
