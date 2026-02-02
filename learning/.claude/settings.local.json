@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "mcp__peekaboo__see",
+      "mcp__peekaboo__image",
+      "mcp__peekaboo__click"
     ]
   }
 }
