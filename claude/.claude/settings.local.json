@@ -4,7 +4,12 @@
       "WebSearch",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "WebFetch(domain:mynixos.com)"
+      "WebFetch(domain:mynixos.com)",
+      "Bash(BACKUP_DIR=\"/Volumes/The Vault/mac-backup-20260202\")",
+      "Bash(__NEW_LINE_0d39c950794d5235__ echo \"=== Copying LaunchAgents ===\")",
+      "Bash(rsync:*)",
+      "Bash(__NEW_LINE_0d39c950794d5235__ echo \"=== Copying Rust toolchain ===\")",
+      "Bash(__NEW_LINE_43b698aa3212521c__ echo \"=== Copying pyenv ===\")"
     ],
     "deny": [],
     "ask": []

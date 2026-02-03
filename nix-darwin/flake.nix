@@ -61,7 +61,6 @@
         gnupg # GPG key manager
         btop # See whats up
         atuin # Shell history search
-        unstable.firebase-tools # Firebase CLI (from unstable for latest version)
         python313Packages.pip # Pip for python
         # For typescriptLSP Claude Code plugin
         nodePackages.typescript
@@ -128,6 +127,7 @@
           "watchman" # React Native dependancy
           # "oven-sh/bun"
           "mole"
+          "firebase-cli"
         ];
 
         # GUI Applications
