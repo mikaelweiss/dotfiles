@@ -1,3 +1,10 @@
+---
+name: gh-issue
+description: Create GitHub Issue. Creates a well-structured GitHub issue with duplicate detection, codebase analysis, and proper labeling. Use when the user wants to create an issue, file a bug, or request a feature.
+user-invocable: true
+disable-model-invocation: true
+---
+
 # Create GitHub Issue
 
 You are creating a GitHub issue based on the user's description. Follow this process carefully.
