@@ -6,14 +6,53 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-    nix-clawdbot.url = "github:clawdbot/nix-clawdbot";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable, nix-clawdbot }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable }:
   let
     system = "aarch64-darwin";
     unstable = import nixpkgs-unstable { inherit system; };
-    clawdbot = nix-clawdbot.packages.${system}.default;
+
+    # Host-specific configuration for MacBook Air
+    macbookAirConfig = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+        javaPackages.compiler.openjdk17 # Java
+        rubyPackages_4_0.cocoapods
+      ];
+
+      programs.zsh = {
+        enable = true;
+        interactiveShellInit = ''
+          # Android SDK
+          export ANDROID_HOME="$HOME/Library/Android/sdk"
+          export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk 2>/dev/null | head -1)"
+          export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+        '';
+      };
+    };
+
+    # Host-specific configuration for Wolf
+    wolfConfig = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+        # Wolf-only packages here
+      ];
+
+      programs.zsh = {
+        enable = true;
+        interactiveShellInit = ''
+          # Tailscale
+          alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+          # LM Studio CLI
+          export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
+
+          # Clawd Bot Stuff
+          export PATH="$HOME/.npm-global/bin:$PATH"
+          export PATH="/usr/local/opt/node@24/bin:$PATH"
+        '';
+      };
+    };
+
     configuration = { pkgs, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
@@ -42,9 +81,6 @@
         cocoapods # Manage dependancies for your Xcode projects
         dust # Du, but better
         ffmpeg
-        nodejs_22
-        javaPackages.compiler.openjdk21 # Java
-        javaPackages.compiler.openjdk17 # Java
         swiftformat # Swift formatter
         swiftlint # Swift linter
         tree # See the directories
@@ -64,7 +100,7 @@
         # For typescriptLSP Claude Code plugin
         nodePackages.typescript
         nodePackages.typescript-language-server
-        rubyPackages_4_0.cocoapods
+        javaPackages.compiler.openjdk21 # Java
         ];
 
       # Set nvim as default editor
@@ -123,39 +159,45 @@
           "python@3.14"
           "sqlite"
           "xcode-build-server"
-          "watchman" # React Native dependancy
+          "node@24"
+          # "watchman" # React Native dependancy
           "oven-sh/bun/bun"
           "mole"
-          "firebase-cli"
-          "gh" # GitHub CLI
+          # "firebase-cli"
           "pnpm"
+          "python@3.12"
+          "pyenv"
+          "bruno-cli"
+          "gh" # GitHub CLI
         ];
 
         # GUI Applications
         casks = [
-          # "steipete/tap/codexbar"
+          # "steipete/tap/codexbar" # Keep track of AI usage
+          "bruno"
+          "docker-desktop"
           # "1password"
-          # "rapidapi"
-          "android-commandlinetools"
-          "android-ndk"
-          "android-platform-tools"
-          "android-studio"
+          "rapidapi"
+          # "android-commandlinetools"
+          # "android-ndk"
+          # "android-platform-tools"
+          # "android-studio"
           "arc"
-          "chatgpt"
+          # "chatgpt"
           "claude"
-          "cursor"
-          # "codex"
+          # "cursor"
+          "codex"
           "ghostty"
           "grandperspective"
           # "notion"
           "obs"
           "obsidian"
           # "openmtp" # Android file transfer
-          "prusaslicer"
+          # "prusaslicer"
           "raycast"
           "sf-symbols"
           # "void"
-          "zed"
+          # "zed"
           "zoom"
           "docker-desktop"
           # "opencode-desktop"
@@ -202,15 +244,10 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Mikaels-MacBook-Air
     darwinConfigurations."Mikaels-MacBook-Air" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
+      modules = [ configuration macbookAirConfig ];
     };
-    darwinConfigurations."Mikaels-Mac-mini" = nix-darwin.lib.darwinSystem {
-      modules = [
-        configuration
-        {
-          environment.systemPackages = [ clawdbot ];
-        }
-      ];
+    darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {
+      modules = [ configuration wolfConfig ];
     };
   };
 }
