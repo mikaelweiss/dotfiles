@@ -1,0 +1,3 @@
+# tmux plugins (installed by TPM)
+terminal/.config/tmux/plugins/*
+!terminal/.config/tmux/plugins/.gitkeep
