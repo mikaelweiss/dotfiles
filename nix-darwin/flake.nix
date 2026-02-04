@@ -27,7 +27,6 @@
         stow # Dotfiles manager
         flyctl # CLI for Fly.io
         fzf # Fuzy find files
-        gh # GitHub CLI
         imagemagick # Not sure
         lazygit # Git, but Lazy
         neovim # Vim, but epic
@@ -125,17 +124,19 @@
           "sqlite"
           "xcode-build-server"
           "watchman" # React Native dependancy
-          # "oven-sh/bun"
+          "oven-sh/bun/bun"
           "mole"
           "firebase-cli"
+          "gh" # GitHub CLI
+          "pnpm"
         ];
 
         # GUI Applications
         casks = [
-          "steipete/tap/codexbar"
-          "1password"
-          "rapidapi"
-          # "android-commandlinetools"
+          # "steipete/tap/codexbar"
+          # "1password"
+          # "rapidapi"
+          "android-commandlinetools"
           "android-ndk"
           "android-platform-tools"
           "android-studio"
@@ -143,10 +144,10 @@
           "chatgpt"
           "claude"
           "cursor"
-          "codex"
+          # "codex"
           "ghostty"
           "grandperspective"
-          "notion"
+          # "notion"
           "obs"
           "obsidian"
           # "openmtp" # Android file transfer
@@ -156,22 +157,23 @@
           # "void"
           "zed"
           "zoom"
-          "opencode-desktop"
+          "docker-desktop"
+          # "opencode-desktop"
         ];
 
         # Mac App Store apps by ID
         masApps = {
           # "DaVinci Resolve" = 571213070;
           # "DevCleaner" = 1388020431;
-          # "Developer" = 640199958;
-          # "Harvest" = 506189836;
+          "Developer" = 640199958;
+          "Harvest" = 506189836;
           # "iMovie" = 408981434;
-          # "Magnet" = 441258766;
-          # "Numbers" = 409203825;
+          "Magnet" = 441258766;
+          "Numbers" = 409203825;
           # "Obsidian Web Clipper" = 6720708363;
-          # "Pages" = 409201541;
-          # "RocketSim" = 1504940162;
-          # "Slack" = 803453959;
+          "Pages" = 409201541;
+          "RocketSim" = 1504940162;
+          "Slack" = 803453959;
           # "Tailscale" = 1475387142;
         };
 
