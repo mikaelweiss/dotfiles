@@ -25,6 +25,21 @@ Good code is: obvious, constrained, boring. A reviewer should understand any cha
 
 **Creativity is for exploration. Discipline is for implementation.** When writing code, don't get clever. Follow the architecture. Do the simple thing.
 
+# Git
+
+- Branch naming: `mikael/<feature-name>` (kebab-case)
+- **Never push to remote** without express permission
+- **Never force push**
+
+# Anti-patterns
+
+Avoid:
+- Over-engineering for hypothetical futures
+- Abstractions before the third use case
+- Comments that restate the code
+- Defensive coding against impossible states
+- "Clever" solutions when boring ones work
+
 # Done
 
 A task is done when:
