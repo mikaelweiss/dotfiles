@@ -167,17 +167,17 @@
           "pnpm"
           "python@3.12"
           "pyenv"
-          "bruno-cli"
+          # "bruno-cli"
           "gh" # GitHub CLI
         ];
 
         # GUI Applications
         casks = [
           # "steipete/tap/codexbar" # Keep track of AI usage
-          "bruno"
+          # "bruno"
           "docker-desktop"
           # "1password"
-          "rapidapi"
+          # "rapidapi"
           # "android-commandlinetools"
           # "android-ndk"
           # "android-platform-tools"
