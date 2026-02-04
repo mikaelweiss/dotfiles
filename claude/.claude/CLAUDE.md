@@ -48,11 +48,6 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 
 # Done
 
-A task is done when:
-1. Requirements fulfilled (the real intent, not the literal ask)
-2. Code follows the architecture
-3. A reviewer can understand it quickly
-
----
-
-*For project-specific context, use `@path/to/file` imports in project CLAUDE.md files.*
+- Real intent fulfilled, not just literal ask
+- Follows the architecture
+- Reviewer understands it quickly
