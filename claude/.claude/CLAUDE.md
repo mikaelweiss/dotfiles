@@ -37,6 +37,13 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 
 - Branch naming: `mikael/<feature-name>` (kebab-case)
 - Commit messages: concise, imperative mood
+- Always use the `/commit` skill to commit code
+
+# Tools
+
+Prefer built-in tools over bash for file operations
+Avoid `xargs`. If you need it, you're probably using bash when a built-in tool would work.
+When running code snippets, write to a file first then execute — don't pipe with heredocs (harder to permission).
 
 # Avoid
 

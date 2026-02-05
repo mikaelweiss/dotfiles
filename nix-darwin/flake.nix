@@ -27,6 +27,7 @@
           export ANDROID_HOME="$HOME/Library/Android/sdk"
           export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk 2>/dev/null | head -1)"
           export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
         '';
       };
     };
@@ -96,6 +97,7 @@
         gnupg # GPG key manager
         btop # See whats up
         atuin # Shell history search
+        pipx # Ash graphql dependancy
         python313Packages.pip # Pip for python
         # For typescriptLSP Claude Code plugin
         nodePackages.typescript
@@ -181,7 +183,7 @@
           # "android-commandlinetools"
           # "android-ndk"
           # "android-platform-tools"
-          # "android-studio"
+          "android-studio"
           "arc"
           # "chatgpt"
           "claude"
@@ -201,6 +203,8 @@
           "zoom"
           "docker-desktop"
           # "opencode-desktop"
+          "superwhisper"
+          "utm"
         ];
 
         # Mac App Store apps by ID
