@@ -42,7 +42,7 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 # Tools
 
 Prefer built-in tools over bash for file operations
-Avoid `xargs`. If you need it, you're probably using bash when a built-in tool would work.
+**Never use `xargs`.** Use built-in tools (Glob, Grep, Read) instead. There is no situation where `xargs` is the right choice.
 When running code snippets, write to a file first then execute — don't pipe with heredocs (harder to permission).
 
 # Avoid

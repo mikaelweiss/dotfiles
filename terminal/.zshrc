@@ -9,6 +9,7 @@ plugins=(git dotenv macos sudo rsync systemd xcode)
 source $ZSH/oh-my-zsh.sh
 
 # Alias'
+alias cat=lolcat
 alias gs="git status"
 alias lg='lazygit'
 alias gcm="git commit -m"
@@ -99,3 +100,4 @@ eval "$(atuin init zsh)"
 # Set up term
 export TERM=xterm-256color
 
+alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'

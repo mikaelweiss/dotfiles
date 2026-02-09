@@ -5,7 +5,6 @@ return {
     -- Server settings
     auto_start = true,
     log_level = "info",
-    terminal_cmd = "/Users/mikaelweiss/.claude/local/claude",
 
     -- Terminal behavior
     split_side = "right",

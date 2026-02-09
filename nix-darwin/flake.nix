@@ -103,6 +103,16 @@
         nodePackages.typescript
         nodePackages.typescript-language-server
         javaPackages.compiler.openjdk21 # Java
+        cbonsai # Generates ascii bonsai
+        cmatrix # Generates ascii matrix
+        asciiquarium # Generates an ascii aquarium
+        # asciinema # Record and play back a terminal session, can turn it into a gif
+        # croc # File sharing
+        # ttyd # open a terminal from another computer
+        # jrnl # Light weight journaling app
+        lolcat
+        # faker # Fake names, emails, ids, datas etc. Good for automation.
+        grex # Generates a regex based on an input you give it.
         ];
 
       # Set nvim as default editor
@@ -205,6 +215,7 @@
           # "opencode-desktop"
           "superwhisper"
           "utm"
+          "signal"
         ];
 
         # Mac App Store apps by ID
