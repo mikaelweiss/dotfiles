@@ -22,7 +22,8 @@ gbc() {
 }
 gw() {
     git worktree add -b "mikael/$1" ".worktrees/$1" && \
-    cd ".worktrees/$1"
+    cd ".worktrees/$1" && \
+    cp ../../.env .
     # git push -u origin "mikael/$1"
 }
 gwc() {
@@ -101,3 +102,4 @@ eval "$(atuin init zsh)"
 export TERM=xterm-256color
 
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
+alias claude='claude --dangerously-skip-permissions'

@@ -160,6 +160,7 @@
 
         # Taps (third-party repositories)
         taps = [
+          "mikaelweiss/openchat"
         ];
 
         # CLI tools
@@ -188,7 +189,7 @@
           # "steipete/tap/codexbar" # Keep track of AI usage
           # "bruno"
           "docker-desktop"
-          # "1password"
+          "1password"
           # "rapidapi"
           # "android-commandlinetools"
           # "android-ndk"
@@ -216,6 +217,7 @@
           "superwhisper"
           "utm"
           "signal"
+          "mikaelweiss-open-chat"
         ];
 
         # Mac App Store apps by ID

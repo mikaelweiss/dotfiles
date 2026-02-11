@@ -38,6 +38,7 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 - Branch naming: `mikael/<feature-name>` (kebab-case)
 - Commit messages: concise, imperative mood
 - Always use the `/commit` skill to commit code
+- **Never use `git -C`**. `cd` into the directory first, then run git commands.
 
 # Tools
 
