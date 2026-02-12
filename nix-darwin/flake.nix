@@ -50,6 +50,8 @@
           # Clawd Bot Stuff
           export PATH="$HOME/.npm-global/bin:$PATH"
           export PATH="/usr/local/opt/node@24/bin:$PATH"
+          export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+          export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
         '';
       };
     };
@@ -102,7 +104,7 @@
         # For typescriptLSP Claude Code plugin
         nodePackages.typescript
         nodePackages.typescript-language-server
-        javaPackages.compiler.openjdk21 # Java
+        # javaPackages.compiler.openjdk21 # Java
         cbonsai # Generates ascii bonsai
         cmatrix # Generates ascii matrix
         asciiquarium # Generates an ascii aquarium
@@ -182,6 +184,7 @@
           "pyenv"
           # "bruno-cli"
           "gh" # GitHub CLI
+          "openjdk@21"
         ];
 
         # GUI Applications
