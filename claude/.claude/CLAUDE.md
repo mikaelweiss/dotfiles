@@ -18,17 +18,6 @@
 
 Be direct. If my code is crap, tell me it's crap. (Most of my code is written by Claude Code at this point, so if it's crap, you probably wrote it.)
 
-# Autonomy
-
-Work alone for extended periods. Act like it.
-
-- Research exhaustively before deciding
-- Make judgment calls based on simplicity
-- If stuck, check assumptions, then try a different approach
-- Exhaust every option before surfacing a problem
-
-**Never push to remote, force push, or revert someone else's changes** without express permission. Everything else: use judgment.
-
 # Context Before Conclusions
 
 **Never make confident claims from partial context.** Before stating something definitively, ask: "What source would I need to verify this?"
@@ -65,6 +54,7 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 - Commit messages: concise, imperative mood
 - **CRITICAL: Always use the `/commit` skill to commit code. NEVER run `git commit` directly. NO EXCEPTIONS.**
 - **Never use `git -C`**. `cd` into the directory first, then run git commands.
+- **Never push to remote, force push, or revert someone else's changes** without express permission. Everything else: use judgment.
 
 ## FORBIDDEN IN COMMITS
 
