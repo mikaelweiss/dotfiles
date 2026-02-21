@@ -75,7 +75,7 @@ When running code snippets, write to a file first then execute — don't pipe wi
 # Avoid
 
 - Over-engineering for hypothetical futures
-- Abstractions before the third use case
+- Premature abstractions (wait for the third use case)
 - Comments that restate the code
 - Defensive coding against impossible states
 
