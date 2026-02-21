@@ -1,6 +1,7 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-5-20251101"
   },
   "permissions": {
     "allow": [
@@ -18,14 +19,12 @@
       "Bash(git rev-parse:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Bash(git checkout:*)",
       "Bash(git branch:*)",
       "Bash(git stash:*)",
       "Bash(git worktree:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(git rebase:*)",
-      "Bash(git reset:*)",
       "Bash(git clean:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
@@ -97,6 +96,10 @@
     ],
     "deny": [
       "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)",
+      "Bash(git revert:*)",
+      "Bash(rm:*)",
       "Bash(rm -rf:*)",
       "Read(.env)",
       "Read(./secrets/**)",
@@ -116,5 +119,6 @@
     "ralph-loop@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true
-  }
+  },
+  "skipDangerousModePermissionPrompt": true
 }

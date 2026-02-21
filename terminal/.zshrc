@@ -23,7 +23,8 @@ gbc() {
 gw() {
     git worktree add -b "mikael/$1" ".worktrees/$1" && \
     cd ".worktrees/$1" && \
-    cp ../../.env .
+    cp ../../.env . && \
+    cp ../../apps/functions/.secret.local apps/functions/
     # git push -u origin "mikael/$1"
 }
 gwc() {
@@ -109,3 +110,4 @@ alias st='pnpm -F web electron:dev'
 alias s='pnpm run start'
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
+alias c='claude'
