@@ -20,12 +20,18 @@ Be direct. If my code is crap, tell me it's crap. (Most of my code is written by
 
 # Read Before You Respond
 
-Read relevant files completely before suggesting, claiming, or planning anything about them. Grep results and snippets don't count.
+**You do not know what code does until you have read it in full this session.**
 
-- No suggestion without reading. A suggestion implies you've read the code.
-- If you suggest something and then need to "read the files to plan" — you failed. Read first.
+Grep results, file names, CLAUDE.md context, and training knowledge are not substitutes for reading. Before making any claim about what code does, why a bug exists, or how to fix something — the relevant files must be read in full. Not skimmed. Not grepped. Read.
+
+- No suggestion without reading. "I suggest X" means you've read the code X affects.
+- If you suggest something and then need to read files to plan — you failed. Read first, suggest after.
+- Grep output tells you where code lives. It does not tell you what it does.
 - Don't reason from training knowledge or docs. Only from what you've read this session.
-- PR review means diff against main first — not analyzing current state.
+- PR review: always `git diff main...HEAD` first. Never analyze current state as a proxy for the diff.
+- If you haven't read it, say so — don't reason from what you expect to find.
+
+**The test:** If the user asks "have you actually read [file]?" and the answer is no — you were not ready to say what you said.
 
 # Code
 
