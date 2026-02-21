@@ -24,7 +24,23 @@ gw() {
     git worktree add -b "mikael/$1" ".worktrees/$1" && \
     cd ".worktrees/$1" && \
     cp ../../.env . && \
+    cp ../../.env.local . && \
+    direnv allow
+    # git push -u origin "mikael/$1"
+}
+gwa() {
+    git worktree add -b "mikael/$1" ".worktrees/$1" && \
+    cd ".worktrees/$1" && \
+    cp ../../.env . && \
     cp ../../apps/functions/.secret.local apps/functions/
+    pnpm i
+    # git push -u origin "mikael/$1"
+}
+gwr() {
+    git worktree add -b "mikael/$1" ".worktrees/$1" && \
+    cd ".worktrees/$1" && \
+    cp ../../.env.local . && \
+    bun i
     # git push -u origin "mikael/$1"
 }
 gwc() {
@@ -111,3 +127,5 @@ alias s='pnpm run start'
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
 alias c='claude'
+alias st='bun run dev:desktop'
+alias s='bunx convex dev'

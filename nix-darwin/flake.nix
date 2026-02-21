@@ -237,6 +237,7 @@
           "RocketSim" = 1504940162;
           "Slack" = 803453959;
           # "Tailscale" = 1475387142;
+          # "Transporter" = 1450874784
         };
 
         # Automatically uninstall things in Homebrew not listed in this flake

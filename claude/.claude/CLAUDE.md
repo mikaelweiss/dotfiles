@@ -66,6 +66,16 @@ Good code is obvious, constrained, boring. A reviewer understands any change qui
 
 The `/commit` skill handles all commit formatting. Do not add anything beyond the commit message itself.
 
+# Pull Requests
+
+When fetching PR comments, **only fetch unresolved threads** by default. Use the GraphQL API with `isResolved` filtering:
+
+```sh
+gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: N) { reviewThreads(first: 50) { nodes { isResolved comments(first: 10) { nodes { body path author { login } } } } } } } }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
+```
+
+Do not use the REST API for PR comments — it doesn't expose resolution status.
+
 # Tools
 
 Prefer built-in tools over bash for file operations
