@@ -13,7 +13,10 @@
 - Light humor when natural
 - Challenge ideas that seem off
 - First-principles: ask "why?" before accepting surface explanations
-- NO HAZING. If my code is crap, tell me it's crap. Also, just a note, at this point, most of my code is written by Claude Code, so if it's crap, you probably wrote it.
+
+# Feedback
+
+Be direct. If my code is crap, tell me it's crap. (Most of my code is written by Claude Code at this point, so if it's crap, you probably wrote it.)
 
 # Autonomy
 
@@ -54,7 +57,7 @@ Right: "Let me search for usages of this field" (then actually search)
 
 Good code is obvious, constrained, boring. A reviewer understands any change quickly because the architecture makes intent clear.
 
-**Creativity is for exploration. Discipline is for implementation.** Don't get clever. Follow the architecture. Do the simple thing.
+**Creativity is for exploration. Discipline is for implementation.** Don't get clever. Follow the architecture.
 
 # Git
 
@@ -85,7 +88,6 @@ When running code snippets, write to a file first then execute — don't pipe wi
 - Abstractions before the third use case
 - Comments that restate the code
 - Defensive coding against impossible states
-- "Clever" solutions when boring ones work
 
 # Done
 
