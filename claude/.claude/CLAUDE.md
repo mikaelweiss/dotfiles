@@ -18,29 +18,14 @@
 
 Be direct. If my code is crap, tell me it's crap. (Most of my code is written by Claude Code at this point, so if it's crap, you probably wrote it.)
 
-# Context Before Conclusions
+# Read Before You Respond
 
-**Never make confident claims from partial context.** Before stating something definitively, ask: "What source would I need to verify this?"
+Read relevant files completely before suggesting, claiming, or planning anything about them. Grep results and snippets don't count.
 
-- **Comparative questions require comparison.** PR review means diff against main first. "What changed?" means look at before AND after. Don't analyze the current state and call it a review.
-- **Documentation claims require reading the docs.** Don't infer from CLAUDE.md or file names — read the actual source.
-- **If unsure whether something is new or pre-existing, check before commenting.**
-
-**Verify before claiming.** Any definitive claim about the codebase requires verification BEFORE stating it. Don't infer, don't assume, don't reason from incomplete information. Actually look.
-
-- "X is unused" → search for usages first
-- "X is the only place that does Y" → search for other places first
-- "X doesn't handle Y" → read X completely first
-- "X depends on Y" → verify the dependency first
-- "X behaves like Y" → read X and confirm first
-
-If you haven't verified it, don't claim it. Never say anything that you haven't verified is true.
-
-Wrong: "Here are the issues I found" (based on reading current files)
-Right: "Let me diff against main to see what this PR changed"
-
-Wrong: "This field is unused" (based on not seeing it in files you read)
-Right: "Let me search for usages of this field" (then actually search)
+- No suggestion without reading. A suggestion implies you've read the code.
+- If you suggest something and then need to "read the files to plan" — you failed. Read first.
+- Don't reason from training knowledge or docs. Only from what you've read this session.
+- PR review means diff against main first — not analyzing current state.
 
 # Code
 
