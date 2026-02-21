@@ -16,7 +16,7 @@
     # Host-specific configuration for MacBook Air
     macbookAirConfig = { pkgs, ... }: {
       environment.systemPackages = with pkgs; [
-        javaPackages.compiler.openjdk17 # Java
+        javaPackages.compiler.openjdk25 # Java
         rubyPackages_4_0.cocoapods
       ];
 
