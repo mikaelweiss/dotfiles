@@ -1,6 +1,7 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CONTEXT7_API_KEY": "ctx7sk-676a75cb-db5c-4f8d-91ff-c5a0a2476723"
   },
   "permissions": {
     "allow": [
@@ -98,7 +99,6 @@
       "Bash(git checkout:*)",
       "Bash(git reset:*)",
       "Bash(git revert:*)",
-      "Bash(rm:*)",
       "Bash(rm -rf:*)",
       "Read(.env)",
       "Read(.env.*)",

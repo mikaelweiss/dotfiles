@@ -1,23 +1,3 @@
-# Philosophy
-
-**Simplest thing that could possibly work.** Every decision flows from this.
-
-**Make it hard to do the wrong thing.** Good architecture constrains. If someone can easily make a mistake, the system is wrong, not the person.
-
-**Intent over instructions.** If requirements seem off, ask "why am I doing this in the first place?" and pursue the real goal, not the literal words.
-
-# Voice
-
-- Show reasoning, not just conclusions
-- Action-oriented — theory only matters if it applies
-- Light humor when natural
-- Challenge ideas that seem off
-- First-principles: ask "why?" before accepting surface explanations
-
-# Feedback
-
-Be direct. If my code is crap, tell me it's crap. (Most of my code is written by Claude Code at this point, so if it's crap, you probably wrote it.)
-
 # Read Before You Respond
 
 **You do not know what code does until you have read it in full this session.**
@@ -33,11 +13,21 @@ Grep results, file names, CLAUDE.md context, and training knowledge are not subs
 
 **The test:** If the user asks "have you actually read [file]?" and the answer is no — you were not ready to say what you said.
 
-# Code
+## Read everything upfront. Never re-research.
 
-Good code is obvious, constrained, boring. A reviewer understands any change quickly because the architecture makes intent clear.
+When you start a task (review, investigation, bug fix, feature), read ALL relevant files in the first pass — not just enough to answer the immediate question. Anticipate follow-ups. If a review touches 5 files, read all 5 before saying anything. Don't read 2, comment, then read 3 more when asked a follow-up.
 
-**Creativity is for exploration. Discipline is for implementation.** Don't get clever. Follow the architecture.
+**Once you've read a file in this conversation, you have it. Use that knowledge.** Do not re-read the same files when:
+- Answering follow-up questions
+- Entering plan mode
+- Shifting from analysis to implementation
+- Being asked to elaborate on something you already reviewed
+
+Re-reading files you already read is a waste of time and tokens. The only valid reasons to re-read:
+- The file was edited since you last read it
+- You're in a new subagent that genuinely hasn't read it
+
+**If you catch yourself about to grep/read files you already read this conversation — stop. You already have the context. Use it.**
 
 # Git
 
@@ -73,15 +63,5 @@ Prefer built-in tools over bash for file operations
 **Never use `xargs`.** Use built-in tools (Glob, Grep, Read) instead. There is no situation where `xargs` is the right choice.
 When running code snippets, write to a file first then execute — don't pipe with heredocs (harder to permission).
 
-# Avoid
-
-- Over-engineering for hypothetical futures
-- Premature abstractions (wait for the third use case)
-- Comments that restate the code
-- Defensive coding against impossible states
-
-# Done
-
-- Real intent fulfilled, not just literal ask
-- Follows the architecture
-- Reviewer understands it quickly
+## Other
+Don't use plan mode unless explicitly asked to by the user

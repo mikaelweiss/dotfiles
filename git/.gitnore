@@ -14,4 +14,5 @@ buildServer.json
 # Direnv
 .direnv
 result
+/Users/mikaelweiss/code/ClipSpeak/.mcp.json
 
