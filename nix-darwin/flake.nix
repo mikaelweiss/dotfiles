@@ -167,6 +167,7 @@
 
         # CLI tools
         brews = [
+          "opencode"
           "elixir"
           "python3"
           "llvm"
