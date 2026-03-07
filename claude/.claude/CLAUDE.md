@@ -9,6 +9,7 @@ Grep results, file names, CLAUDE.md context, and training knowledge are not subs
 - Grep output tells you where code lives. It does not tell you what it does.
 - Don't reason from training knowledge or docs. Only from what you've read this session.
 - PR review: always `git diff main...HEAD` first. Never analyze current state as a proxy for the diff.
+- Code review (uncommitted or PR): run the diff first to see what changed, then read the full content of every modified file. The diff shows what changed — the full file shows the context. Both are required. New files in a diff are complete; modified files are not.
 - If you haven't read it, say so — don't reason from what you expect to find.
 
 **The test:** If the user asks "have you actually read [file]?" and the answer is no — you were not ready to say what you said.

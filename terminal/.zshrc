@@ -43,6 +43,13 @@ gwr() {
     bun i
     # git push -u origin "mikael/$1"
 }
+gwru() {
+    git worktree add -b "mikael/$1" ".worktrees/$1" main && \
+    cd ".worktrees/$1" && \
+    cp ../../.env.local . && \
+    npm i
+    # git push -u origin "mikael/$1"
+}
 gwc() {
   git worktree add -b "mikael/$1" "~/.worktrees/ClipSpeak/$1" && \
   cd "/Users/mikaelweiss/.worktrees/ClipSpeak/$1"
@@ -113,7 +120,7 @@ export ERL_AFLAGS="-kernel shell_history enabled"
 
 # Direnv stuff
 eval "$(direnv hook zsh)"
-eval "$(atuin init zsh)"
+eval "$(atuin init zsh --disable-up-arrow)"
 
 # Set up term
 export TERM=xterm-256color

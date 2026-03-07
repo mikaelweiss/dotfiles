@@ -96,7 +96,6 @@
     ],
     "deny": [
       "Bash(git push:*)",
-      "Bash(git checkout:*)",
       "Bash(git reset:*)",
       "Bash(git revert:*)",
       "Bash(rm -rf:*)",
@@ -109,14 +108,10 @@
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "linear@claude-plugins-official": false,
-    "frontend-design@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
-    "ralph-loop@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true
   },
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "low"
 }
