@@ -35,6 +35,7 @@
     # Host-specific configuration for Wolf
     wolfConfig = { pkgs, ... }: {
       environment.systemPackages = with pkgs; [
+        nodejs_24
         # Wolf-only packages here
       ];
 
@@ -49,7 +50,6 @@
 
           # Clawd Bot Stuff
           export PATH="$HOME/.npm-global/bin:$PATH"
-          export PATH="/usr/local/opt/node@24/bin:$PATH"
           export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
           export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
         '';
@@ -175,7 +175,6 @@
           "python@3.14"
           "sqlite"
           "xcode-build-server"
-          "node@24"
           # "watchman" # React Native dependancy
           "oven-sh/bun/bun"
           "mole"
