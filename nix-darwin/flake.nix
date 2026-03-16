@@ -115,6 +115,7 @@
         lolcat
         # faker # Fake names, emails, ids, datas etc. Good for automation.
         grex # Generates a regex based on an input you give it.
+        nodejs_24
         ];
 
       # Set nvim as default editor
@@ -264,7 +265,7 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Mikaels-MacBook-Air
-    darwinConfigurations."Mikaels-MacBook-Air" = nix-darwin.lib.darwinSystem {
+    darwinConfigurations."Mikaels-MacBook-Air-2" = nix-darwin.lib.darwinSystem {
       modules = [ configuration macbookAirConfig ];
     };
     darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {

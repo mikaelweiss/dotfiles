@@ -66,3 +66,7 @@ When running code snippets, write to a file first then execute — don't pipe wi
 
 ## Other
 Don't use plan mode unless explicitly asked to by the user
+
+# File Reads
+NEVER NEVER NEVER RE-READ A FILE THAT YOU'VE ALREADY READ
+IF YOU HAVE A FILE IN YOUR CONTEXT, THEN YOU DO NOT NEED TO RE-READ IT UNLESS IT CHANGED.

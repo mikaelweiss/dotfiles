@@ -5,3 +5,5 @@ keybind = shift+enter=text:\n
 keybind = shift+space=text:\x20
 keybind = shift+backspace=text:\x7f
 term = xterm-256color
+
+background-opacity = 1.00

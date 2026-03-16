@@ -95,7 +95,6 @@
       "mcp__postgres__query"
     ],
     "deny": [
-      "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git revert:*)",
       "Bash(rm -rf:*)",
@@ -114,6 +113,6 @@
     "rust-analyzer-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "skipDangerousModePermissionPrompt": true
 }
