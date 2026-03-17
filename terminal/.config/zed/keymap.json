@@ -1,0 +1,93 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      // "shift shift": "file_finder::Toggle"
+    },
+  },
+  {
+    "context": "Editor && vim_mode == insert",
+    "bindings": {
+      // "j k": "vim::NormalBefore"
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-o": "file_finder::Toggle",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-/": "terminal_panel::Toggle",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-0": "workspace::ToggleLeftDock",
+      "cmd-1": "project_panel::Toggle",
+      "cmd-2": "git_panel::Toggle",
+      "cmd-3": "outline_panel::Toggle",
+      "cmd-4": "collab_panel::Toggle",
+      "cmd-5": "pane::DeploySearch",
+    },
+  },
+  {
+    "bindings": {
+      "cmd-0": "workspace::ToggleLeftDock",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-r": "agent::ToggleFocus",
+    },
+  },
+  {
+    "context": "AgentPanel > Editor",
+    "bindings": {
+      "cmd-r": "agent::ToggleFocus",
+    },
+  },
+  {
+    "context": "AgentPanel > Markdown",
+    "bindings": {
+      "cmd-r": "agent::ToggleFocus",
+    },
+  },
+  {
+    "context": "AcpThread",
+    "bindings": {
+      "cmd-r": "agent::ToggleFocus",
+    },
+  },
+  {
+    "context": "vim_mode == normal",
+    "bindings": {
+      "] h": "editor::GoToHunk",
+    },
+  },
+  {
+    "context": "vim_mode == normal",
+    "bindings": {
+      "[ h": "editor::GoToPreviousHunk",
+    },
+  },
+  {
+    "context": "ContextEditor > Editor",
+    "bindings": {},
+  },
+  {
+    "context": "Workspace",
+    "bindings": {},
+  }
+]

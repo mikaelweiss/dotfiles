@@ -1,0 +1,62 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "helix_mode": false,
+  "git": {
+    "inline_blame": {
+      "show_commit_summary": false
+    }
+  },
+  "agent": {
+    "show_turn_stats": true,
+    "message_editor_min_lines": 4,
+    "single_file_review": true,
+    "favorite_models": [],
+    "play_sound_when_agent_done": true,
+    "model_parameters": []
+  },
+  "terminal": {
+    "font_weight": 400.0,
+    "font_size": 12.0,
+    "font_family": "MesloLGS NF"
+  },
+  "autosave": "off",
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "edit_predictions": {
+    "sweep": {
+      "privacy_mode": true
+    },
+    "provider": "zed"
+  },
+  "telemetry": {
+    "diagnostics": true,
+    "metrics": false
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "vim_mode": true,
+  "icon_theme": {
+    "mode": "dark",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+  "base_keymap": "Cursor",
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "dark",
+    "light": "One Light",
+    "dark": "One Dark",
+  },
+}
