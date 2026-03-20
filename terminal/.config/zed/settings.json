@@ -7,6 +7,41 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "language_models": {
+    "openai_compatible": {
+      "Mac Mini": {
+        "api_url": "https://wolf.tail243cc9.ts.net/v1",
+        "available_models": [
+          {
+            "name": "qwen3-coder-30b",
+            "max_tokens": 200000,
+            "max_output_tokens": 32000,
+            "max_completion_tokens": 200000,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          },
+          {
+            "name": "glm-4.7-flash",
+            "max_tokens": 200000,
+            "max_output_tokens": 32000,
+            "max_completion_tokens": 200000,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true
+            }
+          }
+        ]
+      }
+    }
+  },
   "helix_mode": false,
   "git": {
     "inline_blame": {
@@ -14,6 +49,11 @@
     }
   },
   "agent": {
+    "default_model": {
+      "provider": "Mac Mini",
+      "model": "glm-4.7-flash",
+      "enable_thinking": false
+    },
     "show_turn_stats": true,
     "message_editor_min_lines": 4,
     "single_file_review": true,
@@ -26,8 +66,21 @@
     "font_size": 12.0,
     "font_family": "MesloLGS NF"
   },
-  "autosave": "off",
+  "autosave": {
+    "after_delay": {
+      "milliseconds": 1000
+    }
+  },
   "agent_servers": {
+    "cursor": {
+      "type": "registry"
+    },
+    "corust-agent": {
+      "type": "registry"
+    },
+    "codex-acp": {
+      "type": "registry"
+    },
     "claude-acp": {
       "type": "registry"
     }
@@ -36,7 +89,7 @@
     "sweep": {
       "privacy_mode": true
     },
-    "provider": "zed"
+    "provider": "copilot"
   },
   "telemetry": {
     "diagnostics": true,
@@ -44,6 +97,15 @@
   },
   "session": {
     "trust_all_worktrees": true
+  },
+  "preview_tabs": {
+    "enabled": true,
+    "enable_preview_from_project_panel": true,
+    "enable_preview_from_file_finder": false,
+    "enable_preview_file_from_code_navigation": true
+  },
+  "tab_bar": {
+    "show_nav_history_buttons": true
   },
   "vim_mode": true,
   "icon_theme": {

@@ -7,15 +7,10 @@
 // from the command palette.
 [
   {
-    "context": "Workspace",
-    "bindings": {
-      // "shift shift": "file_finder::Toggle"
-    },
-  },
-  {
     "context": "Editor && vim_mode == insert",
     "bindings": {
       // "j k": "vim::NormalBefore"
+      "cmd-ctrl-i": "editor::Rename"
     },
   },
   {
@@ -47,30 +42,6 @@
     },
   },
   {
-    "context": "Workspace",
-    "bindings": {
-      "cmd-r": "agent::ToggleFocus",
-    },
-  },
-  {
-    "context": "AgentPanel > Editor",
-    "bindings": {
-      "cmd-r": "agent::ToggleFocus",
-    },
-  },
-  {
-    "context": "AgentPanel > Markdown",
-    "bindings": {
-      "cmd-r": "agent::ToggleFocus",
-    },
-  },
-  {
-    "context": "AcpThread",
-    "bindings": {
-      "cmd-r": "agent::ToggleFocus",
-    },
-  },
-  {
     "context": "vim_mode == normal",
     "bindings": {
       "] h": "editor::GoToHunk",
@@ -88,6 +59,29 @@
   },
   {
     "context": "Workspace",
-    "bindings": {},
+    "bindings": {
+      "cmd-g": ["task::Spawn", { "task_name": "lazygit" }],
+    },
+  },
+  {
+    "bindings": {
+      "ctrl-cmd-s": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-f ctrl-n": "workspace::NewCenterTerminal"
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-f ctrl-r": "terminal::RenameTerminal"
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "ctrl-f ctrl-c": "pane::CloseActiveItem"
+    }
   }
 ]

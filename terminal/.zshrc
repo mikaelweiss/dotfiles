@@ -129,6 +129,10 @@ export TERM=xterm-256color
 export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
 # End of LM Studio CLI section
 
+# SwiftPM
+export PATH="$HOME/.swiftpm/bin:$PATH"
+
+# alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
 alias c='claude'
