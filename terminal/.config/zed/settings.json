@@ -89,7 +89,7 @@
     "sweep": {
       "privacy_mode": true
     },
-    "provider": "copilot"
+    "provider": "zed"
   },
   "telemetry": {
     "diagnostics": true,

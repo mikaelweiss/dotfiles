@@ -81,7 +81,10 @@
   {
     "context": "Pane",
     "bindings": {
-      "ctrl-f ctrl-c": "pane::CloseActiveItem"
+      "ctrl-f ctrl-c": "pane::CloseActiveItem",
+      "ctrl-f ctrl-h": "pane::ActivatePreviousItem",
+      "ctrl-f ctrl-l": "pane::ActivateNextItem",
+      "ctrl-f ctrl-f": "pane::AlternateFile"
     }
   }
 ]
