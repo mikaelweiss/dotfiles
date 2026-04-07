@@ -8,6 +8,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(git dotenv macos sudo rsync systemd xcode)
 source $ZSH/oh-my-zsh.sh
 
+# ENV vars
+MAX_MCP_OUTPUT_TOKENS=250000
+
 # Alias'
 alias cat=lolcat
 alias gs="git status"
@@ -113,6 +116,7 @@ export PATH="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.
 
 export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"
 
+export _ZO_EXCLUDE_DIRS="$HOME/.t3/*"
 eval "$(zoxide init zsh)"
 
 # Enable shell history with iex
@@ -140,3 +144,12 @@ alias st='bun run dev:desktop'
 alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
+
+# Added by ma CLI installer
+export PATH="$HOME/.ma/bin:$PATH"
+export PATH="$HOME/.ma/bin:$PATH"
+
+# NVM
+export NVM_DIR="$HOME/.nvm"
+[ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" # This loads nvm
+[ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" # This loads nvm bash_completion
