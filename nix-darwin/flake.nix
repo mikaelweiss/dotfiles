@@ -115,7 +115,6 @@
         lolcat
         # faker # Fake names, emails, ids, datas etc. Good for automation.
         grex # Generates a regex based on an input you give it.
-        nodejs_24
         ];
 
       # Set nvim as default editor
@@ -132,6 +131,19 @@
 
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
+
+      # Automatic garbage collection (Sunday 2am)
+      nix.gc = {
+        automatic = true;
+        interval = { Weekday = 0; Hour = 2; Minute = 0; };
+        options = "--delete-older-than 30d";
+      };
+
+      # Automatic store deduplication (Sunday 3am)
+      nix.optimise = {
+        automatic = true;
+        interval = { Weekday = 0; Hour = 3; Minute = 0; };
+      };
 
       # Primary user for user-specific options like Homebrew
       system.primaryUser = "mikaelweiss";
@@ -186,6 +198,7 @@
           # "bruno-cli"
           "gh" # GitHub CLI
           "openjdk@21"
+          "nvm"
         ];
 
         # GUI Applications
@@ -228,15 +241,15 @@
         masApps = {
           # "DaVinci Resolve" = 571213070;
           # "DevCleaner" = 1388020431;
-          "Developer" = 640199958;
-          "Harvest" = 506189836;
+          # "Developer" = 640199958;
+          # "Harvest" = 506189836;
           # "iMovie" = 408981434;
-          "Magnet" = 441258766;
-          "Numbers" = 409203825;
+          # "Magnet" = 441258766;
+          # "Numbers" = 409203825;
           # "Obsidian Web Clipper" = 6720708363;
-          "Pages" = 409201541;
-          "RocketSim" = 1504940162;
-          "Slack" = 803453959;
+          # "Pages" = 409201541;
+          # "RocketSim" = 1504940162;
+          # "Slack" = 803453959;
           # "Tailscale" = 1475387142;
           # "Transporter" = 1450874784
         };
