@@ -236,6 +236,7 @@
           "utm"
           "signal"
           "mikaelweiss-open-chat"
+          "dockdoor"
         ];
 
         # Mac App Store apps by ID
