@@ -180,6 +180,7 @@
 
         # CLI tools
         brews = [
+          "ast-grep"
           "opencode"
           "elixir"
           "python3"
