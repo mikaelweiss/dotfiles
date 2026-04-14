@@ -10,9 +10,20 @@ return {
       events.subscribe({
         event = events.BEFORE_GIT_STATUS,
         handler = function(args)
-          for i, arg in ipairs(args.status_args) do
-            if arg == "--ignored=traditional" then
-              args.status_args[i] = "--ignored=matching"
+          -- Only swap when untracked-files is not "no", since git rejects
+          -- --ignored=matching combined with --untracked-files=no.
+          local has_untracked_no = false
+          for _, arg in ipairs(args.status_args) do
+            if arg == "--untracked-files=no" then
+              has_untracked_no = true
+              break
+            end
+          end
+          if not has_untracked_no then
+            for i, arg in ipairs(args.status_args) do
+              if arg == "--ignored=traditional" then
+                args.status_args[i] = "--ignored=matching"
+              end
             end
           end
         end,
