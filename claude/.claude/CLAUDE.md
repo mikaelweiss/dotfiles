@@ -1,3 +1,26 @@
+# Behavioral Rules — HIGHEST PRIORITY
+
+## Skills are instructions, not suggestions
+
+**Skills are specific instructions. Follow them EXACTLY as written — every step, in order.**
+- If a skill step says "launch an agent" or "launch a **haiku** agent" — you MUST use the Agent tool. Do NOT do that step yourself. Do NOT skip it. Do NOT do part of it yourself and delegate the rest.
+- If a skill step specifies a model (haiku, sonnet, opus) — use that model.
+- A skill is not a suggestion. It is a procedure. Execute it mechanically.
+
+## Sub-agents
+
+**NEVER use the Agent tool unless:**
+1. The user explicitly asks for sub-agents (e.g., "use an agent", "spawn an agent", "run agents in parallel"), OR
+2. A skill you are executing says to use sub-agents
+
+That's it. No other reason. Every other task — web search, code search, file reading, exploration — do it yourself directly.
+
+## Plan mode
+
+ONLY enter plan mode when I explicitly ask for it (e.g., "make a plan", "use plan mode"). If you are about to enter plan mode and I did not ask for one, STOP and skip it.
+
+---
+
 # Read Before You Respond
 
 **You do not know what code does until you have read it in full this session.**
@@ -14,21 +37,13 @@ Grep results, file names, CLAUDE.md context, and training knowledge are not subs
 
 **The test:** If the user asks "have you actually read [file]?" and the answer is no — you were not ready to say what you said.
 
-## Read everything upfront. Never re-research.
+## Never re-read files
 
-When you start a task (review, investigation, bug fix, feature), read ALL relevant files in the first pass — not just enough to answer the immediate question. Anticipate follow-ups. If a review touches 5 files, read all 5 before saying anything. Don't read 2, comment, then read 3 more when asked a follow-up.
-
-**Once you've read a file in this conversation, you have it. Use that knowledge.** Do not re-read the same files when:
-- Answering follow-up questions
-- Entering plan mode
-- Shifting from analysis to implementation
-- Being asked to elaborate on something you already reviewed
-
-Re-reading files you already read is a waste of time and tokens. The only valid reasons to re-read:
+Once you've read a file in this conversation, you have it. Do not re-read the same files when answering follow-ups, entering plan mode, shifting to implementation, or elaborating. The only valid reasons to re-read:
 - The file was edited since you last read it
 - You're in a new subagent that genuinely hasn't read it
 
-**If you catch yourself about to grep/read files you already read this conversation — stop. You already have the context. Use it.**
+---
 
 # Git
 
@@ -36,17 +51,16 @@ Re-reading files you already read is a waste of time and tokens. The only valid 
 - Commit messages: concise, imperative mood
 - **CRITICAL: Always use the `/commit` skill to commit code. NEVER run `git commit` directly. NO EXCEPTIONS.**
 - **Never use `git -C`**. `cd` into the directory first, then run git commands.
-- **Never push to remote, force push, or revert someone else's changes** without express permission. Everything else: use judgment.
+- **Never push to remote, force push, or revert someone else's changes** without express permission.
 
 ## FORBIDDEN IN COMMITS
 
 **NEVER EVER add any of the following to commit messages:**
-- `Co-Authored-By`
-- `Co-authored-by`
+- `Co-Authored-By` / `Co-authored-by`
 - Any attribution to Claude, AI, or assistants
 - Any trailer or footer referencing who wrote the code
 
-The `/commit` skill handles all commit formatting. Do not add anything beyond the commit message itself.
+The `/commit` skill handles all commit formatting.
 
 # Pull Requests
 
@@ -58,15 +72,16 @@ gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullReques
 
 Do not use the REST API for PR comments — it doesn't expose resolution status.
 
-# Tools
+# Branch Ownership
 
-Prefer built-in tools over bash for file operations
-**Never use `xargs`.** Use built-in tools (Glob, Grep, Read) instead. There is no situation where `xargs` is the right choice.
-When running code snippets, write to a file first then execute — don't pipe with heredocs (harder to permission).
+YOU are responsible for this branch. NEVER say things like "this is pre-existing, not my issue." If it is on this branch, it IS your issue. You are responsible for the quality of all committed and uncommitted code.
 
-## Other
-Don't use plan mode unless explicitly asked to by the user
+# Code Search Tools
 
-# File Reads
-NEVER NEVER NEVER RE-READ A FILE THAT YOU'VE ALREADY READ
-IF YOU HAVE A FILE IN YOUR CONTEXT, THEN YOU DO NOT NEED TO RE-READ IT UNLESS IT CHANGED.
+Use ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) MCP tools as the PRIMARY code search tools. Only fall back to Grep/Glob when ast-grep or tree-sitter cannot do the job (e.g., plain text search, non-code files, simple string matching).
+
+**ast-grep** — Use for: finding code patterns, import analysis, lint scanning, structural find/replace.
+
+**tree-sitter** — Use for: symbol extraction (`get_symbols`), usage tracing (`find_usage`), AST inspection (`get_ast`), complexity analysis, project-wide analysis.
+
+**Grep/Glob** — Use only for: plain string search, non-code files, finding files by name pattern.
