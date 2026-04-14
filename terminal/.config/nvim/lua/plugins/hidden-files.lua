@@ -22,7 +22,7 @@ return {
       filesystem = {
         filtered_items = {
           visible = false,
-          hide_dotfiles = false,
+          hide_dotfiles = true,
           hide_gitignored = true,
           always_show_by_pattern = {
             ".env*",

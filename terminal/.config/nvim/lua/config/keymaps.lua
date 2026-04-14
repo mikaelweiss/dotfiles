@@ -122,6 +122,15 @@ vim.keymap.set("n", "<D-u>", function()
   end
 end, { desc = "Run tests in current file" })
 
+-- Fix ctrl+/ terminal toggle: use stable cwd so terminal ID stays consistent
+-- (LazyVim.root() changes when focus is on a terminal buffer, causing new terminals)
+vim.keymap.set({ "n", "t" }, "<C-/>", function()
+  Snacks.terminal.toggle(nil, { cwd = vim.uv.cwd() })
+end, { desc = "Toggle Terminal" })
+vim.keymap.set({ "n", "t" }, "<C-_>", function()
+  Snacks.terminal.toggle(nil, { cwd = vim.uv.cwd() })
+end, { desc = "Toggle Terminal" })
+
 -- Toggle comment with cmd+/
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Toggle comment line", remap = true })
 vim.keymap.set("v", "<D-/>", "gc", { desc = "Toggle comment selection", remap = true })
