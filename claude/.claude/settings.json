@@ -140,9 +140,7 @@
     "ralph-loop@claude-plugins-official": false,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
-    "svelte@svelte": true,
-    "clangd-lsp@claude-plugins-official": true,
-    "caveman@caveman": true
+    "clangd-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -150,18 +148,13 @@
         "source": "github",
         "repo": "sveltejs/ai-tools"
       }
-    },
-    "caveman": {
-      "source": {
-        "source": "github",
-        "repo": "JuliusBrussee/caveman"
-      }
     }
   },
-  "effortLevel": "high",
-  "voiceEnabled": true,
+  "outputStyle": "concise",
+  "effortLevel": "xhigh",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
+  "voiceEnabled": true,
   "lsp": {
     "enabled": true
   }

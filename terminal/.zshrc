@@ -144,15 +144,14 @@ alias st='bun run dev:desktop'
 alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
+alias pi='npx @mariozechner/pi-coding-agent'
 
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"
 export PATH="$HOME/.ma/bin:$PATH"
 
-# NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ] && \. "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" # This loads nvm
-[ -s "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$HOMEBREW_PREFIX/opt/nvm/etc/bash_completion.d/nvm" # This loads nvm bash_completion
+# mise (node/python/etc version manager, per-project pinning)
+eval "$(mise activate zsh)"
 
 # Added by cog CLI installer
 export PATH="$HOME/.cog/bin:$PATH"

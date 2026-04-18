@@ -75,6 +75,7 @@
         nushell # Cool concept
         pandoc # Change files to other file types
         pyenv # Py environment manager
+        mise # Node/Python/etc version manager
         restic # Backup manager
         ripgrep # Better grep
         rustup # For Rust
@@ -199,7 +200,6 @@
           # "bruno-cli"
           "gh" # GitHub CLI
           "openjdk@21"
-          "nvm"
         ];
 
         # GUI Applications
@@ -237,6 +237,7 @@
           "signal"
           "mikaelweiss-open-chat"
           "dockdoor"
+          "handy"
         ];
 
         # Mac App Store apps by ID
