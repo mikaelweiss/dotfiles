@@ -9,11 +9,13 @@ plugins=(git dotenv macos sudo rsync systemd xcode)
 source $ZSH/oh-my-zsh.sh
 
 # ENV vars
-MAX_MCP_OUTPUT_TOKENS=250000
+export MAX_MCP_OUTPUT_TOKENS=250000
+export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 
 # Alias'
 alias cat=lolcat
 alias gs="git status"
+alias gstk='git stash push && git stash apply'
 alias lg='lazygit'
 alias gcm="git commit -m"
 unalias gcl 2>/dev/null

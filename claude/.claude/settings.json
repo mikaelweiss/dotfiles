@@ -155,6 +155,7 @@
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
+  "showThinkingSummaries": true,
   "lsp": {
     "enabled": true
   }
