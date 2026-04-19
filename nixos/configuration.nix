@@ -55,7 +55,7 @@
   users.users.mikaelweiss = {
     isNormalUser = true;
     description = "Mikael Weiss";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "cdrom" ];
     packages = with pkgs; [];
     shell = pkgs.zsh;
   };
@@ -109,6 +109,8 @@
    signal-desktop
    tailscale
    cockpit
+   ffmpeg
+   libdvdcss
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
