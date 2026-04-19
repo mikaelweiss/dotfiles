@@ -11,6 +11,7 @@ source $ZSH/oh-my-zsh.sh
 # ENV vars
 export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
+export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
 
 # Alias'
 alias cat=lolcat
