@@ -14,7 +14,6 @@ export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
 
 # Alias'
-alias cat=lolcat
 alias gs="git status"
 alias gstk='git stash push && git stash apply'
 alias lg='lazygit'
