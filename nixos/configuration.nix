@@ -42,6 +42,9 @@
     LC_TIME = "en_US.UTF-8";
   };
 
+  # Enable flakes
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -94,7 +97,6 @@
    postgresql
    ripgrep
    unzip #Neovim dependancy
-   claude-code
    tmux # Split screen and windows in the terminal
    tldr # Run tldr tmux to see the tldr for the tmux docs
    # Hyprland tools
@@ -200,6 +202,15 @@
 
   # Set up tailscale
   services.tailscale.enable = true;
+  services.resolved = {
+    enable = true;
+    dnssec = "allow-downgrade";
+    domains = [ "~." ];
+    fallbackDns = [ "1.1.1.1" ];
+    dnsovertls = "opportunistic";
+  };
+
+  networking.nameservers = [ "1.1.1.1" ];
 
   services.samba = {
     enable = true;
@@ -305,6 +316,9 @@
       ExecStart = "/var/lib/ilovemywife/i_love_my_wife/_build/prod/rel/i_love_my_wife/bin/i_love_my_wife start";
     };
   };
+
+  # Jellyfin
+  
   services.jellyfin.enable = true;
   services.jellyfin.user = "mikaelweiss";
   
@@ -333,6 +347,7 @@
 
   # Trust tailscale interface
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
+  networking.firewall.allowedUDPPorts = [ config.services.tailscale.port ];
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ 4000 ];
