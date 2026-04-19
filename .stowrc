@@ -1,0 +1,5 @@
+--target=/Users/mikaelweiss
+--ignore='README\.md'
+--ignore='\.DS_Store'
+--ignore='nix-darwin'
+--ignore='fix-ios-dev.sh'

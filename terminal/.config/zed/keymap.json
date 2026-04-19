@@ -1,0 +1,90 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Editor && vim_mode == insert",
+    "bindings": {
+      // "j k": "vim::NormalBefore"
+      "cmd-ctrl-i": "editor::Rename"
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-o": "file_finder::Toggle",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-/": "terminal_panel::Toggle",
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-0": "workspace::ToggleLeftDock",
+      "cmd-1": "project_panel::Toggle",
+      "cmd-2": "git_panel::Toggle",
+      "cmd-3": "outline_panel::Toggle",
+      "cmd-4": "collab_panel::Toggle",
+      "cmd-5": "pane::DeploySearch",
+    },
+  },
+  {
+    "bindings": {
+      "cmd-0": "workspace::ToggleLeftDock",
+    },
+  },
+  {
+    "context": "vim_mode == normal",
+    "bindings": {
+      "] h": "editor::GoToHunk",
+    },
+  },
+  {
+    "context": "vim_mode == normal",
+    "bindings": {
+      "[ h": "editor::GoToPreviousHunk",
+    },
+  },
+  {
+    "context": "ContextEditor > Editor",
+    "bindings": {},
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-g": ["task::Spawn", { "task_name": "lazygit" }],
+    },
+  },
+  {
+    "bindings": {
+      "ctrl-cmd-s": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-f ctrl-n": "workspace::NewCenterTerminal"
+    }
+  },
+  {
+    "bindings": {
+      "ctrl-f ctrl-r": "terminal::RenameTerminal"
+    }
+  },
+  {
+    "context": "Pane",
+    "bindings": {
+      "ctrl-f ctrl-c": "pane::CloseActiveItem",
+      "ctrl-f ctrl-h": "pane::ActivatePreviousItem",
+      "ctrl-f ctrl-l": "pane::ActivateNextItem",
+      "ctrl-f ctrl-f": "pane::AlternateFile"
+    }
+  }
+]

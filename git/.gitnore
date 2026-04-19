@@ -1,0 +1,18 @@
+# ignore xcuser state
+*.xcuserstate
+*.xcuserdatad
+*.DS_Store
+*xcuserdata
+*.xcshareddata
+buildServer.json
+*.obsidian
+.venv
+.worktrees
+.env
+.nvim
+
+# Direnv
+.direnv
+result
+/Users/mikaelweiss/code/ClipSpeak/.mcp.json
+

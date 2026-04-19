@@ -1,6 +1,0 @@
-# Additionally, each config option is also explained in detail
-# on Ghostty's website, at https://ghostty.org/docs/config.
-keybind = shift+enter=text:\x1b\r
-keybind = super+delete=text:\x15
-font-family = "MesloLGS NF"
-keybind = shift+enter=text:\n

@@ -12,23 +12,70 @@
   let
     system = "aarch64-darwin";
     unstable = import nixpkgs-unstable { inherit system; };
+
+    # Host-specific configuration for MacBook Air
+    macbookAirConfig = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+        javaPackages.compiler.openjdk25 # Java
+        rubyPackages_4_0.cocoapods
+      ];
+
+      programs.zsh = {
+        enable = true;
+        interactiveShellInit = ''
+          # Android SDK
+          export ANDROID_HOME="$HOME/Library/Android/sdk"
+          export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk 2>/dev/null | head -1)"
+          export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+        '';
+      };
+    };
+
+    # Host-specific configuration for Wolf
+    wolfConfig = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+        nodejs_24
+        # Wolf-only packages here
+      ];
+
+      programs.zsh = {
+        enable = true;
+        interactiveShellInit = ''
+          # Tailscale
+          alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+          # LM Studio CLI
+          export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
+
+          # Clawd Bot Stuff
+          export PATH="$HOME/.npm-global/bin:$PATH"
+          export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+          export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
+        '';
+      };
+    };
+
     configuration = { pkgs, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
+      nixpkgs.config.allowUnfree = true;
       environment.systemPackages = with pkgs;
         [
         vim # Vim
         yazi # File browser
-        tmux # Terminal window/session manager
+        tmux # Multiplexer
+        zellij # Multiplexer
+        stow # Dotfiles manager
         flyctl # CLI for Fly.io
         fzf # Fuzy find files
-        gh # GitHub CLI
         imagemagick # Not sure
         lazygit # Git, but Lazy
         neovim # Vim, but epic
         nushell # Cool concept
         pandoc # Change files to other file types
         pyenv # Py environment manager
+        mise # Node/Python/etc version manager
         restic # Backup manager
         ripgrep # Better grep
         rustup # For Rust
@@ -38,9 +85,6 @@
         cocoapods # Manage dependancies for your Xcode projects
         dust # Du, but better
         ffmpeg
-        nodejs_22
-        javaPackages.compiler.openjdk21 # Java
-        javaPackages.compiler.openjdk17 # Java
         swiftformat # Swift formatter
         swiftlint # Swift linter
         tree # See the directories
@@ -55,7 +99,23 @@
         pass # Password management cli
         gnupg # GPG key manager
         btop # See whats up
-        unstable.firebase-tools # Firebase CLI (from unstable for latest version)
+        atuin # Shell history search
+        pipx # Ash graphql dependancy
+        python313Packages.pip # Pip for python
+        # For typescriptLSP Claude Code plugin
+        nodePackages.typescript
+        nodePackages.typescript-language-server
+        # javaPackages.compiler.openjdk21 # Java
+        cbonsai # Generates ascii bonsai
+        cmatrix # Generates ascii matrix
+        asciiquarium # Generates an ascii aquarium
+        # asciinema # Record and play back a terminal session, can turn it into a gif
+        # croc # File sharing
+        # ttyd # open a terminal from another computer
+        # jrnl # Light weight journaling app
+        lolcat
+        # faker # Fake names, emails, ids, datas etc. Good for automation.
+        grex # Generates a regex based on an input you give it.
         ];
 
       # Set nvim as default editor
@@ -72,6 +132,19 @@
 
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
+
+      # Automatic garbage collection (Sunday 2am)
+      nix.gc = {
+        automatic = true;
+        interval = { Weekday = 0; Hour = 2; Minute = 0; };
+        options = "--delete-older-than 30d";
+      };
+
+      # Automatic store deduplication (Sunday 3am)
+      nix.optimise = {
+        automatic = true;
+        interval = { Weekday = 0; Hour = 3; Minute = 0; };
+      };
 
       # Primary user for user-specific options like Homebrew
       system.primaryUser = "mikaelweiss";
@@ -103,46 +176,72 @@
 
         # Taps (third-party repositories)
         taps = [
+          "mikaelweiss/openchat"
         ];
 
         # CLI tools
         brews = [
+          "ast-grep"
+          "opencode"
           "elixir"
+          "python3"
           "llvm"
           "postgresql@18"
           "python@3.14"
           "sqlite"
           "xcode-build-server"
+          # "watchman" # React Native dependancy
+          "oven-sh/bun/bun"
+          "mole"
+          # "firebase-cli"
+          "pnpm"
+          "python@3.12"
+          "pyenv"
+          # "bruno-cli"
+          "gh" # GitHub CLI
+          "openjdk@21"
         ];
 
         # GUI Applications
         casks = [
-          "android-commandlinetools"
-          "android-ndk"
-          "android-platform-tools"
+          # "steipete/tap/codexbar" # Keep track of AI usage
+          # "bruno"
+          "docker-desktop"
+          "1password"
+          # "rapidapi"
+          # "android-commandlinetools"
+          # "android-ndk"
+          # "android-platform-tools"
           "android-studio"
           "arc"
           "chatgpt"
-          "claude"
-          "cursor"
+          # "claude"
+          # "cursor"
+          "codex"
           "ghostty"
           "grandperspective"
-          "notion"
+          # "notion"
           "obs"
           "obsidian"
           # "openmtp" # Android file transfer
-          "prusaslicer"
+          # "prusaslicer"
           "raycast"
           "sf-symbols"
-          "void"
-          "zed"
+          # "void"
+          # "zed"
           "zoom"
-          "opencode-desktop"
+          "docker-desktop"
+          # "opencode-desktop"
+          "superwhisper"
+          "utm"
+          "signal"
+          "mikaelweiss-open-chat"
+          "dockdoor"
+          "handy"
         ];
 
         # Mac App Store apps by ID
         masApps = {
-          # "Base" = 402383384;
           # "DaVinci Resolve" = 571213070;
           # "DevCleaner" = 1388020431;
           # "Developer" = 640199958;
@@ -155,10 +254,11 @@
           # "RocketSim" = 1504940162;
           # "Slack" = 803453959;
           # "Tailscale" = 1475387142;
+          # "Transporter" = 1450874784
         };
 
         # Automatically uninstall things in Homebrew not listed in this flake
-        onActivation.cleanup = "zap";
+        # onActivation.cleanup = "zap";
 
         # Auto-update Homebrew
         onActivation.autoUpdate = true;
@@ -181,8 +281,11 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Mikaels-MacBook-Air
-    darwinConfigurations."Mikaels-MacBook-Air" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
+    darwinConfigurations."Mikaels-MacBook-Air-2" = nix-darwin.lib.darwinSystem {
+      modules = [ configuration macbookAirConfig ];
+    };
+    darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {
+      modules = [ configuration wolfConfig ];
     };
   };
 }

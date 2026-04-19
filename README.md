@@ -5,4 +5,4 @@ From here I will be able run a script and set up my computer with everything I n
 
 To install, run the following command:
 
-``` git clone https://github.com/MikaelWeiss/dotfiles.git && cd dotfiles && chmod +x freshinstall && ./freshinstall ```
+``` git clone https://github.com/MikaelWeiss/dotfiles.git && stow .```
