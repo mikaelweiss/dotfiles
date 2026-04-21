@@ -111,6 +111,12 @@
    cockpit
    ffmpeg
    libdvdcss
+   dvdbackup
+   handbrake
+   stow
+   atuin
+   mise
+   direnv
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -350,6 +356,7 @@
   # Trust tailscale interface
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
   networking.firewall.allowedUDPPorts = [ config.services.tailscale.port ];
+  networking.firewall.allowedTCPPorts = [ 8096 ];
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ 4000 ];
