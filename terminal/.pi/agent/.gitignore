@@ -1,0 +1,10 @@
+# Sensitive files — do NOT track in dotfiles
+auth.json
+
+# Auto-managed directories — Pi creates/updates these automatically
+bin/
+git/
+npm/
+
+# Machine-local session data — large and path-specific
+sessions/
