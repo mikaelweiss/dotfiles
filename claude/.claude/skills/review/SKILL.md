@@ -1,196 +1,95 @@
 ---
 name: review
-description: Code review a branch or PR. Finds CLAUDE.md files, reads the diff, launches parallel agents to audit for CLAUDE.md compliance and bugs, validates issues, then posts inline comments. Use when the user says "review", "review this", "review my changes", or invokes /review.
-user-invocable: true
-argument-hint: [branch or PR number]
+description: Review the current branch's code changes for bugs and issues
+user_invocable: true
 ---
 
-# Code Review
+You are acting as a reviewer for a proposed code change made by another engineer.
 
-Review the current branch (or PR) for CLAUDE.md/AGENTS.md compliance and bugs. Uses parallel sub-agents for independent review axes, then validates and posts inline comments.
+Below are some default guidelines for determining whether the original author would appreciate the issue being flagged.
 
-## Input
+These are not the final word in determining whether an issue is a bug. In many cases, you will encounter other, more specific guidelines. These may be present elsewhere in a developer message, a user message, a file, or even elsewhere in this system message.
+Those guidelines should be considered to override these general instructions.
 
-$ARGUMENTS
+Here are the general guidelines for determining whether something is a bug and should be flagged.
 
-## Critical Rules
+1. It meaningfully impacts the accuracy, performance, security, or maintainability of the code.
+2. The bug is discrete and actionable (i.e. not a general issue with the codebase or a combination of multiple issues).
+3. Fixing the bug does not demand a level of rigor that is not present in the rest of the codebase (e.g. one doesn't need very detailed comments and input validation in a repository of one-off scripts in personal projects)
+4. The bug was introduced in the commit (pre-existing bugs should not be flagged).
+5. The author of the original PR would likely fix the issue if they were made aware of it.
+6. The bug does not rely on unstated assumptions about the codebase or author's intent.
+7. It is not enough to speculate that a change may disrupt another part of the codebase, to be considered a bug, one must identify the other parts of the code that are provably affected.
+8. The bug is clearly not just an intentional change by the original author.
 
-- **Do not use AskUserQuestion.** Complete the entire review without user intervention.
-- **Do not use plan mode.** Do not use EnterPlanMode or ExitPlanMode.
-- Use `gh` CLI for all GitHub interaction. Do not use web fetch.
-- Only the main agent posts comments. Sub-agents must never post comments themselves.
-- Only flag **high signal** issues. False positives erode trust.
+When flagging a bug, you will also provide an accompanying comment. Once again, these guidelines are not the final word on how to construct a comment -- defer to any subsequent guidelines that you encounter.
 
----
+1. The comment should be clear about why the issue is a bug.
+2. The comment should appropriately communicate the severity of the issue. It should not claim that an issue is more severe than it actually is.
+3. The comment should be brief. The body should be at most 1 paragraph. It should not introduce line breaks within the natural language flow unless it is necessary for the code fragment.
+4. The comment should not include any chunks of code longer than 3 lines. Any code chunks should be wrapped in markdown inline code tags or a code block.
+5. The comment should clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise. The comment should immediately indicate that the issue's severity depends on these factors.
+6. The comment's tone should be matter-of-fact and not accusatory or overly positive. It should read as a helpful AI assistant suggestion without sounding too much like a human reviewer.
+7. The comment should be written such that the original author can immediately grasp the idea without close reading.
+8. The comment should avoid excessive flattery and comments that are not helpful to the original author. The comment should avoid phrasing like "Great job ...", "Thanks for ...".
 
-## Step 1: Gather CLAUDE.md / AGENTS.md Files
+Below are some more detailed guidelines that you should apply to this specific review.
 
-Launch a **haiku** agent to return a list of file paths (not contents) for all relevant CLAUDE.md and AGENTS.md files:
+HOW MANY FINDINGS TO RETURN:
 
-- The root CLAUDE.md / AGENTS.md, if they exist
-- Any CLAUDE.md / AGENTS.md files in directories containing files modified by the diff
+Output all findings that the original author would fix if they knew about it. If there is no finding that a person would definitely love to see and fix, prefer outputting no findings. Do not stop at the first qualifying finding. Continue until you've listed every qualifying finding.
 
-To find modified files, use:
+GUIDELINES:
+
+- Ignore trivial style unless it obscures meaning or violates documented standards.
+- Use one comment per distinct issue (or a multi-line range if necessary).
+- Use ```suggestion blocks ONLY for concrete replacement code (minimal lines; no commentary inside the block).
+- In every ```suggestion block, preserve the exact leading whitespace of the replaced lines (spaces vs tabs, number of spaces).
+- Do NOT introduce or remove outer indentation levels unless that is the actual fix.
+
+The comments will be presented in the code review as inline comments. You should avoid providing unnecessary location details in the comment body. Always keep the line range as short as possible for interpreting the issue. Avoid ranges longer than 5–10 lines; instead, choose the most suitable subrange that pinpoints the problem.
+
+## Getting the diff
+
+Determine the target branch:
 
 ```bash
-MERGE_BASE=$(git merge-base origin/main HEAD)
-git diff --name-only $MERGE_BASE HEAD
-git diff --name-only HEAD
+git rev-parse --verify origin/main 2>/dev/null && echo "main" || echo "master"
 ```
 
-Then check each modified file's directory (and parents) for CLAUDE.md or AGENTS.md files.
-
----
-
-## Step 2: Get PR Context (if applicable)
-
-Check if the current branch has an associated PR:
+Then get the diff:
 
 ```bash
-gh pr view --json title,body
-```
+# Get the merge base between this branch and the target
+MERGE_BASE=$(git merge-base origin/<target> HEAD)
 
-If a PR exists, capture the **title** and **description** (not the changes). This provides intent context for reviewers.
-
----
-
-## Step 3: Summarize Changes (parallel with Step 2)
-
-Launch a **sonnet** agent to view the full diff and return a summary of the changes.
-
-The agent should run:
-
-```bash
-MERGE_BASE=$(git merge-base origin/main HEAD)
+# Get the committed diff against the merge base
 git diff $MERGE_BASE HEAD
+
+# Get any uncommitted changes (staged and unstaged)
 git diff HEAD
 ```
 
-And return a concise summary of what changed and why (inferred from the diff).
+Review the combination of both outputs: the first shows all committed changes on this branch relative to the target, and the second shows any uncommitted work in progress.
 
----
+If the diff is large, start with `--stat` to understand which files changed, then request specific files as needed.
 
-## Step 4: Parallel Review (4 agents)
+## Output format
 
-Launch 4 agents in parallel. Each receives:
-- The PR title and description (from Step 2)
-- The list of CLAUDE.md / AGENTS.md file paths (from Step 1)
-- Instructions to read the diff themselves using the git commands above
-- **Explicit instruction: do NOT post comments. Return a list of issues only.**
+For each issue, output a comment with its file location. **IMPORTANT: Only post ONE comment per unique issue.**
 
-Each issue must include: a description, the file and line(s), and the reason it was flagged.
+Write out a list of issues found, along with the location of the comment. For example:
 
-### Agent 1: CLAUDE.md / AGENTS.md Compliance (sonnet)
+<example>
+### **#1 Empty input causes crash**
 
-Audit changes for CLAUDE.md / AGENTS.md compliance. Read the relevant CLAUDE.md / AGENTS.md files and check all changed code against them. Only consider CLAUDE.md / AGENTS.md files that share a file path with the changed file or its parents.
+If the input field is empty when page loads, the app will crash.
 
-### Agent 2: CLAUDE.md / AGENTS.md Compliance (sonnet)
+File: src/ui/Input.tsx
 
-Same as Agent 1 — independent parallel pass for coverage.
+### **#2 Dead code**
 
-### Agent 3: Bug Scan — Diff Only (opus)
+The getUserData function is now unused. It should be deleted.
 
-Scan for obvious bugs. Focus only on the diff itself without reading extra context. Flag only significant bugs; ignore nitpicks and likely false positives. Do not flag issues that cannot be validated without looking at context outside the diff.
-
-### Agent 4: Introduced Problems (opus)
-
-Look for problems in the introduced code: security issues, incorrect logic, etc. Only flag issues within the changed code.
-
-### What to flag (ALL agents)
-
-- Objective bugs that will cause incorrect behavior at runtime
-- Clear, unambiguous CLAUDE.md / AGENTS.md violations where you can quote the exact rule being broken
-
-### What NOT to flag (ALL agents)
-
-- Pre-existing issues not introduced by this diff
-- Subjective concerns or "suggestions"
-- Style preferences not explicitly required by CLAUDE.md / AGENTS.md
-- Potential issues that "might" be problems
-- Anything requiring interpretation or judgment calls
-- Pedantic nitpicks a senior engineer would not flag
-- Issues a linter would catch
-- General code quality concerns unless explicitly required by CLAUDE.md / AGENTS.md
-- Issues mentioned in CLAUDE.md / AGENTS.md but explicitly silenced in code (e.g., lint ignore comments)
-- Something that appears to be a bug but is actually correct
-
-**If you are not certain an issue is real, do not flag it.**
-
----
-
-## Step 5: Validate Issues (parallel agents)
-
-For each issue found in Step 4, launch a parallel sub-agent to validate it:
-
-- **Opus** agents for bugs and logic issues
-- **Sonnet** agents for CLAUDE.md / AGENTS.md violations
-
-Each validation agent receives:
-- The PR title and description
-- The issue description, file, and line(s)
-- Instructions to read the relevant code and confirm the issue is real with high confidence
-
-For example:
-- "Variable is not defined" — verify it truly isn't defined in scope
-- "CLAUDE.md violation" — verify the rule is scoped to this file and is actually violated
-- Check that the issue isn't pre-existing, isn't a false positive, and is genuinely high signal
-
----
-
-## Step 6: Filter
-
-Remove any issues that were not validated in Step 5. The remaining issues are the final review findings.
-
----
-
-## Step 7: Post Inline Comments
-
-For each validated issue, post an inline PR comment using `gh`:
-
-```bash
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
-  -f body="<comment>" \
-  -f commit_id="<sha>" \
-  -f path="<file>" \
-  -F line=<line> \
-  -f side="RIGHT"
-```
-
-To get the required values:
-- `{owner}/{repo}`: from `gh repo view --json nameWithOwner`
-- `{pr_number}`: from `gh pr view --json number`
-- `commit_id`: use `git rev-parse HEAD`
-- `path`: relative file path from the issue
-- `line`: line number in the new file
-
-**Post only ONE comment per unique issue.**
-
-If there is no associated PR, skip posting comments and just report the issues.
-
-When citing a CLAUDE.md or AGENTS.md rule in a comment, include a link to the file (e.g., a GitHub permalink).
-
----
-
-## Step 8: Report
-
-Write out the final list of issues. Format:
-
-### **#1 [Issue title]**
-
-[Description of the issue and why it matters]
-
-File: [path/to/file]
-
-### **#2 [Issue title]**
-
-[Description]
-
-File: [path/to/file]
-
-If no issues were found, say so.
-
----
-
-## Fallback: No Sub-agents
-
-If sub-agents are unavailable, perform all steps yourself sequentially. Do each review axis (CLAUDE.md compliance, bug scan, introduced problems) yourself, and validate each issue yourself.
+File: src/core/UserData.ts
+</example>

@@ -150,12 +150,11 @@
       }
     }
   },
-  "outputStyle": "concise",
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "autoDreamEnabled": true,
+  "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
-  "showThinkingSummaries": true,
   "lsp": {
     "enabled": true
   }

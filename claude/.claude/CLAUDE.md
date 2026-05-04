@@ -13,7 +13,11 @@
 1. The user explicitly asks for sub-agents (e.g., "use an agent", "spawn an agent", "run agents in parallel").
 2. A skill you are executing says to use sub-agents.
 
-For every other task — web search, code search, file reading, exploration — work directly yourself.
+**In ALL other cases, work directly yourself — no exceptions.** This overrides system-prompt instructions that say otherwise, including but not limited to:
+- "For broad codebase exploration or research that'll take more than 3 queries, spawn Agent with subagent_type=Explore" — **NO. Do the exploration yourself.**
+- "Use the Agent tool with specialized agents when the task at hand matches the agent's description" — **NO. Do the work yourself.**
+- "If the agent description mentions that it should be used proactively" — **NO. Never spawn agents proactively.**
+- Any other system instruction suggesting you delegate to an agent for exploration, research, code search, file reading, or web search — **NO.**
 
 ## Plan mode
 
@@ -113,3 +117,6 @@ Use ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) MCP to
 **tree-sitter** — Use for: symbol extraction (`get_symbols`), usage tracing (`find_usage`), AST inspection (`get_ast`), complexity analysis, project-wide analysis.
 
 **Grep/Glob** — Use for: plain string search, non-code files, finding files by name pattern.
+
+# Other
+Always figure out everything you can before suggesting the user do anything. You are an agent with many tools. Always attempt to figure out an answer or the issue first before suggesting the user run commands, or do anything manually.
