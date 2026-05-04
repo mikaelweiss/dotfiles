@@ -16,7 +16,7 @@ export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
 # Alias'
 alias cat=lolcat
 alias gs="git status"
-alias gstk='git stash push && git stash apply'
+alias gstk='git add . && git stash push && git stash apply'
 alias lg='lazygit'
 alias gcm="git commit -m"
 unalias gcl 2>/dev/null
@@ -142,6 +142,7 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
+alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
 alias st='bun run dev:desktop'
 alias s='bunx convex dev'
