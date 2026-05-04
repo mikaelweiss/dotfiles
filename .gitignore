@@ -1,3 +1,11 @@
 # tmux plugins (installed by TPM)
 terminal/.config/tmux/plugins/*
 !terminal/.config/tmux/plugins/.gitkeep
+
+# Node.js
+node_modules/
+
+# Telemetry / crash reports
+*.telemetry
+telemetry/
+
