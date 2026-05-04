@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.72.1",
-  "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/models/kimi-k2p6",
+  "defaultProvider": "baseten",
+  "defaultModel": "moonshotai/Kimi-K2.6",
   "defaultThinkingLevel": "medium",
   "compaction": {
     "enabled": false
@@ -15,7 +15,6 @@
   },
   "theme": "dark-blue-tint",
   "packages": [
-    "npm:pi-web-access",
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:@jerryan/pi-sanity"
   ]
