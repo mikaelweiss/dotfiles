@@ -230,14 +230,15 @@
           # "void"
           # "zed"
           "zoom"
-          "docker-desktop"
+          # "docker-desktop"
           # "opencode-desktop"
-          "superwhisper"
-          "utm"
+          # "superwhisper" # STT/TTS app
+          # "utm" # vm app
           "signal"
           "mikaelweiss-open-chat"
-          "dockdoor"
-          "handy"
+          # "dockdoor" # Prityfication of cmd + tab
+          # "handy" # Local Open Source STT app
+          "tailscale"
         ];
 
         # Mac App Store apps by ID
