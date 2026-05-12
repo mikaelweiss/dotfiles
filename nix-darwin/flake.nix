@@ -116,6 +116,8 @@
         lolcat
         # faker # Fake names, emails, ids, datas etc. Good for automation.
         grex # Generates a regex based on an input you give it.
+        jujutsu
+        lazyjj
         ];
 
       # Set nvim as default editor
@@ -200,13 +202,14 @@
           # "bruno-cli"
           "gh" # GitHub CLI
           "openjdk@21"
+          "rtk" # Used to reduce the tokens used in Claude Code
         ];
 
         # GUI Applications
         casks = [
           # "steipete/tap/codexbar" # Keep track of AI usage
           # "bruno"
-          "docker-desktop"
+          # "docker-desktop"
           "1password"
           # "rapidapi"
           # "android-commandlinetools"
@@ -238,7 +241,7 @@
           "mikaelweiss-open-chat"
           # "dockdoor" # Prityfication of cmd + tab
           # "handy" # Local Open Source STT app
-          "tailscale"
+          "tailscale-app"
         ];
 
         # Mac App Store apps by ID

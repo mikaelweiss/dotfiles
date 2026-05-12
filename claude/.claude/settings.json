@@ -127,6 +127,9 @@
       }
     ]
   },
+  "worktree": {
+    "baseRef": "fresh"
+  },
   "statusLine": {
     "type": "command",
     "command": "npx -y ccstatusline@latest",
@@ -151,9 +154,16 @@
     }
   },
   "effortLevel": "high",
+  "awaySummaryEnabled": false,
   "autoDreamEnabled": true,
   "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
+  "editorMode": "normal",
+  "verbose": true,
+  "preferredNotifChannel": "auto",
+  "teammateMode": "auto",
+  "agentPushNotifEnabled": true,
   "voiceEnabled": true,
   "lsp": {
     "enabled": true

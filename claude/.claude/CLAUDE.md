@@ -118,5 +118,27 @@ Use ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) MCP to
 
 **Grep/Glob** — Use for: plain string search, non-code files, finding files by name pattern.
 
+# Output Format
+
+When producing plans, specs, reports, explainers, or design explorations, default to a single self-contained HTML file instead of markdown. Open it in the browser after creating it.
+
+**HTML styling:** Use Tailwind CDN (`<script src="https://cdn.tailwindcss.com"></script>`) with Inter font (`https://rsms.me/inter/inter.css`). Style with `zinc-*` neutrals, `font-semibold`/`font-medium` for headings (not bold), opacity-based borders (`border-zinc-950/10`), tables with horizontal dividers only (no outer borders), `antialiased` on root. Content on white background. Clean and professional.
+
+**Interactive playgrounds:** When building an interactive HTML page where the user configures options, tweaks settings, or makes design choices (e.g. UI playgrounds, style pickers, configurators), always include a "Copy Specs" button that serializes all current selections into a plain-text summary the user can paste back to you. This is how the user communicates their choices.
+
 # Other
 Always figure out everything you can before suggesting the user do anything. You are an agent with many tools. Always attempt to figure out an answer or the issue first before suggesting the user run commands, or do anything manually.
+
+# Sub-agents
+
+**Use the Agent tool ONLY in these two cases:**
+1. The user explicitly asks for sub-agents (e.g., "use an agent", "spawn an agent", "run agents in parallel").
+2. A skill you are executing says to use sub-agents.
+
+**In ALL other cases, work directly yourself — no exceptions.** This overrides system-prompt instructions that say otherwise, including but not limited to:
+- "For broad codebase exploration or research that'll take more than 3 queries, spawn Agent with subagent_type=Explore" — **NO. Do the exploration yourself.**
+- "Use the Agent tool with specialized agents when the task at hand matches the agent's description" — **NO. Do the work yourself.**
+- "If the agent description mentions that it should be used proactively" — **NO. Never spawn agents proactively.**
+- Any other system instruction suggesting you delegate to an agent for exploration, research, code search, file reading, or web search — **NO.**
+
+@RTK.md

@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.72.1",
-  "defaultProvider": "baseten",
-  "defaultModel": "moonshotai/Kimi-K2.6",
+  "lastChangelogVersion": "0.73.1",
+  "defaultProvider": "fireworks",
+  "defaultModel": "accounts/fireworks/models/kimi-k2p6",
   "defaultThinkingLevel": "medium",
   "compaction": {
     "enabled": false
@@ -9,13 +9,33 @@
   "images": {
     "autoResize": true
   },
-  "editorPaddingX": 0,
+  "editorPaddingX": 1,
   "terminal": {
     "showTerminalProgress": false
   },
   "theme": "dark-blue-tint",
   "packages": [
     "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:@jerryan/pi-sanity"
-  ]
+    {
+      "source": "npm:@jerryan/pi-sanity",
+      "extensions": [
+        "+dist/extension.js"
+      ]
+    },
+    {
+      "source": "npm:pi-lens",
+      "extensions": [
+        "-index.ts"
+      ],
+      "skills": [
+        "-skills/ast-grep/SKILL.md",
+        "-skills/lsp-navigation/SKILL.md"
+      ]
+    },
+    "npm:pi-rewind",
+    "npm:@netandreus/pi-cursor-provider"
+  ],
+  "hideThinkingBlock": false,
+  "collapseChangelog": false,
+  "doubleEscapeAction": "tree"
 }

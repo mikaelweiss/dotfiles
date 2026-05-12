@@ -1,0 +1,12 @@
+{
+  "name": "pi-telemetry-comprehensive",
+  "version": "1.0.0",
+  "description": "Comprehensive telemetry extension for Pi coding agent",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "dependencies": {
+    "langfuse": "^3.30.0"
+  }
+}
