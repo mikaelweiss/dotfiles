@@ -17,8 +17,11 @@ When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y
 - Never push, force-push, or revert someone else's changes without explicit permission.
 
 ## Commits
-- Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars, imperative, no period.
-- Body only when the "why" isn't obvious from the diff.
+- Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars (hard max 72), imperative, no period. Be specific — `fix: resolve login timeout`, not `fix: bug fix`.
+- Default to title-only. Add a body only when the *why* isn't obvious from the diff.
+- Body: one short paragraph (not bullets), explains *why* — diff already shows *what*.
+- Avoid filler openers ("This commit…", "Updated…", "Changes include…"), file listings, and obvious restatements of the diff.
+- No AI attribution anywhere — no `Co-Authored-By`, no 🤖, no "Generated with…" footer, no `claude.ai/code/session` URL, no `noreply@anthropic.com`, no "AI-assisted / AI-generated / with help from" phrasing, no `<!-- claude-* -->` markers. The `~/.claude/no-attribution/check.sh` PreToolUse hook enforces this and will block the commit if a pattern slips through.
 
 ## PR comments
 Fetch only unresolved threads via GraphQL (REST doesn't expose resolution status):
