@@ -103,6 +103,11 @@
       "Read(./secrets/**)"
     ]
   },
+  "model": "claude-opus-4-7",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -153,14 +158,14 @@
       }
     }
   },
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "awaySummaryEnabled": false,
   "autoDreamEnabled": true,
   "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto",
   "editorMode": "normal",
-  "verbose": true,
+  "verbose": false,
   "preferredNotifChannel": "auto",
   "teammateMode": "auto",
   "agentPushNotifEnabled": true,
