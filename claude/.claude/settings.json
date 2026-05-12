@@ -109,6 +109,16 @@
     "pr": ""
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/no-attribution/session-start.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read",
@@ -117,6 +127,20 @@
             "type": "command",
             "command": "~/.claude/read-once/hook.sh"
           }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "if": "Bash(git commit *)",       "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh pr create *)",     "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh pr edit *)",       "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh pr comment *)",    "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh pr review *)",     "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh issue create *)",  "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh issue comment *)", "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh issue edit *)",    "command": "~/.claude/no-attribution/check.sh" },
+          { "type": "command", "if": "Bash(gh release create *)","command": "~/.claude/no-attribution/check.sh" }
         ]
       }
     ],
