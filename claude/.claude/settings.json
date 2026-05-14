@@ -103,7 +103,7 @@
       "Read(./secrets/**)"
     ]
   },
-  "model": "claude-opus-4-7",
+  "model": "claude-opus-4-6[1m]",
   "attribution": {
     "commit": "",
     "pr": ""

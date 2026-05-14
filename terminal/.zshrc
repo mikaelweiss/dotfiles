@@ -148,7 +148,6 @@ alias st='bun run dev:desktop'
 alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
-alias pi='npx @mariozechner/pi-coding-agent'
 
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"

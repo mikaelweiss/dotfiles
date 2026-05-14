@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.73.1",
+  "lastChangelogVersion": "0.74.0",
   "defaultProvider": "fireworks",
   "defaultModel": "accounts/fireworks/models/kimi-k2p6",
   "defaultThinkingLevel": "medium",
