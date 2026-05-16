@@ -33,10 +33,5 @@ gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullReques
 ## Code search
 Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for code search. Use Grep/Glob for plain-text search and filename patterns.
 
-## Output format
-For plans, specs, reports, explainers, or design explorations, produce a single self-contained HTML file and open it in the browser. Use Tailwind CDN + Inter font, `zinc-*` neutrals, `font-semibold`/`font-medium` headings (not bold), opacity-based borders (`border-zinc-950/10`), tables with horizontal dividers only, `antialiased` on root. White background, clean and professional.
-
-For interactive HTML playgrounds (configurators, style pickers, anything where I'm tweaking options), include a "Copy Specs" button that serializes selections as plain text I can paste back.
-
 ## Obstacles
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
