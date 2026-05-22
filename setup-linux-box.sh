@@ -60,6 +60,7 @@ sudo -u postgres createuser deploy --createdb
 
 # ─── Dotfiles (as deploy, HTTPS clone) ───────────────────────
 sudo -u deploy bash -c '
+  cd ~
   mkdir -p ~/code
   git clone https://github.com/mikaelweiss/dotfiles.git ~/code/dotfiles
   cd ~/code/dotfiles
@@ -75,14 +76,14 @@ sudo -u deploy bash -c '
 sudo chsh -s "$(which zsh)" deploy
 
 # oh-my-zsh for deploy
-sudo -u deploy bash -c 'RUNZSH=no KEEP_ZSHRC=yes CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
+sudo -u deploy bash -c 'cd ~ && RUNZSH=no KEEP_ZSHRC=yes CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
 
 # powerlevel10k
-sudo -u deploy bash -c 'git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k'
+sudo -u deploy bash -c 'cd ~ && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k'
 
 # ─── CLI tools (as deploy) ───────────────────────────────────
 # claude code
-sudo -u deploy bash -c 'curl -fsSL https://claude.ai/install.sh | sh'
+sudo -u deploy bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
 # pi.dev
 npm install -g --ignore-scripts @earendil-works/pi-coding-agent
@@ -92,6 +93,7 @@ npm install -g @openai/codex
 
 # ─── Elixir tools (as deploy) ────────────────────────────────
 sudo -u deploy bash -c '
+  cd ~
   export PATH="$HOME/.elixir-install/installs/otp/28.1/bin:$PATH"
   export PATH="$HOME/.elixir-install/installs/elixir/1.19.5-otp-28/bin:$PATH"
   mix local.hex --force
