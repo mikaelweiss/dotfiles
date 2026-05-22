@@ -25,82 +25,23 @@ gcl() {
 gbc() {
     git checkout -b $1 && git push -u origin $1
 }
-gw() {
-    git worktree add -b "mikael/$1" ".worktrees/$1" && \
-    cd ".worktrees/$1" && \
-    cp ../../.env . && \
-    cp ../../.env.local . && \
-    # git push -u origin "mikael/$1"
-}
-gwa() {
-    git worktree add -b "mikael/$1" ".worktrees/$1" && \
-    cd ".worktrees/$1" && \
-    cp ../../.env . && \
-    cp ../../apps/functions/.secret.local apps/functions/
-    pnpm i
-    # git push -u origin "mikael/$1"
-}
-gwr() {
-    git worktree add -b "mikael/$1" ".worktrees/$1" && \
-    cd ".worktrees/$1" && \
-    cp ../../.env.local . && \
-    bun i
-    # git push -u origin "mikael/$1"
-}
-gwru() {
-    git worktree add -b "mikael/$1" ".worktrees/$1" main && \
-    cd ".worktrees/$1" && \
-    cp ../../.env.local . && \
-    npm i
-    # git push -u origin "mikael/$1"
-}
-gwc() {
-  git worktree add -b "mikael/$1" "~/.worktrees/ClipSpeak/$1" && \
-  cd "/Users/mikaelweiss/.worktrees/ClipSpeak/$1"
-}
 alias gcp='git checkpoint'
 alias gcpl='git listCheckpoints'
 alias gcpd='git deleteCheckpoint'
 alias gcpld='git loadCheckpoint'
-alias minecraftskins='open Library/Application\ Support/minecraft/assets/skins'
-alias minecraft='open Library/Application\ Support/minecraft'
 
 # Random
-alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
 alias venv='source .venv/bin/activate'
-alias xc='sh ~/code/dotfiles/resize-xcode.sh'
 alias :q='exit'
-alias nix-rebuild='sudo darwin-rebuild switch'
-alias nix-config='nvim /Users/mikaelweiss/code/dotfiles/nix-darwin/flake.nix'
 alias tm='tmux new-session -A -s main'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Stuff for fly.io
-export FLYCTL_INSTALL="/Users/mikaelweiss/.fly"
-export PATH="$FLYCTL_INSTALL/bin:$PATH"
-# Cargo
-export PATH="$HOME/.cargo/bin:$PATH"
-# Elixir
-export PATH="$PATH:/path/to/elixir/bin"
 # Local bin
 export PATH="$HOME/.local/bin:$PATH"
 
-# pnpm
-export PNPM_HOME="/Users/mikaelweiss/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
-# opencode
-export PATH=/Users/mikaelweiss/.opencode/bin:$PATH
-
-# Source Kit LSP
-export PATH="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/sourcekit-lsp:$PATH"
-
+# Zoxide
 export _ZO_EXCLUDE_DIRS="$HOME/.t3/*"
 eval "$(zoxide init zsh)"
 
@@ -110,15 +51,7 @@ export ERL_AFLAGS="-kernel shell_history enabled"
 # Set up term
 export TERM=xterm-256color
 
-# Added by LM Studio CLI (lms)
-export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
-# End of LM Studio CLI section
-
-# SwiftPM
-export PATH="$HOME/.swiftpm/bin:$PATH"
-
 # alias's
-alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions --model claude-opus-4-6\[1m\]'
 alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
@@ -127,8 +60,6 @@ alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
 
-# Added by ma CLI installer
-export PATH="$HOME/.ma/bin:$PATH"
-export PATH="$HOME/.ma/bin:$PATH"
-
-export PATH="$HOME/.npm-global/bin:$PATH"
+# Elixir stuff
+export PATH=$HOME/.elixir-install/installs/otp/28.1/bin:$PATH
+export PATH=$HOME/.elixir-install/installs/elixir/1.19.5-otp-28/bin:$PATH
