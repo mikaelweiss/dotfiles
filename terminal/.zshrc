@@ -141,7 +141,7 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
-alias claude='claude --dangerously-skip-permissions'
+alias claude='claude --dangerously-skip-permissions --model claude-opus-4-6\[1m\]'
 alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
 alias st='bun run dev:desktop'

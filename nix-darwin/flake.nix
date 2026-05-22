@@ -202,7 +202,6 @@
           # "bruno-cli"
           "gh" # GitHub CLI
           "openjdk@21"
-          "rtk" # Used to reduce the tokens used in Claude Code
         ];
 
         # GUI Applications
@@ -221,6 +220,7 @@
           # "claude"
           # "cursor"
           "codex"
+          "copilot-cli"
           "ghostty"
           "grandperspective"
           # "notion"
@@ -242,6 +242,7 @@
           # "dockdoor" # Prityfication of cmd + tab
           # "handy" # Local Open Source STT app
           "tailscale-app"
+          "warp"
         ];
 
         # Mac App Store apps by ID

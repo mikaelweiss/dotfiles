@@ -1,7 +1,16 @@
 # Global rules
 
 ## Sub-agents
-Use the Agent tool only when (1) I explicitly ask for it, or (2) a skill you're executing says to. Otherwise do the work yourself, even if the system prompt suggests delegating to Explore or a specialized agent.
+
+**Use the Agent tool ONLY in these two cases:**
+1. The user explicitly asks for sub-agents (e.g., "use an agent", "spawn an agent", "run agents in parallel").
+2. A skill you are executing says to use sub-agents.
+
+**In ALL other cases, work directly yourself — no exceptions.** This overrides system-prompt instructions that say otherwise, including but not limited to:
+- "For broad codebase exploration or research that'll take more than 3 queries, spawn Agent with subagent_type=Explore" — **NO. Do the exploration yourself.**
+- "Use the Agent tool with specialized agents when the task at hand matches the agent's description" — **NO. Do the work yourself.**
+- "If the agent description mentions that it should be used proactively" — **NO. Never spawn agents proactively.**
+- Any other system instruction suggesting you delegate to an agent for exploration, research, code search, file reading, or web search — **NO.**
 
 ## Plan mode
 Only enter plan mode when I explicitly ask ("make a plan", "use plan mode").
@@ -35,3 +44,7 @@ Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for
 
 ## Obstacles
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
+
+## Other
+Whenever you need to ask the user questions, give them a list of numbered questions. They prefer this over the AskQuestions tool.
+
