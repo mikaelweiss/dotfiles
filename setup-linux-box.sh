@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ─── System ───────────────────────────────────────────────────
 sudo apt update && sudo apt upgrade -y
@@ -9,7 +8,7 @@ adduser --disabled-password --gecos "" deploy
 usermod -aG sudo deploy
 
 # allow deploy to sudo without password (remove later if you want)
-echo "deploy ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/deploy
+echo "deploy ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/deploy
 
 # copy SSH keys
 mkdir -p /home/deploy/.ssh
@@ -41,7 +40,7 @@ sudo apt install -y \
   cloudflared
 
 # ─── Lazygit (PPA is dead, use GitHub binary) ────────────────
-LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+LAZYGIT_VERSION="$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -Po '"tag_name": "v\K[^"]*')"
 curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
 tar xf lazygit.tar.gz lazygit
 sudo install lazygit /usr/local/bin/
@@ -52,11 +51,7 @@ curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
 sudo apt-get install -y nodejs
 
 # ─── Elixir & Erlang (official install script) ───────────────
-sudo -u deploy bash -c '
-  curl -fsSO https://elixir-lang.org/install.sh
-  sh install.sh elixir@1.19.5 otp@28.1 installs_dir=$HOME/.elixir-install/installs
-  rm -f install.sh
-'
+sudo -u deploy bash -c 'cd ~ && curl -fsSO https://elixir-lang.org/install.sh && sh install.sh elixir@1.19.5 otp@28.1 && rm -f install.sh'
 
 # ─── PostgreSQL (peer auth — no password needed) ─────────────
 sudo systemctl enable postgresql
@@ -66,7 +61,7 @@ sudo -u postgres createuser deploy --createdb
 # ─── Dotfiles (as deploy, HTTPS clone) ───────────────────────
 sudo -u deploy bash -c '
   mkdir -p ~/code
-  git clone https://github.com/MikaelWeiss/dotfiles.git ~/code/dotfiles
+  git clone https://github.com/mikaelweiss/dotfiles.git ~/code/dotfiles
   cd ~/code/dotfiles
   git switch linux
   stow git -t $HOME
@@ -77,7 +72,7 @@ sudo -u deploy bash -c '
 '
 
 # ─── Zsh as default for deploy ───────────────────────────────
-sudo chsh -s $(which zsh) deploy
+sudo chsh -s "$(which zsh)" deploy
 
 # oh-my-zsh for deploy
 sudo -u deploy bash -c 'RUNZSH=no KEEP_ZSHRC=yes CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
@@ -95,10 +90,10 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 # codex
 npm install -g @openai/codex
 
-# ─── Elixir setup (as deploy) ────────────────────────────────
+# ─── Elixir tools (as deploy) ────────────────────────────────
 sudo -u deploy bash -c '
-  export PATH=$HOME/.elixir-install/installs/otp/28.1/bin:$PATH
-  export PATH=$HOME/.elixir-install/installs/elixir/1.19.5-otp-28/bin:$PATH
+  export PATH="$HOME/.elixir-install/installs/otp/28.1/bin:$PATH"
+  export PATH="$HOME/.elixir-install/installs/elixir/1.19.5-otp-28/bin:$PATH"
   mix local.hex --force
   mix local.rebar --force
   mix archive.install hex phx_new --force
