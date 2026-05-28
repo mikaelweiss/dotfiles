@@ -11,6 +11,7 @@ source $ZSH/oh-my-zsh.sh
 # ENV vars
 export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
+export CLAUDE_CODE_NO_FLICKER=1
 # export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
 export PI_LENS_STARTUP_MODE=quick
 
@@ -102,11 +103,6 @@ case ":$PATH:" in
 esac
 # pnpm end
 
-# Pyenv setup
-export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-
 # opencode
 export PATH=/Users/mikaelweiss/.opencode/bin:$PATH
 
@@ -141,7 +137,7 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
-alias claude='claude --dangerously-skip-permissions --model claude-opus-4-6\[1m\]'
+alias claude='claude --dangerously-skip-permissions'
 alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
 alias st='bun run dev:desktop'

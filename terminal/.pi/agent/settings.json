@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.75.3",
-  "defaultProvider": "github-copilot",
-  "defaultModel": "gpt-5.4",
+  "lastChangelogVersion": "0.75.5",
+  "defaultProvider": "fireworks",
+  "defaultModel": "accounts/fireworks/models/kimi-k2p6",
   "defaultThinkingLevel": "medium",
   "compaction": {
     "enabled": false
@@ -37,5 +37,8 @@
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
-  "doubleEscapeAction": "tree"
+  "doubleEscapeAction": "tree",
+  "skills": [
+    "~/.claude/skills"
+  ]
 }
