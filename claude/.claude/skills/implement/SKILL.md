@@ -28,9 +28,11 @@ Read the spec file completely. This is your single source of truth for what to b
 
 ### Step 2: Read the context
 
-Read every file mentioned in the spec's "Affected areas" and "Context" sections. Also read any prior specs referenced to understand what was already done.
+Read every file in the spec's "Files" and "Context" sections.
 
 Understand the codebase conventions by looking at neighboring files — match patterns, naming, style.
+
+The spec is self-contained. Do not go searching for related specs.
 
 ### Step 3: Implement
 
@@ -39,7 +41,8 @@ Write the code that satisfies every requirement in the spec. Follow these princi
 - **Match existing patterns.** Look at how similar things are done in the codebase and do the same.
 - **Satisfy the spec, nothing more.** Don't add features, refactor surrounding code, or "improve" things outside the spec's scope. Respect the "Boundaries" section.
 - **Write tests as specified.** Implement the test scenarios from "Test expectations." Match the project's existing test patterns and frameworks.
-- **Keep the changeset small.** If you find yourself touching files not listed in the spec, stop and reconsider. The spec should have anticipated the affected files — if it didn't, mention it to the user rather than silently expanding scope.
+- **The Files list is closed.** Do not create files that aren't listed. Do not invent abstractions (new helpers, sub-modules, wrapper layers) the spec didn't name. If you need a file or layer not in the Files list, the spec was wrong — stop and surface it to the user rather than silently expanding.
+- **Make no behavioral or scope decisions.** Those belong in the spec; internal structure (private helpers, naming, organization within the listed files) is yours. If the spec leaves a genuine gap — two implementations would differ in *observable behavior* and the spec doesn't decide — stop and surface it rather than picking. For everything else, follow the convention the neighboring code uses.
 
 ### Step 4: Verify
 

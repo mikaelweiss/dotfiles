@@ -1,128 +1,161 @@
 ---
 name: ideate
 description: >
-  Decompose a large change into small, independently-implementable spec files.
+  Decompose a change into small, independently-implementable spec files.
   Use when starting new features, refactors, migrations, or any multi-step work.
   Triggers: "plan", "break this down", "decompose this", "spec this out",
   "what are the steps", "how should I approach this".
 user-invocable: true
 ---
 
-# Plan
+# Ideate
 
 Decompose a change into an ordered sequence of small, independently-implementable specs. Each spec becomes one session, one PR, one reviewable unit.
 
-## Philosophy
-
-Planning is valuable. Giant PRs are not. This skill converts thorough understanding into a sequence of small, precise specs that any agent — even a weak one — can implement without ambiguity.
-
-**No code in specs.** If you're writing code, you're implementing, not planning. Specs describe *what* and *why* in natural language only.
+**The only thing you write is spec files in `.specs/`.** No application code, no scaffolding, no build commands, no edits to existing files outside `.specs/`. Every decision about behavior and scope must be settled in the spec before it's written — the implementer chooses only internal structure (private helpers, naming, file organization within the listed files).
 
 ## Process
 
-### Step 1: Understand the full picture
+### 1. Read first, ask second
 
-Before asking the user anything:
-- Read the relevant code. Explore the codebase thoroughly — files, structure, patterns, conventions.
-- Search the web or library docs (Context7, WebSearch, WebFetch) for anything you need to understand.
-- Build a mental model of the current state and what needs to change.
+Before talking to the user, exhaust your tools:
+- Read the relevant code — files, structure, patterns, conventions, neighbors.
+- Run grep / find to confirm what exists vs what doesn't.
+- Fetch docs (Context7, WebFetch, WebSearch) for any library or framework involved.
 
-**Do your homework first.** Exhaust what you can learn on your own before involving the user.
+You have full read access. Use it. If you're about to ask "does X exist?", "how is Y handled?", "what's the convention?" — go read instead.
 
-### Step 2: Ask only what you can't figure out
+### 2. Ask only what you can't figure out
 
-Ask the user questions, but ONLY questions that require human judgment. Batch them as a numbered list.
+Before asking any question, write down (silently) the answer you'd give if forced to choose right now. If your answer is ≥70% confident from code or docs, **don't ask** — proceed and note the decision in the spec's Context. Only ask when the answer genuinely requires human judgment:
 
-Questions you must NEVER ask (figure these out yourself):
-- Anything about how the current code works (read it)
-- Anything about library APIs or framework behavior (search docs/web)
-- Anything about project structure or conventions (look at the codebase)
-- Anything about what files exist or what they contain (read them)
-- Anything about the tech stack (inspect package files, build configs, etc.)
-- "Should I read the code?" or "Should I look at X?" — just do it
+- Product / UX preferences
+- Scope tradeoffs ("does this include X?")
+- Constraints you can't discover (deadlines, compatibility targets, performance targets)
+- Architectural preferences when multiple valid approaches exist and the codebase has no precedent
 
-Questions you SHOULD ask:
-- Ambiguous product/UX decisions the code can't answer
-- Priority tradeoffs ("should we optimize for speed or correctness here?")
-- Scope boundaries ("does this include X or is that a separate effort?")
-- Constraints you couldn't discover ("is there a deadline?", "does this need to be backwards-compatible with X?")
-- Architectural preferences when multiple valid approaches exist and the codebase doesn't establish a precedent
+Questions you must NEVER ask:
+- Anything about how the current code works → read it
+- Anything about library / framework behavior → fetch docs
+- Anything about project structure, conventions, file existence → grep
+- Anything about the tech stack → inspect package files / build configs
+- "Should I read X?" / "Should I look at Y?" — just do it
 
-If you have zero questions, skip straight to decomposition. Don't ask questions just to seem thorough.
+Batch questions as a numbered list. If you have zero real questions, skip to step 4.
 
-### Step 3: Iterate until alignment
+### 3. Iterate until alignment
 
-After the user answers, repeat steps 1-2 if needed. You may need multiple rounds. Each round should go deeper — never re-ask something already answered or discoverable.
+After the user answers, repeat 1–2 if needed. Each round goes deeper — never re-ask something already answered or discoverable.
 
-### Step 4: Decompose into specs
+### 4. Walk the concerns checklist, then decompose
 
-Break the work into the smallest independently-mergeable units. Each spec should:
-- Be implementable in a single session
-- Touch a small number of files (aim for <10, ideally <5)
-- Be testable on its own
-- Build on prior specs but be mergeable independently (no half-finished states)
+Before decomposing, mentally walk through the standard concerns. For each, decide: **addressed in spec N, or explicitly out of scope and why.** This is the step that catches missed-entirely failures.
 
-Present the decomposition as a numbered list of spec titles with one-line descriptions. Ask the user to confirm, reorder, merge, or split before writing the files.
+- Authentication / unauthenticated state / sign-out
+- Timezone / locale / date handling
+- Error handling / partial failure / retries
+- Sync / cross-device / stale data
+- Soft-delete / cascade / deleted-records tracking
+- Undo / reversal
+- Empty state / first-run
+- Accessibility
+- Color / theming / dark mode
+- Offline behavior
+- Existing tests / test conventions
 
-### Step 5: Write spec files
+Don't write the checklist into the spec. Use it to make sure nothing important is silently skipped.
 
-After the user approves the decomposition, write each spec to disk.
+Then decompose the work into the smallest independently-mergeable units. Each spec:
+- Implements one cohesive behavior
+- Is testable on its own
+- Ships without depending on a yet-to-be-written spec
+- Implies roughly ≤400 LOC of resulting code (split if bigger)
+
+Sequence them: each spec only depends on prior specs. Forward dependencies are not allowed.
+
+Present the decomposition to the user as a numbered list of spec titles with one-line descriptions. Confirm before writing files.
+
+### 5. Write spec files
 
 **Location:**
-- Small tasks (≤5 specs): `.specs/001-short-description.md`, `.specs/002-short-description.md`, etc.
-- Larger tasks (>5 specs or logically distinct feature): `.specs/<feature-name>/001-short-description.md`, etc.
+- ≤5 specs: `.specs/001-short-description.md`, `.specs/002-short-description.md`, etc.
+- >5 specs or distinct feature: `.specs/<feature-name>/001-short-description.md`, etc.
 
-**Spec file format:**
+Three-digit zero-padded prefixes. Kebab-case names.
+
+### 6. Self-audit, then summarize
+
+Before announcing completion, scan every spec for these phrases:
+
+- "Possibly", "Possibly modify", "may need", "might need"
+- "TBD", "to be determined", "check first", "verify whether"
+- "Choose one", "pick one", "either approach"
+- The literal string "spec " followed by a number, anywhere in Boundaries
+
+Every match is research debt or sloppy wording. Resolve each — by reading code, running grep, fetching docs, or asking the user — and rewrite the spec. Do not stop at the first pass; re-scan after fixes.
+
+Then print:
+- Total spec count
+- Path
+- Implementation order
+- "Start a new session and run `/implement <spec-path>` to begin."
+
+## Spec file format
 
 ```markdown
 # [NNN] Title
 
 ## Objective
-One paragraph. What this spec accomplishes and why it matters in the broader plan.
+1–3 sentences. What this spec accomplishes.
 
 ## Context
-What currently exists that this spec builds on. Reference specific files, modules, or patterns by name. Mention which prior specs (if any) must be completed first.
+Only what the implementer needs that isn't already in the code or in the requirements. Cite specific files and line numbers. No paragraphs of restatement.
 
 ## Requirements
-Numbered list of concrete, testable requirements. Each one is a clear statement of behavior or structure — not a vague goal.
+Numbered list of definite, testable behaviors. Each one is a clear statement — never "may", "might", "possibly", "TBD", "verify whether", "check first", or "pick one". If you find yourself writing those, go research first.
 
 1. ...
 2. ...
-3. ...
 
-## Affected areas
-List of files or modules that will likely need changes, and what kind of change (create, modify, extend). Be specific about *what* changes in each file, described in natural language.
+## Files
+Definitive list of every file that will be created or modified. No hedges. Each entry:
 
-- `path/to/file.ts` — Add X, modify Y
-- `path/to/other.ts` — Extend Z to support W
+- `path/to/file.ext` — Create / Modify / Delete. One-line description of what changes.
+
+The implement agent is forbidden from creating files not in this list. If implementation needs a file not listed, the spec was wrong — surface it.
 
 ## Test expectations
-What tests should be written or updated. Describe the scenarios, not the test code.
-
-- Verify that ...
-- Ensure that ... when ...
-- Edge case: ...
+Bulleted behavioral test scenarios. Not test code.
 
 ## Boundaries
-What this spec explicitly does NOT cover. Prevents scope creep during implementation.
+"Does NOT" lines that describe behavior outside this spec. Each is a concrete, self-contained statement. Never reference other specs by number.
 
-- Does NOT include ...
-- ... will be handled in spec NNN
+- "Does NOT support search" — good
+- "Does NOT support search (that's spec 005)" — wrong, drop the parenthetical
 ```
 
-### Step 6: Summarize
+## What NOT to put in specs
 
-After writing specs, print a short summary:
-- Total number of specs
-- The path where they live
-- Suggested order (if non-linear dependencies exist)
-- Remind the user: "Start a new session and run `/implement <spec-path>` to begin the first task."
+- **No internal architecture.** Don't decompose into sub-modules, helper files, or layer splits unless those modules are referenced from outside the spec. Name public entry points and behaviors; let the implementer choose internal structure. (This is the #1 cause of architectural rewrites after implementation.)
+- **No code.** Not in Requirements, not in Context. Pseudocode for non-trivial algorithms is fine; production code shapes are not.
+- **Default to bullets, tables, and concrete examples (JSON / pseudocode / tables).** They scan far faster than prose. Drop to a sentence or two only when a *why* genuinely needs it — never a paragraph where a bullet would do.
+- **No spec numbers anywhere.** Not in Context, not in Boundaries, not in Files. Every spec stands on its own.
+- **No "out of scope because spec N covers it."** Just "Does NOT do X." The implementer doesn't need to know who else is doing what.
+
+## Behavioral rules need enforcement plans
+
+If a requirement says "X must always Y" — e.g., "the AI must query before mutating," "tokens must expire after 90 days," "uploads must reject non-image content" — the spec must also state **where Y is enforced**, in this spec:
+
+- Prompt text? Quote the exact text.
+- Tool / function input validation? Name the function and the check.
+- Test that asserts it? Note the scenario.
+
+A behavioral rule without an enforcement plan becomes one line of code that doesn't enforce. List enforcement points like requirements.
 
 ## Rules
 
-- Never write code in spec files. Not even pseudocode. Describe behavior in natural language.
-- Never create a spec that requires more than ~400 lines of changes. If it's bigger, split it.
-- Number specs with zero-padded three-digit prefixes (001, 002, ...) for sort order.
-- Use kebab-case for file and folder names.
-- If the user provides a GitHub issue or PR, read it to extract context before starting.
-- Specs should be detailed enough that someone with no prior context (or a weak model like Haiku) can implement them correctly by reading only the spec and the referenced files.
+- Never write application code, scaffold files, or run build commands. Only writes are `.specs/*.md` files.
+- The implement agent makes no behavioral or scope decisions; every such choice must be definite in the spec. (Internal structure is theirs.)
+- If a spec implies >400 LOC of resulting code, split it.
+- Three-digit zero-padded prefixes (001, 002, ...). Kebab-case names.
+- Specs must be readable by a weak model. If a junior reader couldn't implement it cleanly from the spec plus the cited files, the spec is wrong.

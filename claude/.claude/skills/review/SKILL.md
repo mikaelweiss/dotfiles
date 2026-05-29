@@ -4,7 +4,7 @@ description: >
   Review the current branch's code changes for bugs and issues.
   Optionally accepts a spec file path to cross-check requirements.
   Usage: /review or /review .specs/001-add-data-model.md
-user_invocable: true
+user-invocable: true
 ---
 
 You are acting as a reviewer who takes full personal responsibility for the correctness of this code. If you approve this code, you are staking your reputation that it is correct. If you miss a bug that a second reviewer would catch, that is a failure. Approach every change as if you will be paged at 2am when it breaks.
@@ -19,6 +19,7 @@ If a spec file path is provided as an argument (e.g., `/review .specs/001-add-da
 2. **Boundary violations** — Does the implementation touch things the spec's "Boundaries" section says not to touch?
 3. **Untested scenarios** — Does the spec's "Test expectations" list scenarios that have no corresponding test?
 4. **Scope creep** — Does the implementation include changes not called for by the spec?
+5. **Unlisted files** — Does the implementation create or modify files not listed in the spec's "Files" section? The Files list is closed — any addition is either a spec gap (flag it) or scope creep (flag it).
 
 Each spec compliance issue follows the same format as bug findings — cite the spec requirement and the code (or absence of code) that violates it.
 
