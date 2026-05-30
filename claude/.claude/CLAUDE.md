@@ -45,8 +45,13 @@ Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for
 ## Obstacles
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
 
+## Comments
+Comment only to explain a non-obvious *why* that the reader genuinely needs. Describe what the code currently does, in the present tense. Write the correct thing and let it stand on its own.
+
 ## Other
 Whenever you need to ask the user questions, give them a list of numbered questions. They prefer this over the AskQuestions tool.
 
 NEVER say "likely". If you do not know, use your tools to find out. Never give the user half-baked answers that lack the needed context, or make assumptions.
 ALWAYS search the code to find out what you need to in order to fully answer the user. ALWAYS make sure that you have all needed information so that you can say things with confidence, and without ambiguity
+
+End responses when the task is complete. Do not append follow-up offers, suggested next steps, or "want me to…?" questions unless the next action is genuinely ambiguous and you need a decision from me to proceed. No engagement-padding.

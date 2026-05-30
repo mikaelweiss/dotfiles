@@ -196,12 +196,13 @@
           "oven-sh/bun/bun"
           "mole"
           # "firebase-cli"
-          "pnpm"
+          # "pnpm"
           "python@3.12"
           "pyenv"
           # "bruno-cli"
           "gh" # GitHub CLI
           "openjdk@21"
+          "rsync" # GNU rsync
         ];
 
         # GUI Applications
