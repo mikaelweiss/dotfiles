@@ -1,196 +1,174 @@
 ---
 name: review
-description: Code review a branch or PR. Finds CLAUDE.md files, reads the diff, launches parallel agents to audit for CLAUDE.md compliance and bugs, validates issues, then posts inline comments. Use when the user says "review", "review this", "review my changes", or invokes /review.
+description: >
+  Review the current branch's code changes for bugs and issues.
+  Optionally accepts a spec file path to cross-check requirements.
+  Usage: /review or /review .specs/001-add-data-model.md
 user-invocable: true
-argument-hint: [branch or PR number]
 ---
 
-# Code Review
+You are acting as a reviewer who takes full personal responsibility for the correctness of this code. If you approve this code, you are staking your reputation that it is correct. If you miss a bug that a second reviewer would catch, that is a failure. Approach every change as if you will be paged at 2am when it breaks.
 
-Review the current branch (or PR) for CLAUDE.md/AGENTS.md compliance and bugs. Uses parallel sub-agents for independent review axes, then validates and posts inline comments.
+Do not use sub-agents. Do all the work yourself.
 
-## Input
+## Spec-aware review
 
-$ARGUMENTS
+If a spec file path is provided as an argument (e.g., `/review .specs/001-add-data-model.md`), read the spec before reviewing the code. After completing the normal review, add a **Spec Compliance** section that checks:
 
-## Critical Rules
+1. **Missing requirements** — Go through every numbered requirement in the spec. Is it implemented? If not, flag it.
+2. **Boundary violations** — Does the implementation touch things the spec's "Boundaries" section says not to touch?
+3. **Untested scenarios** — Does the spec's "Test expectations" list scenarios that have no corresponding test?
+4. **Scope creep** — Does the implementation include changes not called for by the spec?
+5. **Unlisted files** — Does the implementation create or modify files not listed in the spec's "Files" section? The Files list is closed — any addition is either a spec gap (flag it) or scope creep (flag it).
 
-- **Do not use AskUserQuestion.** Complete the entire review without user intervention.
-- **Do not use plan mode.** Do not use EnterPlanMode or ExitPlanMode.
-- Use `gh` CLI for all GitHub interaction. Do not use web fetch.
-- Only the main agent posts comments. Sub-agents must never post comments themselves.
-- Only flag **high signal** issues. False positives erode trust.
+Each spec compliance issue follows the same format as bug findings — cite the spec requirement and the code (or absence of code) that violates it.
 
----
+If no spec path is provided, skip this section entirely.
 
-## Step 1: Gather CLAUDE.md / AGENTS.md Files
+## What to look for
 
-Launch a **haiku** agent to return a list of file paths (not contents) for all relevant CLAUDE.md and AGENTS.md files:
+Focus on issues that matter: data loss, security vulnerabilities, crashes, logic errors, race conditions, broken user flows, missing error handling that silently corrupts state. These are the things that ship bugs to users.
 
-- The root CLAUDE.md / AGENTS.md, if they exist
-- Any CLAUDE.md / AGENTS.md files in directories containing files modified by the diff
+Do not flag:
+- Design tradeoffs where two reasonable approaches exist and the code picks one.
+- Speculative race conditions or failure modes you cannot trace to a concrete code path.
+- Style preferences or nitpicks unless they obscure meaning or violate documented standards.
+- Pre-existing issues not introduced by these changes.
+- Things a linter, type checker, or compiler would catch.
 
-To find modified files, use:
+## Reading the code
+
+### Step 1: Get the list of changed files
+
+Determine the review scope. For uncommitted work, compare against the branch point. For a branch, compare against the base.
 
 ```bash
-MERGE_BASE=$(git merge-base origin/main HEAD)
+TARGET=$(git rev-parse --verify origin/main 2>/dev/null && echo "main" || echo "master")
+MERGE_BASE=$(git merge-base origin/$TARGET HEAD)
+
+# Changed files: committed since branch point + uncommitted
 git diff --name-only $MERGE_BASE HEAD
 git diff --name-only HEAD
+git diff --name-only --cached HEAD
 ```
 
-Then check each modified file's directory (and parents) for CLAUDE.md or AGENTS.md files.
+### Step 2: Read every changed file in full
 
----
+Use the Read tool to read each changed file in its entirety. Do not read diffs first. Do not read partial files. Do not skip any file. If a file is too large for one read, read it in sequential chunks covering the whole file.
 
-## Step 2: Get PR Context (if applicable)
+For deleted files, read the old version from the diff to understand what was removed.
 
-Check if the current branch has an associated PR:
-
-```bash
-gh pr view --json title,body
-```
-
-If a PR exists, capture the **title** and **description** (not the changes). This provides intent context for reviewers.
-
----
-
-## Step 3: Summarize Changes (parallel with Step 2)
-
-Launch a **sonnet** agent to view the full diff and return a summary of the changes.
-
-The agent should run:
+### Step 3: Read the diff
 
 ```bash
-MERGE_BASE=$(git merge-base origin/main HEAD)
+MERGE_BASE=$(git merge-base origin/$TARGET HEAD)
 git diff $MERGE_BASE HEAD
 git diff HEAD
+git diff --cached HEAD
 ```
 
-And return a concise summary of what changed and why (inferred from the diff).
+Use the diff to understand what specifically changed. But base your analysis on the full file contents you already read.
 
----
+### Step 4: Read related files
 
-## Step 4: Parallel Review (4 agents)
+This is the step most reviewers skip, and it is the step that causes the most missed bugs.
 
-Launch 4 agents in parallel. Each receives:
-- The PR title and description (from Step 2)
-- The list of CLAUDE.md / AGENTS.md file paths (from Step 1)
-- Instructions to read the diff themselves using the git commands above
-- **Explicit instruction: do NOT post comments. Return a list of issues only.**
+For each changed file, identify files that are directly related:
+- Files that import or are imported by the changed file
+- Files that call functions defined in the changed file, or that the changed file calls
+- Data models, types, or interfaces that the changed file depends on
+- Configuration files that affect the changed file's behavior
+- Test files for the changed code (if not already in the changed set)
 
-Each issue must include: a description, the file and line(s), and the reason it was flagged.
+Read these files in full. You need to understand how the changed code fits into the larger system. A change to a function signature is only safe if every caller handles it correctly. A new database field is only safe if every read path accounts for it. You cannot know this from the diff alone.
 
-### Agent 1: CLAUDE.md / AGENTS.md Compliance (sonnet)
-
-Audit changes for CLAUDE.md / AGENTS.md compliance. Read the relevant CLAUDE.md / AGENTS.md files and check all changed code against them. Only consider CLAUDE.md / AGENTS.md files that share a file path with the changed file or its parents.
-
-### Agent 2: CLAUDE.md / AGENTS.md Compliance (sonnet)
-
-Same as Agent 1 — independent parallel pass for coverage.
-
-### Agent 3: Bug Scan — Diff Only (opus)
-
-Scan for obvious bugs. Focus only on the diff itself without reading extra context. Flag only significant bugs; ignore nitpicks and likely false positives. Do not flag issues that cannot be validated without looking at context outside the diff.
-
-### Agent 4: Introduced Problems (opus)
-
-Look for problems in the introduced code: security issues, incorrect logic, etc. Only flag issues within the changed code.
-
-### What to flag (ALL agents)
-
-- Objective bugs that will cause incorrect behavior at runtime
-- Clear, unambiguous CLAUDE.md / AGENTS.md violations where you can quote the exact rule being broken
-
-### What NOT to flag (ALL agents)
-
-- Pre-existing issues not introduced by this diff
-- Subjective concerns or "suggestions"
-- Style preferences not explicitly required by CLAUDE.md / AGENTS.md
-- Potential issues that "might" be problems
-- Anything requiring interpretation or judgment calls
-- Pedantic nitpicks a senior engineer would not flag
-- Issues a linter would catch
-- General code quality concerns unless explicitly required by CLAUDE.md / AGENTS.md
-- Issues mentioned in CLAUDE.md / AGENTS.md but explicitly silenced in code (e.g., lint ignore comments)
-- Something that appears to be a bug but is actually correct
-
-**If you are not certain an issue is real, do not flag it.**
-
----
-
-## Step 5: Validate Issues (parallel agents)
-
-For each issue found in Step 4, launch a parallel sub-agent to validate it:
-
-- **Opus** agents for bugs and logic issues
-- **Sonnet** agents for CLAUDE.md / AGENTS.md violations
-
-Each validation agent receives:
-- The PR title and description
-- The issue description, file, and line(s)
-- Instructions to read the relevant code and confirm the issue is real with high confidence
-
-For example:
-- "Variable is not defined" — verify it truly isn't defined in scope
-- "CLAUDE.md violation" — verify the rule is scoped to this file and is actually violated
-- Check that the issue isn't pre-existing, isn't a false positive, and is genuinely high signal
-
----
-
-## Step 6: Filter
-
-Remove any issues that were not validated in Step 5. The remaining issues are the final review findings.
-
----
-
-## Step 7: Post Inline Comments
-
-For each validated issue, post an inline PR comment using `gh`:
+Use grep or ast-grep to find callers, importers, and references when the dependency graph is not obvious:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
-  -f body="<comment>" \
-  -f commit_id="<sha>" \
-  -f path="<file>" \
-  -F line=<line> \
-  -f side="RIGHT"
+# Find files that reference a changed function or type
+grep -rl "functionName" --include="*.ts" src/
 ```
 
-To get the required values:
-- `{owner}/{repo}`: from `gh repo view --json nameWithOwner`
-- `{pr_number}`: from `gh pr view --json number`
-- `commit_id`: use `git rev-parse HEAD`
-- `path`: relative file path from the issue
-- `line`: line number in the new file
+Be pragmatic — you do not need to read the entire codebase. But you must read enough to verify that every assumption you make about how the changed code interacts with the rest of the system is grounded in actual code you have read, not inferred from names or conventions.
 
-**Post only ONE comment per unique issue.**
+### Step 5: Trace the end-to-end flow
 
-If there is no associated PR, skip posting comments and just report the issues.
+Before writing any findings, trace the execution path of every significant change:
 
-When citing a CLAUDE.md or AGENTS.md rule in a comment, include a link to the file (e.g., a GitHub permalink).
+For each changed function or code path:
+1. **Entry point**: Where does execution enter this code? (API handler, UI event, cron job, etc.)
+2. **Data flow**: What data comes in? How is it transformed? Where does it go?
+3. **Exit points**: What are all the ways this code can complete? (success, error, early return, exception)
+4. **Side effects**: What state does this code modify? (database writes, file system, cache, global state, UI state)
+5. **Failure modes**: What happens when dependencies fail? (network errors, null values, invalid input, concurrent modification)
 
----
+State your premises explicitly. Do not say "this function probably does X" — read the function and confirm what it actually does. If you find yourself guessing what a function does based on its name, stop and read it.
 
-## Step 8: Report
+### Step 6: Verify each finding before reporting it
 
-Write out the final list of issues. Format:
+For every issue you are about to report, challenge it:
 
-### **#1 [Issue title]**
+1. **Is it real?** Read the actual code path that triggers the bug. Can you name the specific input or state that causes it? If not, drop it.
+2. **Is it new?** Check if this issue existed before the change. If it did, do not flag it.
+3. **Is it provable?** Can you cite the specific file and line where the problem occurs, and the specific file and line of the code that interacts with it badly? If you cannot cite both sides, drop it.
+4. **Would you bet on it?** If the author pushed back and said "that's not a bug," could you prove them wrong by pointing to concrete code? If not, drop it.
+5. **Is it the right severity?** Do not say "this will crash" when you mean "this could return an unexpected value in an edge case." Calibrate your language to the actual impact.
 
-[Description of the issue and why it matters]
+Only report findings that survive all five checks.
 
-File: [path/to/file]
+## When asked to fix issues
 
-### **#2 [Issue title]**
+If the user asks you to fix issues you found:
 
-[Description]
+1. **Trace the impact of your fix.** Before writing the fix, identify every caller, every test, and every dependent code path. Your fix must not break any of them.
+2. **Make minimal changes.** Fix the bug. Do not refactor surrounding code. Do not "improve" adjacent logic. Do not add abstractions. Every line you touch is a line that could introduce a new bug.
+3. **If you are not confident in a fix, say so.** It is better to say "I'm not sure the right fix here — here are two options and the tradeoffs" than to write a fix that introduces a new bug.
 
-File: [path/to/file]
+You are equally responsible for the correctness of your fixes as you are for your findings. A fix that introduces a new bug is worse than no fix at all.
 
-If no issues were found, say so.
+## Bug guidelines
 
----
+These are general guidelines for determining whether something is a bug. More specific guidelines elsewhere (CLAUDE.md, user messages) override these.
 
-## Fallback: No Sub-agents
+1. It meaningfully impacts the accuracy, performance, security, or maintainability of the code.
+2. The bug is discrete and actionable.
+3. Fixing it does not demand a level of rigor not present in the rest of the codebase.
+4. The bug was introduced in the changes being reviewed, not pre-existing.
+5. The author would likely fix the issue if they were made aware of it.
+6. The bug does not rely on unstated assumptions about the codebase or author's intent.
+7. It is not enough to speculate that a change may disrupt another part of the codebase — you must identify the other parts of the code that are provably affected by reading them.
+8. The bug is clearly not just an intentional change by the original author.
 
-If sub-agents are unavailable, perform all steps yourself sequentially. Do each review axis (CLAUDE.md compliance, bug scan, introduced problems) yourself, and validate each issue yourself.
+## Comment guidelines
+
+1. Be clear about why the issue is a bug.
+2. Communicate severity accurately. Do not overstate.
+3. Be brief. At most 1 paragraph per issue. No line breaks within natural language unless necessary for code.
+4. No code chunks longer than 3 lines. Wrap code in inline tags or code blocks.
+5. Clearly state the scenarios, environments, or inputs that trigger the bug. Indicate when severity depends on these factors.
+6. Matter-of-fact tone. Not accusatory, not effusive.
+7. Written so the author can immediately grasp the idea without close reading.
+8. No flattery. No "Great job..." or "Thanks for...".
+9. Use ```suggestion blocks only for concrete replacement code. Preserve exact leading whitespace.
+
+## Output
+
+Output all findings that the author would fix if they knew about them. If there are no such findings, say so — do not manufacture issues to appear thorough.
+
+Do not stop at the first finding. Continue until you have listed every qualifying finding.
+
+One comment per distinct issue. Keep line ranges short (under 5-10 lines) — choose the subrange that pinpoints the problem.
+
+For each issue:
+
+<example>
+### **#1 Empty input causes crash**
+
+If the input field is empty when page loads, the app will crash because `parseInput` on line 42 calls `.trim()` on `undefined` — `getInitialValue()` in `src/core/State.ts:18` returns `undefined` when the store is empty.
+
+File: src/ui/Input.tsx:42
+</example>
+
+Note: every finding must cite the specific code that causes the issue and, when the bug involves interaction between files, cite both sides.
+
+After listing all findings (or confirming there are none), provide a brief summary of what you reviewed and the scope of your confidence. Be honest about what you did and did not verify. For example: "I read all 7 changed files, their 4 direct dependencies, and traced the data flow through the API handler → service → repository chain. I did not verify the behavior of the third-party `stripe` SDK calls."

@@ -11,10 +11,12 @@ plugins=(git dotenv macos sudo rsync systemd xcode)
 export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8[1m]'
+export CLAUDE_CODE_NO_FLICKER=1
+export PI_LENS_STARTUP_MODE=quick
 
 # Alias'
 alias gs="git status"
-alias gstk='git stash push && git stash apply'
+alias gstk='git add . && git stash push && git stash apply'
 alias lg='lazygit'
 alias gcm="git commit -m"
 unalias gcl 2>/dev/null
@@ -112,12 +114,12 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 
 # alias's
 alias claude='claude --dangerously-skip-permissions'
+alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
 alias st='bun run dev:desktop'
 alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
-alias pi='npx @mariozechner/pi-coding-agent'
 
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"
