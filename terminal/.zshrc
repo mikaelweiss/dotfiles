@@ -10,7 +10,7 @@ plugins=(git dotenv macos sudo rsync systemd xcode)
 # ENV vars
 export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
-export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
+export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8[1m]'
 
 # Alias'
 alias gs="git status"
@@ -70,7 +70,7 @@ alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
 alias venv='source .venv/bin/activate'
 alias xc='sh ~/code/dotfiles/resize-xcode.sh'
 alias :q='exit'
-alias nix-rebuild='sudo nixos-rebuild switch'
+alias nix-rebuild='sudo nix flake update --flake ~/code/dotfiles/nixos && sudo nixos-rebuild switch'
 alias nix-config='nvim ~/code/dotfiles/nixos/configuration.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
 alias tm='tmux new-session -A -s main'
@@ -128,3 +128,6 @@ eval "$(mise activate zsh)"
 
 # Added by cog CLI installer
 export PATH="$HOME/.cog/bin:$PATH"
+
+# Pi
+export PATH="/home/mikaelweiss/.bun/bin:$PATH"

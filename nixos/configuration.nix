@@ -11,6 +11,7 @@
     ];
 
   # Bootloader.
+  boot.kernelModules = [ "sg" ];
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -96,6 +97,7 @@
    erlang
    postgresql
    ripgrep
+   jq # JSON CLI (used by the bedrock-whitelist helper script)
    unzip #Neovim dependancy
    tmux # Split screen and windows in the terminal
    tldr # Run tldr tmux to see the tldr for the tmux docs
@@ -113,10 +115,12 @@
    libdvdcss
    dvdbackup
    handbrake
+   makemkv
    stow
    atuin
    mise
    direnv
+   nodejs
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -264,10 +268,10 @@
     environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
     path = [ pkgs.restic pkgs.openssh ];
     script = ''
-      restic -r /mnt/backup/share-backup backup /home/mikaelweiss/share
       restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/share-backup backup /home/mikaelweiss/share
-      restic -r /mnt/backup/share-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
       restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/share-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+      restic -r /mnt/backup/share-backup backup /home/mikaelweiss/share || echo "local backup skipped (USB not mounted?)"
+      restic -r /mnt/backup/share-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
     '';
   };
 
@@ -294,10 +298,10 @@
     environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
     path = [ pkgs.restic pkgs.openssh pkgs.podman ];
     script = ''
-      restic -r /mnt/backup/minecraft-backup backup /home/mikaelweiss/.minecraft-server/data
       restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-backup backup /home/mikaelweiss/.minecraft-server/data
-      restic -r /mnt/backup/minecraft-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
       restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+      restic -r /mnt/backup/minecraft-backup backup /home/mikaelweiss/.minecraft-server/data || echo "local backup skipped (USB not mounted?)"
+      restic -r /mnt/backup/minecraft-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
     '';
   };
 
@@ -307,6 +311,62 @@
       OnCalendar = "daily";
       RandomizedDelaySec = "15m";
       Persistent = true;
+    };
+  };
+
+  # Rexburg Friends backup service
+  systemd.services.rexburg-friends-backup = {
+    description = "Restic backup of Rexburg Friends Minecraft server data";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "mikaelweiss";
+      Nice = 19;
+      IOSchedulingClass = "idle";
+    };
+    environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
+    path = [ pkgs.restic pkgs.openssh pkgs.podman ];
+    script = ''
+      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/rexburg-friends-backup backup /home/mikaelweiss/.rexburg-friends/data
+      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/rexburg-friends-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+      restic -r /mnt/backup/rexburg-friends-backup backup /home/mikaelweiss/.rexburg-friends/data || echo "local backup skipped (USB not mounted?)"
+      restic -r /mnt/backup/rexburg-friends-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
+    '';
+  };
+
+  systemd.timers.rexburg-friends-backup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "daily";
+      RandomizedDelaySec = "15m";
+      Persistent = true;
+    };
+  };
+
+  # Keep the tailscale NAT hole to the pip relay punched open. elm is behind
+  # double-NAT/CGNAT, so without steady outbound traffic the direct path to pip
+  # lapses to idle and inbound Java (TCP) forwarded from pip black-holes until
+  # something re-punches it. Bedrock's constant UDP stream masks this for itself;
+  # this heartbeat does it for the whole tunnel. A tailscaled restart (e.g. on
+  # nixos-rebuild) drops the established path, which is what broke Java today.
+  systemd.services.tailscale-keepalive-pip = {
+    description = "Keepalive ping to the pip relay to hold the tailscale NAT hole open";
+    after = [ "tailscaled.service" ];
+    wants = [ "tailscaled.service" ];
+    serviceConfig.Type = "oneshot";
+    path = [ pkgs.tailscale ];
+    script = ''
+      tailscale ping --c 1 --timeout 3s 100.80.106.14 || true
+    '';
+  };
+
+  systemd.timers.tailscale-keepalive-pip = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "30s";
+      OnUnitActiveSec = "20s";
+      AccuracySec = "1s";
     };
   };
 
@@ -330,14 +390,25 @@
   services.jellyfin.enable = true;
   services.jellyfin.user = "mikaelweiss";
   
+  # Required so podman containers on the bridge network can reach the
+  # internet (NAT/forwarding). Without this, containers can't reach
+  # Mojang's auth servers and online-mode joins fail with "Authentication
+  # servers are down". `ip_forward` and `conf.all.forwarding` are kernel
+  # aliases; set both so neither overrides the other at boot.
+  boot.kernel.sysctl = {
+    "net.ipv4.ip_forward" = 1;
+    "net.ipv4.conf.all.forwarding" = 1;
+  };
+
   # Virtualisations
-  
+
   virtualisation.podman.enable = true;
 
   virtualisation.oci-containers = {
     backend = "podman";
     containers.minecraft-server = {
-      image = "docker.io/itzg/minecraft-server:latest";
+      # java25 image (matches rexburg-friends): MC 26.1.x needs a current JDK.
+      image = "docker.io/itzg/minecraft-server:java25";
       ports = [ "25565:25565" ];
       volumes = [ "/home/mikaelweiss/.minecraft-server/data:/data" ];
       autoStart = true;
@@ -345,10 +416,63 @@
         EULA = "TRUE";
         TYPE = "FABRIC";
         MEMORY = "2G";
-        VERSION = "1.21.10";
+        # Pinned (not LATEST): mods track one MC version at a time, so an auto-bump
+        # would break them. Bump deliberately once the mods below ship the next build.
+        VERSION = "26.1.2";
+        # Auto-download server-relevant mods from Modrinth on each start (always latest
+        # compatible build). Client-only mods (Sodium, BetterF3, Mod Menu, MouseTweaks,
+        # MidnightControls, FullBrightnessToggle) were dropped: they do nothing on a
+        # dedicated server. fabric-api = base lib; fallingtree = server-required;
+        # journeymap/appleskin kept for their optional server-side features.
+        MODRINTH_PROJECTS = "fabric-api,fallingtree,journeymap,appleskin";
+        # JourneyMap only ships a beta build for 26.1.2; beta also accepts release mods.
+        MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         UID = "1000";
         GID = "100";
         REMOVE_OLD_MODS = "FALSE";
+      };
+    };
+
+    containers.rexburg-friends = {
+      image = "docker.io/itzg/minecraft-server:java25";
+      # Published on host port 61658; the VPS Tailscale relay DNATs inbound
+      # public traffic to <home-tailscale-ip>:61658. Kept off 25565 because the
+      # minecraft-server container above already uses that host port.
+      #
+      # UDP 19132 is Geyser's Bedrock listener. The VPS relay must ALSO DNAT inbound
+      # public UDP 19132 -> <home-tailscale-ip>:19132 for Bedrock players to connect.
+      ports = [ "61658:25565" "19132:19132/udp" ];
+      volumes = [ "/home/mikaelweiss/.rexburg-friends/data:/data" ];
+      autoStart = true;
+      environment = {
+        EULA = "TRUE";
+        # Fabric loader so Geyser + Floodgate can run as mods (Bedrock crossplay).
+        TYPE = "FABRIC";
+        MEMORY = "4G";
+        # Pinned (not LATEST): Geyser-Fabric and Fabric API track one MC version at a
+        # time, so an auto-bump to a newer MC than Geyser supports would break the
+        # server. Bump deliberately once Geyser-Fabric ships a build for the next version.
+        VERSION = "26.1.2";
+        # Auto-download these mods from Modrinth on each start. Required deps (e.g.
+        # fabric-api) are resolved automatically; fabric-api also listed to be explicit.
+        # geyser/floodgate = Bedrock crossplay; fallingtree/journeymap/appleskin mirror
+        # the normal minecraft-server so both worlds run the same server-side mod set.
+        # All three are server-side-compatible and do NOT force Java clients to install
+        # them, so vanilla (non-Fabric) and Bedrock players can still connect.
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin";
+        # Geyser publishes its Fabric builds on the beta channel, so allow beta. This
+        # setting still accepts release-channel mods (Floodgate, fabric-api) too.
+        MODRINTH_ALLOWED_VERSION_TYPE = "beta";
+        # Required for Bedrock players to chat (they can't sign Java 1.19+ secure chat).
+        # Server stays online-mode=true; Floodgate authenticates Bedrock (hybrid mode).
+        ENFORCE_SECURE_PROFILE = "false";
+        UID = "1000";
+        GID = "100";
+        MOTD = "Rexburg Friends";
+        # Disable Minecraft 26.x's auto-pause: tunneled connections (via the VPS
+        # relay) don't wake a paused server, so joins hang at "Connecting to server".
+        PAUSE_WHEN_EMPTY_SECONDS = "0";
+        ENABLE_WHITELIST = "TRUE";
       };
     };
   };
