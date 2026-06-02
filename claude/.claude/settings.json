@@ -103,7 +103,7 @@
       "Read(./secrets/**)"
     ]
   },
-  "model": "claude-opus-4-6[1m]",
+  "model": "claude-opus-4-8[1m]",
   "attribution": {
     "commit": "",
     "pr": ""
@@ -187,6 +187,16 @@
           {
             "type": "command",
             "command": "~/.claude/read-once/compact.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/no-chatbait/check.sh"
           }
         ]
       }
