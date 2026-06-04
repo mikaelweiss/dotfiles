@@ -284,9 +284,9 @@
     };
   };
 
-  # Minecraft backup service
-  systemd.services.minecraft-backup = {
-    description = "Restic backup of minecraft server data";
+  # Unified Minecraft backup service (all servers under /mnt/nvme/minecraft/)
+  systemd.services.minecraft-all-backup = {
+    description = "Restic backup of all Minecraft server data";
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
     serviceConfig = {
@@ -298,44 +298,14 @@
     environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
     path = [ pkgs.restic pkgs.openssh pkgs.podman ];
     script = ''
-      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-backup backup /home/mikaelweiss/.minecraft-server/data
-      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
-      restic -r /mnt/backup/minecraft-backup backup /home/mikaelweiss/.minecraft-server/data || echo "local backup skipped (USB not mounted?)"
-      restic -r /mnt/backup/minecraft-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
+      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-all-backup backup /mnt/nvme/minecraft
+      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/minecraft-all-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+      restic -r /mnt/backup/minecraft-all-backup backup /mnt/nvme/minecraft || echo "local backup skipped (USB not mounted?)"
+      restic -r /mnt/backup/minecraft-all-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
     '';
   };
 
-  systemd.timers.minecraft-backup = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "daily";
-      RandomizedDelaySec = "15m";
-      Persistent = true;
-    };
-  };
-
-  # Rexburg Friends backup service
-  systemd.services.rexburg-friends-backup = {
-    description = "Restic backup of Rexburg Friends Minecraft server data";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      User = "mikaelweiss";
-      Nice = 19;
-      IOSchedulingClass = "idle";
-    };
-    environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
-    path = [ pkgs.restic pkgs.openssh pkgs.podman ];
-    script = ''
-      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/rexburg-friends-backup backup /home/mikaelweiss/.rexburg-friends/data
-      restic -r sftp:mikaelweiss@oak:/home/mikaelweiss/backups/rexburg-friends-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
-      restic -r /mnt/backup/rexburg-friends-backup backup /home/mikaelweiss/.rexburg-friends/data || echo "local backup skipped (USB not mounted?)"
-      restic -r /mnt/backup/rexburg-friends-backup forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune || true
-    '';
-  };
-
-  systemd.timers.rexburg-friends-backup = {
+  systemd.timers.minecraft-all-backup = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
       OnCalendar = "daily";
@@ -410,7 +380,7 @@
       # java25 image (matches rexburg-friends): MC 26.1.x needs a current JDK.
       image = "docker.io/itzg/minecraft-server:java25";
       ports = [ "25565:25565" ];
-      volumes = [ "/home/mikaelweiss/.minecraft-server/data:/data" ];
+      volumes = [ "/mnt/nvme/minecraft/minecraft-server/data:/data" ];
       autoStart = true;
       environment = {
         EULA = "TRUE";
@@ -442,13 +412,13 @@
       # UDP 19132 is Geyser's Bedrock listener. The VPS relay must ALSO DNAT inbound
       # public UDP 19132 -> <home-tailscale-ip>:19132 for Bedrock players to connect.
       ports = [ "61658:25565" "19132:19132/udp" ];
-      volumes = [ "/home/mikaelweiss/.rexburg-friends/data:/data" ];
+      volumes = [ "/mnt/nvme/minecraft/rexburg-friends/data:/data" ];
       autoStart = true;
       environment = {
         EULA = "TRUE";
         # Fabric loader so Geyser + Floodgate can run as mods (Bedrock crossplay).
         TYPE = "FABRIC";
-        MEMORY = "4G";
+        MEMORY = "2G";
         # Pinned (not LATEST): Geyser-Fabric and Fabric API track one MC version at a
         # time, so an auto-bump to a newer MC than Geyser supports would break the
         # server. Bump deliberately once Geyser-Fabric ships a build for the next version.
@@ -475,12 +445,36 @@
         ENABLE_WHITELIST = "TRUE";
       };
     };
+
+    containers.skyblock = {
+      image = "docker.io/itzg/minecraft-server:java25";
+      ports = [ "25566:25565" "19133:19132/udp" ];
+      volumes = [ "/mnt/nvme/minecraft/skyblock/data:/data" ];
+      autoStart = true;
+      environment = {
+        EULA = "TRUE";
+        TYPE = "PAPER";
+        MEMORY = "2G";
+        VERSION = "26.1.2";
+        MODRINTH_PROJECTS = "luckperms,vaultunlocked,placeholderapi,worldedit,worldguard,geyser";
+        MODRINTH_ALLOWED_VERSION_TYPE = "beta";
+        ENFORCE_SECURE_PROFILE = "false";
+        PAUSE_WHEN_EMPTY_SECONDS = "0";
+        UID = "1000";
+        GID = "100";
+        MOTD = "SkyBlock";
+        MAX_PLAYERS = "50";
+        DIFFICULTY = "normal";
+        SPAWN_PROTECTION = "0";
+        ALLOW_FLIGHT = "true";
+      };
+    };
   };
 
   # Trust tailscale interface
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
   networking.firewall.allowedUDPPorts = [ config.services.tailscale.port ];
-  networking.firewall.allowedTCPPorts = [ 8096 ];
+  networking.firewall.allowedTCPPorts = [ 8096 25566 ];
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ 4000 ];
