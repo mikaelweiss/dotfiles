@@ -96,8 +96,6 @@
         # Load Nix environment when you open a directory with .envrc file
         direnv
         nix-direnv
-        pass # Password management cli
-        gnupg # GPG key manager
         btop # See whats up
         atuin # Shell history search
         pipx # Ash graphql dependancy
@@ -203,6 +201,8 @@
           "gh" # GitHub CLI
           "openjdk@21"
           "rsync" # GNU rsync
+          "pass" # Password manager — installed via brew so GUI apps (Raycast) find it on PATH
+          "gnupg" # GPG key manager (pass dependency)
         ];
 
         # GUI Applications

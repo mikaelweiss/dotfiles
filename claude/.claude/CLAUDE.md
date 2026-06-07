@@ -46,7 +46,9 @@ Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
 
 ## Comments
-Comment only to explain a non-obvious *why* that the reader genuinely needs. Describe what the code currently does, in the present tense. Write the correct thing and let it stand on its own.
+The default is no comment. Make the code itself obvious — clear names, clear structure — instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely can't be made obvious in the code: a non-obvious *why*, an external constraint, a real gotcha. If a comment just restates what the code says, delete it and let the code stand on its own. When you do comment, describe what the code currently does, in the present tense.
+
+Never narrate history in comments. The code shows how it works now; how it used to work is tech debt the moment it's written. No comments that contrast the current approach with a previous one, explain what changed in a migration/refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Don't mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live — not the source. If a comment only makes sense to someone who knew the prior implementation, delete it.
 
 ## Other
 Whenever you need to ask the user questions, give them a list of numbered questions. They prefer this over the AskQuestions tool.
