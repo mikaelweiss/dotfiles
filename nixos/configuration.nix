@@ -456,7 +456,7 @@
         TYPE = "PAPER";
         MEMORY = "2G";
         VERSION = "26.1.2";
-        MODRINTH_PROJECTS = "luckperms,vaultunlocked,placeholderapi,worldedit,worldguard,geyser";
+        MODRINTH_PROJECTS = "luckperms,vaultunlocked,placeholderapi,worldedit,worldguard,geyser,journeymap";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         PAUSE_WHEN_EMPTY_SECONDS = "0";
