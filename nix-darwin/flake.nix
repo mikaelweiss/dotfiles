@@ -24,9 +24,9 @@
         enable = true;
         interactiveShellInit = ''
           # Android SDK
-          export ANDROID_HOME="$HOME/Library/Android/sdk"
-          export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk 2>/dev/null | head -1)"
-          export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+          export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
+          # export NDK_HOME="$ANDROID_HOME/ndk/$(ls -1 $ANDROID_HOME/ndk 2>/dev/null | head -1)"
+          # export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
         '';
       };
@@ -207,43 +207,45 @@
 
         # GUI Applications
         casks = [
-          # "steipete/tap/codexbar" # Keep track of AI usage
-          # "bruno"
-          # "docker-desktop"
-          "1password"
-          # "rapidapi"
-          # "android-commandlinetools"
-          # "android-ndk"
-          # "android-platform-tools"
-          "android-studio"
-          "arc"
-          "chatgpt"
+          # AI Tools
+          "codexbar"
+          "copilot-cli"
+          "codex"
           # "claude"
           # "cursor"
-          "codex"
-          "copilot-cli"
-          "ghostty"
+          # Android Development
+          "android-commandlinetools"
+          # "android-ndk"
+          # "android-platform-tools"
+          # "android-studio"
+          # "openmtp" # Android file transfer
+          # Apps
+          "arc"
+          "chatgpt"
           "grandperspective"
-          # "notion"
           "obs"
           "obsidian"
-          # "openmtp" # Android file transfer
-          # "prusaslicer"
           "raycast"
+          "signal"
+          "mikaelweiss-open-chat"
+          "tailscale-app"
+          # "notion"
+          # Dev tools
+          "ghostty"
           "sf-symbols"
+          "cmux"
+          # "bruno"
+          # "rapidapi"
           # "void"
           # "zed"
-          "zoom"
-          # "docker-desktop"
+          # 
+          # "prusaslicer"
           # "opencode-desktop"
           # "superwhisper" # STT/TTS app
           # "utm" # vm app
-          "signal"
-          "mikaelweiss-open-chat"
           # "dockdoor" # Prityfication of cmd + tab
           # "handy" # Local Open Source STT app
-          "tailscale-app"
-          "warp"
+          # "warp"
         ];
 
         # Mac App Store apps by ID
