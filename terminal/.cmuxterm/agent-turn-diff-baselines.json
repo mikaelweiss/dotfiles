@@ -1,0 +1,140 @@
+{
+  "records" : [
+    {
+      "agent" : "codex",
+      "baseCommit" : "440170ed93b047c15ecae03fb35d109f7f9577ad",
+      "capturedAt" : 1781493832.854367,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec948-4fcd-7b70-85f9-4931c8628058",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "turnId" : "019ec94e-99fa-7452-b2d3-b584d8bcb53b",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d1d9badf5dc9c2e452236c55bab5829ca6552091",
+      "capturedAt" : 1781493428.663368,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec948-4fcd-7b70-85f9-4931c8628058",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "turnId" : "019ec948-636e-7510-ae28-7361c14187b0",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d1d9badf5dc9c2e452236c55bab5829ca6552091",
+      "capturedAt" : 1781493428.038255,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec948-4fcd-7b70-85f9-4931c8628058",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "4a7ee38320133d48ea2243dfe1e9c8262ca86435",
+      "capturedAt" : 1781492928.180622,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec940-95a9-7bb0-9fd1-ab155d0f05b0",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "380c0259f3efe6fdb3b256cb3ad13051e368918f",
+      "capturedAt" : 1781492323.8808842,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec929-67f0-7a82-886a-c8c70c321a6c",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "turnId" : "019ec937-9389-7a93-a896-ebb307d07a73",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d52cd1ce2e9b3f6f445e9c4f4559bb71fce6bb13",
+      "capturedAt" : 1781491552.144084,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec929-67f0-7a82-886a-c8c70c321a6c",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "turnId" : "019ec92b-c5c0-7b13-98e1-e68446d1726f",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d52cd1ce2e9b3f6f445e9c4f4559bb71fce6bb13",
+      "capturedAt" : 1781491551.5652308,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec929-67f0-7a82-886a-c8c70c321a6c",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "5fe60419f55bf56a1091edf8a64316240712023b",
+      "capturedAt" : 1781483089.863205,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/honolulu",
+      "sessionId" : "019ec8a2-d3a7-7e10-a73c-6cbe692e4a08",
+      "surfaceId" : "BE554995-2444-4A48-AB62-AB5C1CC91315",
+      "turnId" : "019ec8aa-ad5b-7542-9cf6-c8179861d7b1",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d08097d93d0619e96eab11e57d968a6b6acaff77",
+      "capturedAt" : 1781482994.1484098,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/honolulu",
+      "sessionId" : "019ec8a2-d3a7-7e10-a73c-6cbe692e4a08",
+      "surfaceId" : "BE554995-2444-4A48-AB62-AB5C1CC91315",
+      "turnId" : "019ec8a9-36ee-7482-bdaa-5d521e7c3e86",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "2de2da7bbb26c5ccfc210960b0652d375021306f",
+      "capturedAt" : 1781482776.196356,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/honolulu",
+      "sessionId" : "019ec8a2-d3a7-7e10-a73c-6cbe692e4a08",
+      "surfaceId" : "BE554995-2444-4A48-AB62-AB5C1CC91315",
+      "turnId" : "019ec8a5-e417-7b73-9914-a6c18001a687",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "e738b37a716779d18a125de6011a4f1d645ce8f9",
+      "capturedAt" : 1781482599.161175,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/honolulu",
+      "sessionId" : "019ec8a2-d3a7-7e10-a73c-6cbe692e4a08",
+      "surfaceId" : "BE554995-2444-4A48-AB62-AB5C1CC91315",
+      "turnId" : "019ec8a3-27d4-73d0-9d84-42a290276d90",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "2363c23da04d72eb1c6ea10850015120bab8a60d",
+      "capturedAt" : 1781482598.5499759,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/honolulu",
+      "sessionId" : "019ec8a2-d3a7-7e10-a73c-6cbe692e4a08",
+      "surfaceId" : "BE554995-2444-4A48-AB62-AB5C1CC91315",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d52cd1ce2e9b3f6f445e9c4f4559bb71fce6bb13",
+      "capturedAt" : 1781481976.414923,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec898-0dcf-7680-a461-bf55bacdda49",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "turnId" : "019ec899-ad4d-7f61-a962-37694b2b049c",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    },
+    {
+      "agent" : "codex",
+      "baseCommit" : "d52cd1ce2e9b3f6f445e9c4f4559bb71fce6bb13",
+      "capturedAt" : 1781481975.783191,
+      "repoRoot" : "\/Users\/mikaelweiss\/.conductor\/workspaces\/strive\/chicago-v1",
+      "sessionId" : "019ec898-0dcf-7680-a461-bf55bacdda49",
+      "surfaceId" : "96330F27-EAA8-4CCC-821E-0158292B9E5D",
+      "workspaceId" : "495122ED-8512-4FA3-8B7C-51A9289803BF"
+    }
+  ],
+  "version" : 1
+}

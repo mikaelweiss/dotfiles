@@ -154,3 +154,8 @@ eval "$(mise activate zsh)"
 
 # Added by cog CLI installer
 export PATH="$HOME/.cog/bin:$PATH"
+
+# Keep Homebrew on the main branch for macOS 27 pre-release support (until a stable tag ships it)
+export HOMEBREW_DEVELOPER=1
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi

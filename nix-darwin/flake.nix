@@ -203,6 +203,7 @@
           "rsync" # GNU rsync
           "pass" # Password manager — installed via brew so GUI apps (Raycast) find it on PATH
           "gnupg" # GPG key manager (pass dependency)
+          "worktrunk" # Manage git worktrees
         ];
 
         # GUI Applications
