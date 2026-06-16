@@ -1,0 +1,3 @@
+# Mole Whitelist - Protected paths won't be deleted
+# Add one pattern per line to keep items safe.
+~/.oh-my-zsh/cache
