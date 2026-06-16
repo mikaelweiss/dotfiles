@@ -187,16 +187,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/no-chatbait/check.sh"
-          }
-        ]
-      }
     ]
   },
   "worktree": {
