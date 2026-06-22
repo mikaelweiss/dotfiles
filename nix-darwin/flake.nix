@@ -13,6 +13,37 @@
     system = "aarch64-darwin";
     unstable = import nixpkgs-unstable { inherit system; };
 
+    # Personal computers, not work computer
+    personalConfig = { pkgs, ... }: {
+        environment.systemPackages = with pkgs; [
+        restic # Backup manager
+        rustup # For Rust
+        # flyctl # CLI for Fly.io
+        # imagemagick # Not sure
+        # nushell # Cool concept
+        # pyenv # Py environment manager (USE MISE INSTEAD)
+        cloudflared # Cloudflare daemon
+        cmake # Build system generator
+        cocoapods # Manage dependancies for your Xcode projects
+        swiftformat # Swift formatter
+        swiftlint # Swift linter
+        xcbeautify # Beautifier tool for Xcode
+        xcodegen # Swift CLI for generating Xcode projects
+        cbonsai # Generates ascii bonsai
+        cmatrix # Generates ascii matrix
+        asciiquarium # Generates an ascii aquarium
+        asciinema # Record and play back a terminal session, can turn it into a gif
+        # croc # File sharing
+        # ttyd # open a terminal from another computer
+        # jrnl # Light weight journaling app
+        # lolcat
+        # faker # Fake names, emails, ids, datas etc. Good for automation.
+        # grex # Generates a regex based on an input you give it.
+        jujutsu
+        lazyjj
+        ];
+      };
+
     # Host-specific configuration for MacBook Air
     macbookAirConfig = { pkgs, ... }: {
       environment.systemPackages = with pkgs; [
@@ -65,32 +96,21 @@
         vim # Vim
         yazi # File browser
         tmux # Multiplexer
-        zellij # Multiplexer
         stow # Dotfiles manager
-        flyctl # CLI for Fly.io
         fzf # Fuzy find files
-        imagemagick # Not sure
         lazygit # Git, but Lazy
         neovim # Vim, but epic
-        nushell # Cool concept
         pandoc # Change files to other file types
-        pyenv # Py environment manager
         mise # Node/Python/etc version manager
-        restic # Backup manager
         ripgrep # Better grep
-        rustup # For Rust
         tldr # Read docs faster
-        cloudflared # Cloudflare daemon
-        cmake # Build system generator
-        cocoapods # Manage dependancies for your Xcode projects
-        dust # Du, but better
+        # For typescriptLSP Claude Code plugin
+        nodePackages.typescript
+        nodePackages.typescript-language-server
         ffmpeg
-        swiftformat # Swift formatter
-        swiftlint # Swift linter
+        dust # Du, but better
         tree # See the directories
         wget # wget files from http, https, and ftp
-        xcbeautify # Beautifier tool for Xcode
-        xcodegen # Swift CLI for generating Xcode projects
         zoxide # Better cd
         mas # CLI to manage Mac Apps from the App Store
         # Load Nix environment when you open a directory with .envrc file
@@ -98,24 +118,7 @@
         nix-direnv
         btop # See whats up
         atuin # Shell history search
-        pipx # Ash graphql dependancy
-        python313Packages.pip # Pip for python
-        # For typescriptLSP Claude Code plugin
-        nodePackages.typescript
-        nodePackages.typescript-language-server
         # javaPackages.compiler.openjdk21 # Java
-        cbonsai # Generates ascii bonsai
-        cmatrix # Generates ascii matrix
-        asciiquarium # Generates an ascii aquarium
-        # asciinema # Record and play back a terminal session, can turn it into a gif
-        # croc # File sharing
-        # ttyd # open a terminal from another computer
-        # jrnl # Light weight journaling app
-        lolcat
-        # faker # Fake names, emails, ids, datas etc. Good for automation.
-        grex # Generates a regex based on an input you give it.
-        jujutsu
-        lazyjj
         ];
 
       # Set nvim as default editor
@@ -182,9 +185,9 @@
         # CLI tools
         brews = [
           "ast-grep"
-          "opencode"
-          "elixir"
-          "python3"
+          # "opencode"
+          # "elixir"
+          # "python3"
           "llvm"
           "postgresql@18"
           "python@3.14"
@@ -222,13 +225,13 @@
           # "openmtp" # Android file transfer
           # Apps
           "arc"
-          "chatgpt"
-          "grandperspective"
-          "obs"
-          "obsidian"
+          # "chatgpt"
+          # "grandperspective"
+          # "obs"
+          # "obsidian"
           "raycast"
-          "signal"
-          "mikaelweiss-open-chat"
+          # "signal"
+          # "mikaelweiss-open-chat"
           "tailscale-app"
           "ollama-app"
           # "notion"
@@ -292,10 +295,10 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Mikaels-MacBook-Air
     darwinConfigurations."Mikaels-MacBook-Air-2" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration macbookAirConfig ];
+      modules = [ configuration macbookAirConfig personalConfig ];
     };
     darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration wolfConfig ];
+      modules = [ configuration wolfConfig personalConfig ];
     };
   };
 }
