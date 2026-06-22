@@ -149,6 +149,10 @@
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
 
+      # Lix binary cache (prebuilt Lix instead of compiling from source)
+      nix.settings.extra-substituters = [ "https://cache.lix.systems" ];
+      nix.settings.extra-trusted-public-keys = [ "cache.lix.systems:aBnZUw8zA7H35Cz2RyKFVs3H4PlGTLawyY5KRbvJR8o=" ];
+
       # Automatic garbage collection (Sunday 2am)
       nix.gc = {
         automatic = true;
@@ -289,6 +293,9 @@
     };
     darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {
       modules = [ configuration wolfConfig personalConfig ];
+    };
+    darwinConfigurations."Mikaels-MacBook-Pro" = nix-darwin.lib.darwinSystem {
+      modules = [ configuration ];
     };
   };
 }
