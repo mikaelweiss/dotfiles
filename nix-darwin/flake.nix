@@ -93,6 +93,19 @@
       nixpkgs.config.allowUnfree = true;
       environment.systemPackages = with pkgs;
         [
+        # opencode
+        # github-copilot-cli
+        # bruno
+        # bruno-cli
+        llvm
+        ast-grep # for searching code
+        sqlite
+        bun
+        gh # GitHub CLI
+        rsync # GNU rsync
+        pass # Password manager — installed via brew so GUI apps (Raycast) find it on PATH
+        gnupg # GPG key manager (pass dependency)
+        worktrunk # Manage git worktrees
         vim # Vim
         yazi # File browser
         tmux # Multiplexer
@@ -184,44 +197,21 @@
 
         # CLI tools
         brews = [
-          "ast-grep"
-          # "opencode"
           # "elixir"
-          # "python3"
-          "llvm"
           "postgresql@18"
-          "python@3.14"
-          "sqlite"
           "xcode-build-server"
-          # "watchman" # React Native dependancy
-          "oven-sh/bun/bun"
           "mole"
-          # "firebase-cli"
-          # "pnpm"
-          "python@3.12"
-          "pyenv"
-          # "bruno-cli"
-          "gh" # GitHub CLI
           "openjdk@21"
-          "rsync" # GNU rsync
-          "pass" # Password manager — installed via brew so GUI apps (Raycast) find it on PATH
-          "gnupg" # GPG key manager (pass dependency)
-          "worktrunk" # Manage git worktrees
         ];
 
         # GUI Applications
         casks = [
           # AI Tools
           "codexbar"
-          "copilot-cli"
           "codex"
-          # "claude"
           # "cursor"
           # Android Development
           "android-commandlinetools"
-          # "android-ndk"
-          # "android-platform-tools"
-          # "android-studio"
           # "openmtp" # Android file transfer
           # Apps
           "arc"
@@ -260,18 +250,18 @@
           # "Developer" = 640199958;
           # "Harvest" = 506189836;
           # "iMovie" = 408981434;
-          # "Magnet" = 441258766;
+          "Magnet" = 441258766;
           # "Numbers" = 409203825;
           # "Obsidian Web Clipper" = 6720708363;
           # "Pages" = 409201541;
           # "RocketSim" = 1504940162;
-          # "Slack" = 803453959;
+          "Slack" = 803453959;
           # "Tailscale" = 1475387142;
           # "Transporter" = 1450874784
         };
 
         # Automatically uninstall things in Homebrew not listed in this flake
-        # onActivation.cleanup = "zap";
+        onActivation.cleanup = "zap";
 
         # Auto-update Homebrew
         onActivation.autoUpdate = true;
