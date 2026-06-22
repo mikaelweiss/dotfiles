@@ -2,9 +2,9 @@
   description = "Example nix-darwin system flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -15,7 +15,7 @@
 
     # Personal computers, not work computer
     personalConfig = { pkgs, ... }: {
-        environment.systemPackages = with pkgs; [
+      environment.systemPackages = with pkgs; [
         restic # Backup manager
         rustup # For Rust
         # flyctl # CLI for Fly.io
@@ -41,8 +41,8 @@
         # grex # Generates a regex based on an input you give it.
         jujutsu
         lazyjj
-        ];
-      };
+      ];
+    };
 
     # Host-specific configuration for MacBook Air
     macbookAirConfig = { pkgs, ... }: {
