@@ -61,13 +61,21 @@ worktree-path = "~/.worktrees/{{ repo }}/{{ branch | sanitize }}"
 #
 # ### Claude Code
 #
-# [commit.generation]
-# command = "MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
+[commit.generation]
+command = "MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
+template-append = """
+- Use a Conventional Commits prefix: fix:, feat:, refactor:, docs:, test:, chore:, spec:, or localization:
+- Subject in imperative mood, under 50 chars, no trailing period; be specific
+- Default to subject only; add a body only when the *why* is not obvious from the diff
+- Body, when needed: one short paragraph explaining *why* (not a file listing or a restatement of the diff)
+- Avoid filler openers like "This commit", "Updated", or "Changes include"
+- Never add AI attribution: no Co-Authored-By trailer, no "Generated with" / "AI-assisted" footer, no emoji, no tool URLs
+"""
 #
 # ### Codex
 #
-[commit.generation]
-command = "codex exec -m gpt-5.4-mini -c model_reasoning_effort='low' -c system_prompt='' --sandbox=read-only --json - | jq -sr '[.[] | select(.item.type? == \"agent_message\")] | last.item.text'"
+# [commit.generation]
+# command = "codex exec -m gpt-5.4-mini -c model_reasoning_effort='low' -c system_prompt='' --sandbox=read-only --json - | jq -sr '[.[] | select(.item.type? == \"agent_message\")] | last.item.text'"
 #
 # ### OpenCode
 #

@@ -230,11 +230,12 @@
           "signal"
           "mikaelweiss-open-chat"
           "tailscale-app"
+          "ollama-app"
           # "notion"
           # Dev tools
           "ghostty"
           "sf-symbols"
-          "cmux"
+          # "cmux" #fork of Ghostty, built agents first
           # "bruno"
           # "rapidapi"
           # "void"
