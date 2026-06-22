@@ -118,8 +118,8 @@
         ripgrep # Better grep
         tldr # Read docs faster
         # For typescriptLSP Claude Code plugin
-        nodePackages.typescript
-        nodePackages.typescript-language-server
+        typescript
+        typescript-language-server
         ffmpeg
         dust # Du, but better
         tree # See the directories
