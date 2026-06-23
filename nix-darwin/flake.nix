@@ -4,16 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-mise.url = "github:NixOS/nixpkgs/3e41b24abd260e8f71dbe2f5737d24122f972158"; # pinned: mise 2026.5.12
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable, nixpkgs-mise }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable }:
   let
     system = "aarch64-darwin";
     unstable = import nixpkgs-unstable { inherit system; };
-    misePkgs = import nixpkgs-mise { inherit system; };
 
     # Personal computers, not work computer
     personalConfig = { pkgs, ... }: {
@@ -125,7 +123,7 @@
         lazygit # Git, but Lazy
         neovim # Vim, but epic
         pandoc # Change files to other file types
-        misePkgs.mise # pinned via nixpkgs-mise input
+        mise # Node/Python/etc version manager
         ripgrep # Better grep
         tldr # Read docs faster
         # For typescriptLSP Claude Code plugin
