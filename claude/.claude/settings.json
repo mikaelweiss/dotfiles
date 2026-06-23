@@ -230,5 +230,6 @@
   "voiceEnabled": true,
   "lsp": {
     "enabled": true
-  }
+  },
+  "tui": "fullscreen"
 }

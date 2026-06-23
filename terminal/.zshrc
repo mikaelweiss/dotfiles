@@ -150,7 +150,7 @@ export PATH="$HOME/.ma/bin:$PATH"
 export PATH="$HOME/.ma/bin:$PATH"
 
 # mise (node/python/etc version manager, per-project pinning)
-eval "$(mise activate zsh)"
+# eval "$(mise activate zsh)"
 
 # Added by cog CLI installer
 export PATH="$HOME/.cog/bin:$PATH"

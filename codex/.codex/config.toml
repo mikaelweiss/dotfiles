@@ -1,0 +1,7 @@
+tool_output_token_limit = 25000
+[mcp_servers.RepoPromptCE]
+command = "/Applications/RepoPrompt CE.app/Contents/MacOS/repoprompt-mcp"
+args = []
+tool_timeout_sec = 10000
+supports_parallel_tool_calls = true
+enabled = false

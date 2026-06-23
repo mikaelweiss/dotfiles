@@ -9,3 +9,41 @@ node_modules/
 *.telemetry
 telemetry/
 
+# Local SQLite databases
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Claude Code runtime/state (keep config, commands, skills, hooks)
+claude/.claude/.last-cleanup
+claude/.claude/.last-update-result.json
+claude/.claude/mcp-needs-auth-cache.json
+claude/.claude/history.jsonl
+claude/.claude/backups/
+claude/.claude/cache/
+claude/.claude/file-history/
+claude/.claude/paste-cache/
+claude/.claude/plugins/
+claude/.claude/projects/
+claude/.claude/sessions/
+claude/.claude/shell-snapshots/
+claude/.claude/teams/
+
+# Codex runtime/state (keep config.toml and skills)
+codex/.codex/.personality_migration
+codex/.codex/installation_id
+codex/.codex/.tmp/
+codex/.codex/tmp/
+
+# Terminal app runtime/state (keep settings/config files)
+terminal/.config/cagent/.cagent_first_run
+terminal/.config/cagent/user-uuid
+terminal/.config/raycast/
+terminal/.cmuxterm/
+terminal/.pi/agent/global-input-history.jsonl
+
+# Xcode runtime/state (keep themes and key bindings)
+xcode/Library/Developer/CoreSimulator/
+xcode/Library/Developer/Xcode/.derived-data-log-*
+xcode/Library/Developer/Xcode/*.plist
+xcode/Library/Developer/Xcode/UserData/XcodeCloud/
