@@ -87,6 +87,15 @@
       };
     };
 
+    workConfig = { pkgs, ... }: {
+      environment.systemPackages = with pkgs; [
+      ];
+
+      homebrew.casks = [
+        "docker-desktop"
+      ];
+    };
+
     configuration = { pkgs, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
@@ -255,12 +264,12 @@
           # "Developer" = 640199958;
           # "Harvest" = 506189836;
           # "iMovie" = 408981434;
-          "Magnet" = 441258766;
+          # "Magnet" = 441258766;
           # "Numbers" = 409203825;
           # "Obsidian Web Clipper" = 6720708363;
           # "Pages" = 409201541;
           # "RocketSim" = 1504940162;
-          "Slack" = 803453959;
+          # "Slack" = 803453959;
           # "Tailscale" = 1475387142;
           # "Transporter" = 1450874784
         };
@@ -296,7 +305,7 @@
       modules = [ configuration wolfConfig personalConfig ];
     };
     darwinConfigurations."Mikaels-MacBook-Pro" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
+      modules = [ configuration workConfig ];
     };
   };
 }
