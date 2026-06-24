@@ -226,6 +226,7 @@
   "verbose": false,
   "preferredNotifChannel": "auto",
   "teammateMode": "auto",
+  "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "voiceEnabled": true,
   "lsp": {
