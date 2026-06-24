@@ -123,7 +123,7 @@
         lazygit # Git, but Lazy
         neovim # Vim, but epic
         pandoc # Change files to other file types
-        mise # Node/Python/etc version manager
+        # mise # Node/Python/etc version manager
         ripgrep # Better grep
         tldr # Read docs faster
         # For typescriptLSP Claude Code plugin
@@ -142,6 +142,7 @@
         atuin # Shell history search
         # javaPackages.compiler.openjdk21 # Java
         nodejs
+        beamPackages.elixir
         ];
 
       # Set nvim as default editor
