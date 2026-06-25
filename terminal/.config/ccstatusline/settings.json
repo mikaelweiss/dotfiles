@@ -3,59 +3,80 @@
   "lines": [
     [
       {
-        "id": "1",
-        "type": "model",
-        "color": "cyan"
-      },
-      {
-        "id": "2",
-        "type": "separator"
-      },
-      {
-        "id": "3",
-        "type": "context-length",
-        "color": "brightBlack"
-      },
-      {
-        "id": "4",
-        "type": "separator"
-      },
-      {
-        "id": "5",
-        "type": "git-branch",
-        "color": "magenta"
-      },
-      {
-        "id": "6",
-        "type": "separator"
-      },
-      {
         "id": "7",
         "type": "git-changes",
         "color": "yellow"
+      },
+      {
+        "id": "edc5d8a8-cbe2-40d4-acb5-24fdc67da01e",
+        "type": "context-bar",
+        "backgroundColor": "bgGreen"
+      },
+      {
+        "id": "550932fc-978d-4775-acb0-f8f10ceb2679",
+        "type": "reset-timer",
+        "backgroundColor": "bgBrightBlue"
+      },
+      {
+        "id": "42b4d0a6-0a8d-44bb-aee8-049222e90399",
+        "type": "session-usage",
+        "backgroundColor": "bgMagenta"
       }
     ],
-    [],
-    []
+    [
+      {
+        "id": "1533c38a-4518-4a23-80e3-fc7a382e2805",
+        "type": "git-branch",
+        "backgroundColor": "bgRed"
+      },
+      {
+        "id": "f68f49cf-40db-4e78-a29c-c73bc0541455",
+        "type": "session-clock",
+        "backgroundColor": "bgBrightWhite"
+      },
+      {
+        "id": "0025aed4-cb70-4a7b-9cd1-d1583a69439d",
+        "type": "session-cost",
+        "backgroundColor": "bgBrightMagenta"
+      },
+      {
+        "id": "68aef631-f5d9-4d2f-a411-8f5e3cd15d49",
+        "type": "weekly-reset-timer",
+        "backgroundColor": "bgBrightYellow"
+      },
+      {
+        "id": "84a22c68-1783-4d5d-90ba-d2a4d3bd831f",
+        "type": "weekly-usage",
+        "backgroundColor": "bgMagenta"
+      }
+    ]
   ],
   "flexMode": "full-minus-40",
   "compactThreshold": 60,
-  "colorLevel": 2,
+  "colorLevel": 3,
+  "defaultPadding": " ",
   "inheritSeparatorColors": false,
   "globalBold": false,
   "gitCacheTtlSeconds": 5,
   "minimalistMode": false,
   "powerline": {
-    "enabled": false,
+    "enabled": true,
     "separators": [
-      ""
+      ""
     ],
     "separatorInvertBackground": [
       false
     ],
     "startCaps": [],
-    "endCaps": [],
+    "endCaps": [
+      ""
+    ],
+    "theme": "tokyonight",
     "autoAlign": false,
     "continueThemeAcrossLines": false
+  },
+  "installation": {
+    "method": "auto-update",
+    "packageManager": "npm"
   }
 }
