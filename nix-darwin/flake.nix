@@ -114,7 +114,6 @@
         rsync # GNU rsync
         pass # Password manager — installed via brew so GUI apps (Raycast) find it on PATH
         gnupg # GPG key manager (pass dependency)
-        worktrunk # Manage git worktrees
         vim # Vim
         yazi # File browser
         tmux # Multiplexer
@@ -123,7 +122,6 @@
         lazygit # Git, but Lazy
         neovim # Vim, but epic
         pandoc # Change files to other file types
-        # mise # Node/Python/etc version manager
         ripgrep # Better grep
         tldr # Read docs faster
         # For typescriptLSP Claude Code plugin
@@ -142,7 +140,6 @@
         atuin # Shell history search
         # javaPackages.compiler.openjdk21 # Java
         nodejs
-        beamPackages.elixir
         ];
 
       # Set nvim as default editor
@@ -212,11 +209,13 @@
 
         # CLI tools
         brews = [
-          # "elixir"
+          "elixir"
           "postgresql@18"
           "xcode-build-server"
           "mole"
           "openjdk@21"
+          "mise"
+          "worktrunk"
         ];
 
         # GUI Applications
