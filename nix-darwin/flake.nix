@@ -61,6 +61,10 @@
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
         '';
       };
+
+      homebrew.casks = [
+        "modrinth"
+      ];
     };
 
     # Host-specific configuration for Wolf
