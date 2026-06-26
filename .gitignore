@@ -14,22 +14,34 @@ telemetry/
 *.sqlite-shm
 *.sqlite-wal
 
-# Claude Code runtime/state (keep config, commands, skills, hooks)
+# Editor / stow backup artifacts
+*.orig
+*.bak
+*.pre-stow.bak
+
+# Claude Code runtime/state (keep config, commands, hand-authored skills, hooks)
+claude/.claude/.claude.json
 claude/.claude/.last-cleanup
 claude/.claude/.last-update-result.json
 claude/.claude/mcp-needs-auth-cache.json
 claude/.claude/history.jsonl
+claude/.claude/stats-cache.json
 claude/.claude/backups/
 claude/.claude/cache/
 claude/.claude/file-history/
+claude/.claude/image-cache/
+claude/.claude/jobs/
 claude/.claude/paste-cache/
+claude/.claude/plans/
 claude/.claude/plugins/
 claude/.claude/projects/
 claude/.claude/sessions/
 claude/.claude/shell-snapshots/
+claude/.claude/tasks/
 claude/.claude/teams/
 
-# Codex runtime/state (keep config.toml and skills)
+# Codex runtime/state (keep config.toml and hand-authored skills)
+codex/.codex/auth.json
 codex/.codex/.personality_migration
 codex/.codex/installation_id
 codex/.codex/.tmp/
@@ -42,8 +54,51 @@ terminal/.config/raycast/
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
 
+# Auto-installed Cloudflare skill packs (vendor, not hand-authored)
+claude/.claude/skills/agents-sdk/
+claude/.claude/skills/cloudflare/
+claude/.claude/skills/cloudflare-email-service/
+claude/.claude/skills/cloudflare-one/
+claude/.claude/skills/cloudflare-one-migrations/
+claude/.claude/skills/durable-objects/
+claude/.claude/skills/sandbox-sdk/
+claude/.claude/skills/turnstile-spin/
+claude/.claude/skills/web-perf/
+claude/.claude/skills/workers-best-practices/
+claude/.claude/skills/wrangler/
+codex/.codex/skills/agents-sdk/
+codex/.codex/skills/cloudflare/
+codex/.codex/skills/cloudflare-email-service/
+codex/.codex/skills/cloudflare-one/
+codex/.codex/skills/cloudflare-one-migrations/
+codex/.codex/skills/durable-objects/
+codex/.codex/skills/sandbox-sdk/
+codex/.codex/skills/turnstile-spin/
+codex/.codex/skills/web-perf/
+codex/.codex/skills/workers-best-practices/
+codex/.codex/skills/wrangler/
+terminal/.pi/agent/skills/agents-sdk/
+terminal/.pi/agent/skills/cloudflare/
+terminal/.pi/agent/skills/cloudflare-email-service/
+terminal/.pi/agent/skills/cloudflare-one/
+terminal/.pi/agent/skills/cloudflare-one-migrations/
+terminal/.pi/agent/skills/durable-objects/
+terminal/.pi/agent/skills/sandbox-sdk/
+terminal/.pi/agent/skills/turnstile-spin/
+terminal/.pi/agent/skills/web-perf/
+terminal/.pi/agent/skills/workers-best-practices/
+terminal/.pi/agent/skills/wrangler/
+
 # Xcode runtime/state (keep themes and key bindings)
 xcode/Library/Developer/CoreSimulator/
+xcode/Library/Developer/Xcode/DerivedData/
+xcode/Library/Developer/Xcode/CodingAssistant/
+xcode/Library/Developer/Xcode/BackupXcodeSettings/
+xcode/Library/Developer/Xcode/.knownDerivedDataLocations.log
 xcode/Library/Developer/Xcode/.derived-data-log-*
 xcode/Library/Developer/Xcode/*.plist
 xcode/Library/Developer/Xcode/UserData/XcodeCloud/
+xcode/Library/Developer/Xcode/UserData/CodingAssistant/
+xcode/Library/Developer/Xcode/UserData/Capabilities/
+xcode/Library/Developer/Xcode/UserData/Provisioning Profiles/
+xcode/Library/Developer/Xcode/UserData/IDEEditorInteractivityHistory
