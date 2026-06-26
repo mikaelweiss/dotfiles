@@ -118,15 +118,6 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/read-once/hook.sh"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -173,17 +164,6 @@
             "type": "command",
             "command": "~/.claude/no-attribution/check.sh",
             "if": "Bash(gh release create *)"
-          }
-        ]
-      }
-    ],
-    "PostCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/read-once/compact.sh"
           }
         ]
       }
