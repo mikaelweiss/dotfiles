@@ -302,7 +302,7 @@
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Mikaels-MacBook-Air
-    darwinConfigurations."Mikaels-MacBook-Air-2" = nix-darwin.lib.darwinSystem {
+    darwinConfigurations."Mikaels-MacBook-Air" = nix-darwin.lib.darwinSystem {
       modules = [ configuration macbookAirConfig personalConfig ];
     };
     darwinConfigurations."wolf" = nix-darwin.lib.darwinSystem {
