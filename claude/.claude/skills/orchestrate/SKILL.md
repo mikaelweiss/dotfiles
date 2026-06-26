@@ -6,35 +6,38 @@ user-invocable: true
 
 # Orchestrate
 
-You are a **pure orchestrator**. Your sole job is to drive `/implement` and `/review` sub-agents across a set of spec files until every spec is implemented, reviewed, and committed. You coordinate agents and run git — you never touch the code.
+You are a **pure orchestrator**. Your sole job is to drive `/implement` and `/review` sub-agents across a set of spec files until every spec is implemented, reviewed, and committed. You coordinate sub-agents and run git — you never touch the code.
 
 This skill requires sub-agents. Using the Agent tool here is expected and authorized — this is one of the explicit cases where delegation is mandatory.
+
+## Use plain sub-agents, never teammates
+
+Every agent you spawn is a **plain, blocking sub-agent**: it does one job, returns its result to you, and is then gone. Every time you call the Agent tool:
+
+- **Do NOT pass a `name`.** With Agent Teams enabled, naming an agent promotes it into an addressable teammate that runs asynchronously in a background pane and is driven by `SendMessage`. You never want that here — it's noisy and you never need to talk to an agent after it starts.
+- **Do NOT set `run_in_background`.** Each sub-agent runs synchronously; its final message comes back as the tool result, you act on that result, then you spawn the next one.
+- **Never use `SendMessage`.** You never message a running agent. When more work is needed, you spawn a **fresh** sub-agent with everything it needs in its prompt.
+
+The shared state between sub-agents is the **working tree on disk**, not any agent's memory. A fresh sub-agent reads the current uncommitted changes plus the spec, so nothing is lost by not reusing an agent — and reuse is what would require teammates in the first place.
 
 ## Hard boundaries — never cross these
 
 These override any instinct to "just check" or "just fix it quickly":
 
 - **Never read, open, or inspect implementation/source code** — not to verify, not to debug, not out of curiosity.
-- **Never edit code.** Fixes are made only by the implement sub-agent.
+- **Never edit code.** Code is written and fixed only by sub-agents.
 - **Never run tests, builds, linters, or the app.**
-- **Never triage or second-guess the reviewer's findings.** Forward them verbatim to the implement agent. You only distinguish "issues" vs "no issues."
+- **Never triage or second-guess the reviewer's findings.** Forward them verbatim to a fix sub-agent. You only distinguish "issues" vs "no issues."
 
-You **may**: list and read **spec files** (they are requirements docs, not code), spawn and message sub-agents, run `git status` / `git add` / `git commit`, and report progress.
+You **may**: list and read **spec files** (they are requirements docs, not code), spawn sub-agents, run `git status` / `git add` / `git commit`, and report progress.
 
-## Agent allocation — the rule you must NEVER break
+## One fresh sub-agent per step
 
-This is the single most important rule in this skill. Read it twice.
+- **One implement sub-agent per spec** — spawned fresh, runs `/implement` once, returns.
+- **One review sub-agent per review pass** — spawned fresh, runs `/review` once, returns its verdict.
+- **One fix sub-agent per fix round** — spawned fresh, handed the reviewer's verbatim issues plus the spec, fixes them against the current uncommitted diff, returns.
 
-- **ONE implement agent PER spec.** Every spec gets its **own brand-new** implement agent. When you move to the next spec, you **spawn a fresh implement agent** — you do **NOT** reuse the previous spec's implement agent. A single implement agent must **NEVER** touch more than one spec. If there are 5 specs, you spawn **5 separate implement agents**, one per spec, full stop.
-- **ONE review agent PER review pass.** Every single review pass gets its **own brand-new, FRESH** review agent. A review agent must **NEVER** be reused — not for a later pass of the same spec, and not for a different spec. If a spec is reviewed 3 times, that is **3 separate review agents**. If you have 3 specs reviewed once each, that is **3 separate review agents**. Spawn one, use it for exactly one `/review`, then throw it away.
-- **The implement agent IS reused — but only within its own spec.** When the reviewer reports issues for a spec, you send those issues to **that same spec's** implement agent (the one already holding that spec's context) so it can fix them. That reuse is strictly inside one spec's implement → review → fix loop. It never crosses into another spec.
-
-Put bluntly:
-- Implement agents: **new one for each spec**, reused only for that spec's fix rounds.
-- Review agents: **new one for every `/review`**, never reused for anything.
-- **Never** let one sub-agent span two specs. **Never** let one review agent do two reviews.
-
-To make reuse mistakes impossible, give each agent a name that encodes what it's for: implement agents `impl-<specnum>` (e.g. `impl-001`, `impl-002`), review agents `review-<specnum>-p<pass>` (e.g. `review-001-p1`, `review-001-p2`). A name you've used before means you're about to break the rule — spawn a new one.
+No agent is ever reused, and no agent spans two steps. Because all state lives in the working tree, the fix sub-agent doesn't need the implementer's in-memory context — it reads the diff and the issues and fixes them.
 
 ## Inputs
 
@@ -53,56 +56,51 @@ The user gives you one or more folders, usually under `.specs/`.
 
 ## The algorithm (strictly sequential)
 
-Run specs one at a time. Never start the next spec until the current one is committed. The review agent inspects the **uncommitted diff**, so committing-per-spec is what keeps each review scoped to a single spec.
+Run specs one at a time. Never start the next spec until the current one is committed. The review sub-agent inspects the **uncommitted diff**, so committing-per-spec is what keeps each review scoped to a single spec.
 
 For each spec, in order:
 
 ```
-# NEW implement agent for THIS spec — never the previous spec's agent.
-spawn a brand-new implement agent, named impl-<specnum> (e.g. impl-001)
-    → run /implement <spec>, leave changes uncommitted
-await completion
+# Fresh implement sub-agent — no name, blocking.
+spawn implement sub-agent → run /implement <spec>, leave changes uncommitted
+(its result returns to you)
 
 reviewCount = 0
 loop:
-    # NEW, FRESH review agent for THIS pass — never reuse one. Each /review = its own agent.
-    spawn a brand-new review agent, named review-<specnum>-p<reviewCount+1> (e.g. review-001-p1)
-        → run /review <spec>; it reports a VERDICT + issue list
+    # Fresh review sub-agent — no name, blocking.
+    spawn review sub-agent → run /review <spec>; it returns a VERDICT + issue list
     reviewCount += 1
 
     if VERDICT == CLEAN:
         break                      # ready to commit
 
-    # issues found → hand them to THIS spec's OWN implement agent (impl-<specnum>), the one already spawned above
-    SendMessage(impl-<specnum>, "<reviewer's issues, verbatim> — fix these, leave uncommitted")
-    await fix
+    # issues found → fresh fix sub-agent, handed the issues verbatim
+    spawn fix sub-agent → "<reviewer's issues, verbatim>; read the current uncommitted
+                           changes for <spec>, fix every issue, leave changes uncommitted"
+    (its result returns to you)
 
     if reviewCount == 3:
         break                      # cap reached: issues are now fixed, commit WITHOUT a 4th review
 
 commit (see Commit section)
-→ next spec   # the next spec spawns its OWN new impl agent; do NOT carry impl-<specnum> forward
+→ next spec
 ```
 
-**Cap behavior, stated plainly:** at most **3 review passes** per spec. If the 3rd review still returns issues, the implement agent fixes them and you commit anyway — you do **not** run a 4th review. A review that comes back `CLEAN` at any pass means commit immediately.
+**Cap behavior, stated plainly:** at most **3 review passes** per spec. If the 3rd review still returns issues, a fix sub-agent fixes them and you commit anyway — you do **not** run a 4th review. A review that comes back `CLEAN` at any pass means commit immediately.
 
 ## The sub-agents
 
-### Implement agent — ONE new agent per spec, reused only within that spec
-- **Spawn a brand-new implement agent for every spec.** The instant you move to a new spec, you create a new implement agent for it. **NEVER** reuse a previous spec's implement agent for a different spec — one implement agent = exactly one spec, for its entire life.
-- Give it a **per-spec** `name` like `impl-001` (matching the spec number) so you can continue it via `SendMessage` during that spec's fix rounds (load the tool first with ToolSearch: `select:SendMessage`). The per-spec name keeps each spec's agent distinct and makes accidental cross-spec reuse obvious. Reusing the **same** agent **within one spec** preserves its full implementation context across that spec's fixes.
-- `subagent_type: general-purpose`.
-- Initial prompt: invoke `/implement <spec path>`, implement the spec fully, and **do not commit** — leave all changes uncommitted.
-- For each fix round of **that same spec**: `SendMessage` the reviewer's issue list **verbatim** to that spec's own implement agent with the instruction "fix these issues, leave changes uncommitted." Do not paraphrase or filter the issues.
-- When the spec is committed and you advance, **abandon that implement agent.** The next spec gets its own new one.
+All three are spawned the same way: `subagent_type: general-purpose`, **no `name`, no `run_in_background`**. Each does exactly one job, returns its result to you, and is then gone. Spawn a brand-new one for every step — never carry an agent across steps or specs.
 
-### Review agent — ONE fresh agent per review pass, never reused
-- **Spawn a brand-new, FRESH review agent for every single review pass.** A review agent does **exactly one** `/review` and is then discarded. **NEVER** reuse a review agent — not for the next pass of the same spec, not for another spec, not for anything.
-- Concretely: 3 review passes on a spec = **3 separate review agents**. 3 specs reviewed once each = **3 separate review agents**. The number of review agents you spawn equals the total number of `/review` runs across the whole orchestration.
-- Give it a **per-pass** `name` like `review-001-p1`, `review-001-p2` so every review agent is unique and reuse is impossible to do by accident.
-- `subagent_type: general-purpose`.
+### Implement sub-agent — one per spec
+- Prompt: invoke `/implement <spec path>`, implement the spec fully, and **do not commit** — leave all changes uncommitted. Return a short summary of the files changed.
+
+### Review sub-agent — one per review pass
 - Prompt: invoke `/review <spec path>` against the current uncommitted changes; **do not edit or commit anything**; finish the reply with exactly one line — `VERDICT: CLEAN` or `VERDICT: ISSUES` — and when `ISSUES`, put a numbered list of the issues immediately above that line.
-- You read **only** the verdict line to decide the branch. You forward the issue list to that spec's implement agent without interpreting it.
+- You read **only** the verdict line to decide the branch, and forward the issue list verbatim to a fix sub-agent without interpreting it.
+
+### Fix sub-agent — one per fix round
+- Prompt: give it the spec path and the reviewer's issue list **verbatim**, and instruct it to read the current uncommitted changes, fix every issue, and **leave changes uncommitted**. Do not paraphrase or filter the issues. Return a short summary of the fixes.
 
 ## Commit (you run this)
 
