@@ -206,11 +206,6 @@
       homebrew = {
         enable = true;
 
-        # Taps (third-party repositories)
-        taps = [
-          "mikaelweiss/openchat"
-        ];
-
         # CLI tools
         brews = [
           "elixir"
@@ -239,7 +234,6 @@
           # "obsidian"
           "raycast"
           # "signal"
-          # "mikaelweiss-open-chat"
           "tailscale-app"
           "ollama-app"
           # "notion"
