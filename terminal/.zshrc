@@ -22,7 +22,7 @@ alias lg='lazygit'
 alias gcm="git commit -m"
 unalias gcl 2>/dev/null
 gcl() {
-    git clone git@github.com:MikaelWeiss/$1.git
+    git clone git@github.com:mikaelweiss/$1.git
 }
 gbc() {
     git checkout -b $1 && git push -u origin $1
