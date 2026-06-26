@@ -64,6 +64,7 @@
 
       homebrew.casks = [
         "modrinth"
+        "obsidian"
       ];
     };
 
