@@ -65,6 +65,8 @@
       homebrew.casks = [
         "modrinth"
         "obsidian"
+        "shottr"
+        "signal"
       ];
     };
 
@@ -235,7 +237,6 @@
           # "obs"
           # "obsidian"
           "raycast"
-          # "signal"
           "tailscale-app"
           "ollama-app"
           # "notion"
