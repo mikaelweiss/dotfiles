@@ -41,6 +41,8 @@ claude/.claude/sessions/
 claude/.claude/shell-snapshots/
 claude/.claude/tasks/
 claude/.claude/teams/
+claude/.claude/daemon/
+claude/.claude/daemon*
 
 # Codex runtime/state (keep config.toml and hand-authored skills)
 codex/.codex/auth.json
