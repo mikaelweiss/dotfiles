@@ -20,6 +20,8 @@ telemetry/
 *.pre-stow.bak
 
 # Claude Code runtime/state (keep config, commands, hand-authored skills, hooks)
+claude/.claude/ide/
+claude/.claude/plans/
 claude/.claude/.claude.json
 claude/.claude/.last-cleanup
 claude/.claude/.last-update-result.json
@@ -42,8 +44,12 @@ claude/.claude/teams/
 
 # Codex runtime/state (keep config.toml and hand-authored skills)
 codex/.codex/auth.json
+codex/.codex/version.json
+codex/.codex/models_cache.json
 codex/.codex/.personality_migration
 codex/.codex/installation_id
+codex/.codex/cache/
+codex/.codex/plugins/
 codex/.codex/.tmp/
 codex/.codex/tmp/
 
@@ -51,6 +57,8 @@ codex/.codex/tmp/
 terminal/.config/cagent/.cagent_first_run
 terminal/.config/cagent/user-uuid
 terminal/.config/raycast/
+terminal/.config/cmux/
+terminal/.config/gh/
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
 

@@ -98,6 +98,7 @@
 
       homebrew.casks = [
         "docker-desktop"
+        "harvest"
       ];
     };
 
