@@ -50,6 +50,9 @@ The default is no comment. Make the code itself obvious — clear names, clear s
 
 Never narrate history in comments. The code shows how it works now; how it used to work is tech debt the moment it's written. No comments that contrast the current approach with a previous one, explain what changed in a migration/refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Don't mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live — not the source. If a comment only makes sense to someone who knew the prior implementation, delete it.
 
+## Finished work only
+NEVER call work "V1", "MVP", "first pass", "initial version", "basic implementation", "phase 1", or any other label that implies a later version will finish it. Never defer with "for now", "we can add later", "future enhancement", "in a follow-up", or TODO-style placeholders. That language pre-excuses incompleteness: it frames leaving work undone as a plan, and "later" never comes. Everything you ship is *the* version — complete, working, nothing silently deferred. If part of the task genuinely shouldn't be done, that's a scope decision: raise it explicitly and let me decide. Do not cut scope unilaterally and dress it up as a roadmap.
+
 ## Other
 Whenever you need to ask the user questions, give them a list of numbered questions. They prefer this over the AskQuestions tool.
 

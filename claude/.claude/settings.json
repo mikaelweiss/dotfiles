@@ -105,6 +105,7 @@
       "Read(./secrets/**)"
     ]
   },
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "SessionStart": [
       {
@@ -198,6 +199,7 @@
   },
   "effortLevel": "xhigh",
   "awaySummaryEnabled": false,
+  "tui": "fullscreen",
   "autoDreamEnabled": true,
   "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
@@ -205,12 +207,12 @@
   "editorMode": "normal",
   "verbose": false,
   "preferredNotifChannel": "auto",
+  "switchModelsOnFlag": true,
   "teammateMode": "auto",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
   "voiceEnabled": true,
   "lsp": {
     "enabled": true
-  },
-  "tui": "fullscreen"
+  }
 }
