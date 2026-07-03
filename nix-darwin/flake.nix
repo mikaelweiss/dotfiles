@@ -80,6 +80,11 @@
       programs.zsh = {
         enable = true;
         interactiveShellInit = ''
+          # Auto-attach tmux on SSH
+          if [[ -n "$SSH_CONNECTION" && -z "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
+            exec tmux new-session -A -s main
+          fi
+
           # Tailscale
           alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 
@@ -217,7 +222,7 @@
           "xcode-build-server"
           "mole"
           "openjdk@21"
-          "mise"
+          # "mise" # node/python/etc version manager, per-project pinning
           "worktrunk"
         ];
 
