@@ -61,6 +61,7 @@ terminal/.config/cagent/user-uuid
 terminal/.config/raycast/
 terminal/.config/cmux/
 terminal/.config/gh/
+terminal/.config/worktrunk/approvals.toml
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
 

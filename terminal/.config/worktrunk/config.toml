@@ -144,6 +144,9 @@ template-append = """
 # [switch.picker]
 # pager = "delta --paging=never"   # Example: override git's core.pager for diff preview
 #
+[switch]
+cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
+#
 # ### Step
 #
 # [step.copy-ignored]
@@ -182,11 +185,11 @@ template-append = """
 #
 # # Single command
 # [projects."github.com/user/repo"]
-# post-start = "mise trust"
+# post-start = "direnv allow"
 #
 # # Multiple commands, running concurrently
 # [projects."github.com/user/repo".post-start]
-# mise = "mise trust"
+# install = "npm ci"
 # server = "npm run dev"
 #
 # # Pipeline: steps run in sequence
@@ -319,6 +322,15 @@ template-append = """
 # ## Hooks
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
+
+# Each worktree lives in a dedicated tmux window named after its branch:
+# switch to it if it exists, otherwise open one at the worktree path.
+[post-switch]
+tmux-tab = '''
+[ -n "${TMUX:-}" ] || exit 0
+tmux select-window -t ={{ branch }} 2>/dev/null && exit 0
+tmux new-window -n {{ branch }} -c {{ worktree_path }}
+'''
 
 [projects."github.com/MikaelWeiss/ask-pip".post-start]
 deps = "npm i"
