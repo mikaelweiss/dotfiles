@@ -13,7 +13,7 @@
     system = "aarch64-darwin";
     unstable = import nixpkgs-unstable { inherit system; };
 
-    # Personal computers, not work computer
+    # Personal computers
     personalConfig = { pkgs, ... }: {
       environment.systemPackages = with pkgs; [
         restic # Backup manager
@@ -80,9 +80,9 @@
       programs.zsh = {
         enable = true;
         interactiveShellInit = ''
-          # Auto-attach tmux on SSH
-          if [[ -n "$SSH_CONNECTION" && -z "$TMUX" ]] && command -v tmux >/dev/null 2>&1; then
-            exec tmux new-session -A -s main
+          # Auto-attach herdr on SSH
+          if [[ -n "$SSH_CONNECTION" && -z "$HERDR_ENV" ]] && command -v herdr >/dev/null 2>&1; then
+            exec herdr
           fi
 
           # Tailscale
@@ -224,6 +224,7 @@
           "openjdk@21"
           # "mise" # node/python/etc version manager, per-project pinning
           "worktrunk"
+          "herdr"
         ];
 
         # GUI Applications

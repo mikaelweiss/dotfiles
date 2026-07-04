@@ -3,6 +3,11 @@
   "lines": [
     [
       {
+        "id": "f8c8d960-b917-49b0-953b-d6abe001b59e",
+        "type": "model",
+        "backgroundColor": "bgBrightYellow"
+      },
+      {
         "id": "7",
         "type": "git-changes",
         "color": "yellow"

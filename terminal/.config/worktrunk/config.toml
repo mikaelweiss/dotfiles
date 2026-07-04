@@ -323,13 +323,20 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
 
-# Each worktree lives in a dedicated tmux window named after its branch:
-# switch to it if it exists, otherwise open one at the worktree path.
+# Each worktree lives in a dedicated tmux window / herdr tab named after its
+# branch: switch to it if it exists, otherwise open one at the worktree path.
+# When herdr runs inside tmux, HERDR_ENV wins so only the inner mux reacts.
 [post-switch]
 tmux-tab = '''
-[ -n "${TMUX:-}" ] || exit 0
+[ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
 tmux select-window -t ={{ branch }} 2>/dev/null && exit 0
 tmux new-window -n {{ branch }} -c {{ worktree_path }}
+'''
+herdr-tab = '''
+[ -n "${HERDR_ENV:-}" ] || exit 0
+tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
+[ -n "$tab_id" ] && herdr tab focus "$tab_id" && exit 0
+herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{ worktree_path }} --focus
 '''
 
 [projects."github.com/MikaelWeiss/ask-pip".post-start]

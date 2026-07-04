@@ -55,6 +55,10 @@ codex/.codex/plugins/
 codex/.codex/.tmp/
 codex/.codex/tmp/
 
+# Herdr runtime/state (keep config.toml)
+terminal/.config/herdr/*
+!terminal/.config/herdr/config.toml
+
 # Terminal app runtime/state (keep settings/config files)
 terminal/.config/cagent/.cagent_first_run
 terminal/.config/cagent/user-uuid

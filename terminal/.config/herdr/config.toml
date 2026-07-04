@@ -1,0 +1,56 @@
+# Keybindings mirror ~/.config/tmux/tmux.conf + tmux.reset.conf where herdr
+# has an equivalent action. Herdr defaults already match tmux for pane focus
+# (prefix+h/j/k/l), zoom (prefix+z), and config reload (prefix+shift+r).
+
+[theme]
+name = "catppuccin"
+
+[keys]
+prefix = "ctrl+f"
+
+# tmux: bind n new-window
+new_tab = "prefix+n"
+# tmux: bind Left/Right previous-window/next-window
+previous_tab = "prefix+left"
+next_tab = "prefix+right"
+# tmux: bind r rename-window
+rename_tab = "prefix+r"
+# tmux: bind c kill-pane
+close_pane = "prefix+c"
+# tmux: bind s split -h (side by side), bind v split -v (stacked)
+split_vertical = "prefix+s"
+split_horizontal = "prefix+v"
+# tmux: bind ^D detach
+detach = "prefix+ctrl+d"
+# tmux: bind ^F last-window (prefix+ctrl+f is reserved for sending a literal
+# ctrl+f to the pane, so the double-tap becomes prefix then plain f)
+last_pane = "prefix+f"
+# tmux: sessionx project picker on prefix+o
+workspace_picker = "prefix+o"
+# tmux: bind S choose-session
+goto = "prefix+shift+s"
+# settings moves off prefix+s (taken by split); comma matches macOS Cmd+,
+settings = "prefix+comma"
+resize_mode = "prefix+minus"
+# notification target moves off prefix+o (taken by workspace picker)
+open_notification_target = "prefix+shift+o"
+
+# tmux: floax scratch terminal on prefix+p
+[[keys.command]]
+key = "prefix+p"
+type = "pane"
+command = "zsh"
+
+[ui]
+# tmux: pane-active-border-style fg=magenta
+accent = "magenta"
+# split panes share single divider lines; herdr always draws the outer
+# border ring too — interior-only (tmux-style) borders aren't supported
+pane_borders = true
+pane_gaps = false
+# tmux new-window creates instantly without prompting for a name
+prompt_new_tab_name = false
+
+[experimental]
+# tmux: continuum/resurrect restore across restarts
+pane_history = true
