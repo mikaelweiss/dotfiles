@@ -32,6 +32,9 @@ detach = "prefix+ctrl+d"
 last_pane = "prefix+f"
 # tmux: sessionx project picker on prefix+o
 workspace_picker = "prefix+o"
+# cmd+1..9 jumps straight to a workspace without the prefix; requires the
+# matching super+digit unbinds in the ghostty config so the chords reach herdr
+switch_workspace = ["cmd+1..9", "prefix+shift+1..9"]
 # tmux: bind S choose-session
 goto = "prefix+shift+s"
 # settings moves off prefix+s (taken by split); comma matches macOS Cmd+,
