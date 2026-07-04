@@ -1,6 +1,7 @@
 # Keybindings mirror ~/.config/tmux/tmux.conf + tmux.reset.conf where herdr
 # has an equivalent action. Herdr defaults already match tmux for pane focus
-# (prefix+h/j/k/l), zoom (prefix+z), and config reload (prefix+shift+r).
+# (prefix+j/k; h/l are set below), zoom (prefix+z), and config reload
+# (prefix+shift+r).
 
 [theme]
 name = "catppuccin"
@@ -20,6 +21,10 @@ close_pane = "prefix+c"
 # tmux: bind s split -h (side by side), bind v split -v (stacked)
 split_vertical = "prefix+s"
 split_horizontal = "prefix+v"
+# setting these replaces the built-in prefix+h/l defaults, so they are
+# restated alongside the ctrl-held variants
+focus_pane_left = ["prefix+h", "prefix+ctrl+h"]
+focus_pane_right = ["prefix+l", "prefix+ctrl+l"]
 # tmux: bind ^D detach
 detach = "prefix+ctrl+d"
 # tmux: bind ^F last-window (prefix+ctrl+f is reserved for sending a literal

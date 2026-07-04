@@ -362,23 +362,18 @@ herdr pane rename "$new" wolf
 herdr pane run "$new" "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
 '''
 
-# Removing a worktree here also kills its agent session on wolf.
-[pre-remove]
-wolf-tmux-session = '''
-[ "$(hostname -s)" = "wolf" ] && exit 0
-ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$(printf '%s' '{{ branch | sanitize }}' | tr '.:' '--')\"" >/dev/null 2>&1
-exit 0
+# Once a worktree is gone (wt remove, or wt merge with removal), kill its
+# wolf keeper session, clear wolf's leftover copy, and close its local
+# tmux window / herdr tab. The script no-ops while the worktree still
+# exists locally, so merges with --no-remove leave everything open.
+[post-remove]
+cleanup = '''
+~/code/dotfiles/terminal/bin/worktree-cleanup {{ branch }} {{ branch | sanitize }} {{ worktree_path }}
 '''
 
-# Sync can't delete ignored files (node_modules), so clear the leftover
-# worktree directory on wolf after local removal.
-[post-remove]
-wolf-worktree-dir = '''
-[ "$(hostname -s)" = "wolf" ] && exit 0
-case "{{ worktree_path }}" in
-  "$HOME/.worktrees/"*) ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "rm -rf '{{ worktree_path }}'" >/dev/null 2>&1 ;;
-esac
-exit 0
+[post-merge]
+cleanup = '''
+~/code/dotfiles/terminal/bin/worktree-cleanup {{ branch }} {{ branch | sanitize }} {{ worktree_path }}
 '''
 
 [projects."github.com/MikaelWeiss/ask-pip".post-start]
