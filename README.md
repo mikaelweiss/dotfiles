@@ -6,3 +6,6 @@ From here I will be able run a script and set up my computer with everything I n
 To install, run the following command:
 
 ``` git clone https://github.com/MikaelWeiss/dotfiles.git && stow .```
+
+See [wolf-sync.md](wolf-sync.md) for how the wolf ⇄ laptop file sync and
+per-worktree agent sessions work (architecture, decisions, commands, gotchas).
