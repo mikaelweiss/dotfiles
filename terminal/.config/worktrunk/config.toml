@@ -345,6 +345,7 @@ herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{
 wolf-pane-tmux = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
 [ "$(hostname -s)" = "wolf" ] && exit 0
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 [ "$(tmux list-panes -t ={{ branch }} 2>/dev/null | grep -c .)" = "1" ] || exit 0
 tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
   "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
@@ -352,6 +353,7 @@ tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
 wolf-pane-herdr = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
 [ "$(hostname -s)" = "wolf" ] && exit 0
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] || exit 0
 panes=$(herdr pane list --workspace "$HERDR_WORKSPACE_ID")
@@ -368,11 +370,13 @@ herdr pane run "$new" "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ w
 # exists locally, so merges with --no-remove leave everything open.
 [post-remove]
 cleanup = '''
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 ~/code/dotfiles/terminal/bin/worktree-cleanup {{ branch }} {{ branch | sanitize }} {{ worktree_path }}
 '''
 
 [post-merge]
 cleanup = '''
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 ~/code/dotfiles/terminal/bin/worktree-cleanup {{ branch }} {{ branch | sanitize }} {{ worktree_path }}
 '''
 

@@ -56,12 +56,21 @@ The MacBook Pro is the work computer and is **never** part of this.
   no wolf pane yet, split right and run
   `ssh -t wolf wolf-agent <worktree> <branch>` — a persistent shell on wolf in
   the same directory, deps installed. Guards: skips when running on wolf
-  itself (dotfiles sync there too), and never re-splits an existing pane.
-- **post-remove and post-merge** both run `worktree-cleanup`. It no-ops while
-  the worktree still exists locally, which makes double-fires harmless and
-  leaves everything open after `wt merge --no-remove`. The tab close is
-  delayed one second and detached, because you usually run `wt merge` from
-  inside the tab it is about to close.
+  itself (dotfiles sync there too), never re-splits an existing pane, and
+  **skips the primary worktree entirely** — the `main` tab is a local-only
+  launchpad for creating the next worktree; agents work in feature
+  worktrees, so only those get wolf panes/sessions.
+- **post-remove and post-merge** both run `worktree-cleanup`. `wt merge`
+  fires post-merge *before* its backgrounded removal deletes the worktree,
+  so when the dir still exists the script re-launches itself detached and
+  waits (up to 30s) for it to vanish; if it never does, that was
+  `merge --no-remove` and everything stays open. The tab close is delayed
+  and detached, because you usually run `wt merge` from inside the tab it
+  is about to close.
+
+Keeper sessions are named after the branch, matching the tab name. The
+cleanup hooks carry the same primary-worktree guard, so nothing ever
+touches a wolf session named `main`.
 
 The keeper sessions on wolf are plain tmux used purely as process keepers —
 close the laptop and the agent keeps running; reattach and you're back. They

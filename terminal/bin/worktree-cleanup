@@ -7,11 +7,26 @@
 # post-remove and post-merge.
 # Usage: worktree-cleanup <branch> <branch-sanitized> <worktree_path>
 branch=$1
+rawname=$2
 name=${2//[.:]/-}
 worktree=$3
 
 [ "$(hostname -s)" = "wolf" ] && exit 0
-[ -d "$worktree" ] && exit 0
+
+if [ -d "$worktree" ]; then
+  # wt merge fires post-merge before its backgrounded removal deletes the
+  # worktree — hand off to a detached copy that waits for it to vanish
+  if [ -z "${WORKTREE_CLEANUP_REEXEC:-}" ]; then
+    WORKTREE_CLEANUP_REEXEC=1 nohup "$0" "$branch" "$rawname" "$worktree" >/dev/null 2>&1 &!
+    exit 0
+  fi
+  for i in {1..60}; do
+    sleep 0.5
+    [ -d "$worktree" ] || break
+  done
+  # still present after the wait: merge --no-remove, leave everything open
+  [ -d "$worktree" ] && exit 0
+fi
 
 ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$name\"" >/dev/null 2>&1
 case "$worktree" in
