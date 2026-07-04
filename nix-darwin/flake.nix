@@ -74,15 +74,40 @@
     wolfConfig = { pkgs, ... }: {
       environment.systemPackages = with pkgs; [
         nodejs_24
+        python311
         # Wolf-only packages here
       ];
+
+      launchd.user.agents.open-webui = {
+        serviceConfig = {
+          ProgramArguments = [
+            "/Users/mikaelweiss/.local/bin/open-webui"
+            "serve"
+            "--host"
+            "127.0.0.1"
+            "--port"
+            "8089"
+          ];
+          EnvironmentVariables = {
+            DATA_DIR = "/Users/mikaelweiss/.open-webui";
+            WEBUI_SECRET_KEY = "t0p-s3cr3t";
+            HOME = "/Users/mikaelweiss";
+          };
+          WorkingDirectory = "/Users/mikaelweiss/.open-webui";
+          RunAtLoad = true;
+          KeepAlive = true;
+          StandardOutPath = "/tmp/open-webui.log";
+          StandardErrorPath = "/tmp/open-webui.err";
+        };
+      };
 
       programs.zsh = {
         enable = true;
         interactiveShellInit = ''
-          # Auto-attach herdr on SSH
-          if [[ -n "$SSH_CONNECTION" && -z "$HERDR_ENV" ]] && command -v herdr >/dev/null 2>&1; then
-            exec herdr
+          # Auto-attach herdr on SSH; runs from /etc/zshrc before ~/.zshrc
+          # puts Homebrew on PATH, so use the absolute path
+          if [[ -n "$SSH_CONNECTION" && -z "$HERDR_ENV" && -x /opt/homebrew/bin/herdr ]]; then
+            exec /opt/homebrew/bin/herdr
           fi
 
           # Tailscale
