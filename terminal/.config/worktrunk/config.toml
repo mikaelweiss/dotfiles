@@ -370,6 +370,17 @@ ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$(printf 
 exit 0
 '''
 
+# Sync can't delete ignored files (node_modules), so clear the leftover
+# worktree directory on wolf after local removal.
+[post-remove]
+wolf-worktree-dir = '''
+[ "$(hostname -s)" = "wolf" ] && exit 0
+case "{{ worktree_path }}" in
+  "$HOME/.worktrees/"*) ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "rm -rf '{{ worktree_path }}'" >/dev/null 2>&1 ;;
+esac
+exit 0
+'''
+
 [projects."github.com/MikaelWeiss/ask-pip".post-start]
 deps = "npm i"
 env  = "cp {{ primary_worktree_path }}/.env.local {{ worktree_path }}/.env.local"

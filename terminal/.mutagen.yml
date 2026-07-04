@@ -36,3 +36,40 @@ sync:
         - ".mypy_cache"
         # Transient git lock files
         - "index.lock"
+        # Machine-local Xcode state that stow links into dotfiles/xcode
+        # (~/Library/Developer points there); untracked by git
+        - "/dotfiles/xcode/Library/Developer/CoreSimulator"
+        - "/dotfiles/xcode/Library/Developer/XCTestDevices"
+        - "/dotfiles/xcode/Library/Developer/XCPGDevices"
+        - "/dotfiles/xcode/Library/Developer/DVTDownloads"
+        - "/dotfiles/xcode/Library/Developer/Xcode/iOS DeviceSupport"
+        - "/dotfiles/xcode/Library/Developer/Xcode/CodingAssistant"
+        - "/dotfiles/xcode/Library/Developer/Xcode/Products"
+        - "/dotfiles/xcode/Library/Developer/Xcode/Archives"
+        # Live per-machine Claude Code state that stow links into
+        # dotfiles/claude (~/.claude points there); untracked by git.
+        # Shared config (settings, skills, agents, plugins, CLAUDE.md) syncs.
+        - "/dotfiles/claude/.claude/projects"
+        - "/dotfiles/claude/.claude/telemetry"
+        - "/dotfiles/claude/.claude/file-history"
+        - "/dotfiles/claude/.claude/shell-snapshots"
+        - "/dotfiles/claude/.claude/history.jsonl"
+        - "/dotfiles/claude/.claude/todos"
+        - "/dotfiles/claude/.claude/statsig"
+        - "/dotfiles/claude/.claude/cache"
+        - "/dotfiles/claude/.claude/backups"
+        - "/dotfiles/claude/.claude/plans"
+        - "/dotfiles/claude/.claude/debug"
+        - "/dotfiles/claude/.claude/logs"
+        - "/dotfiles/claude/.claude/ide"
+        - "/dotfiles/claude/.claude/session-env"
+        - "/dotfiles/claude/.claude/.credentials.json"
+        # Live per-machine Codex state (~/.codex is stow-linked); the SQLite
+        # databases would corrupt if two machines wrote them through sync
+        - "/dotfiles/codex/.codex/*.sqlite*"
+        - "/dotfiles/codex/.codex/sessions"
+        - "/dotfiles/codex/.codex/shell_snapshots"
+        - "/dotfiles/codex/.codex/cache"
+        - "/dotfiles/codex/.codex/models_cache.json"
+        - "/dotfiles/codex/.codex/history.jsonl"
+        - "/dotfiles/codex/.codex/auth.json"

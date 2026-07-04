@@ -45,6 +45,8 @@ claude/.claude/daemon/
 claude/.claude/daemon*
 
 # Codex runtime/state (keep config.toml and hand-authored skills)
+codex/.codex/shell_snapshots/
+codex/.codex/sessions/
 codex/.codex/auth.json
 codex/.codex/version.json
 codex/.codex/models_cache.json
@@ -106,6 +108,12 @@ terminal/.pi/agent/skills/wrangler/
 
 # Xcode runtime/state (keep themes and key bindings)
 xcode/Library/Developer/CoreSimulator/
+xcode/Library/Developer/XCTestDevices/
+xcode/Library/Developer/XCPGDevices/
+xcode/Library/Developer/DVTDownloads/
+xcode/Library/Developer/Xcode/Products/
+xcode/Library/Developer/Xcode/iOS DeviceSupport/
+xcode/Library/Developer/Xcode/Archives/
 xcode/Library/Developer/Xcode/DerivedData/
 xcode/Library/Developer/Xcode/CodingAssistant/
 xcode/Library/Developer/Xcode/BackupXcodeSettings/

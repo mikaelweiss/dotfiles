@@ -20,7 +20,8 @@ if [ ! -d "$worktree" ]; then
 fi
 
 if ! tmux has-session -t "=$name" 2>/dev/null; then
-  tmux new-session -d -s "$name" -c "$worktree"
-  tmux send-keys -t "=$name" "$cmd" Enter
+  # Blank SSH_CONNECTION so /etc/zshrc's herdr auto-attach skips this session
+  tmux new-session -d -s "$name" -c "$worktree" -e SSH_CONNECTION=
+  tmux send-keys -t "=$name:" "$cmd" Enter
 fi
 exec tmux attach-session -t "=$name"

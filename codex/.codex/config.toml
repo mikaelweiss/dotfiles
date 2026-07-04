@@ -78,6 +78,9 @@ trust_level = "trusted"
 [projects."/Users/mikaelweiss/code/websites/vault"]
 trust_level = "trusted"
 
+[projects."/Users/mikaelweiss/code/ask-pip"]
+trust_level = "trusted"
+
 [plugins."github@openai-curated"]
 enabled = true
 
