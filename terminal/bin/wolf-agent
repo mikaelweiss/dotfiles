@@ -7,7 +7,7 @@ set -u
 worktree=$1
 name=${2//[.:]/-}
 shift 2
-cmd=${*:-'~/code/dotfiles/terminal/bin/wolf-bootstrap; claude'}
+cmd=${*:-'~/code/dotfiles/terminal/bin/wolf-bootstrap'}
 
 waited=0
 while [ ! -d "$worktree" ] && [ "$waited" -lt 120 ]; do
