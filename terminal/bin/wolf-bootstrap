@@ -1,0 +1,14 @@
+#!/bin/zsh
+# Installs node dependencies in the current worktree when the sync layer
+# skipped them (node_modules is ignored in .mutagen.yml).
+if [ -f package.json ] && [ ! -d node_modules ]; then
+  if [ -f pnpm-lock.yaml ]; then
+    pnpm install
+  elif [ -f bun.lock ] || [ -f bun.lockb ]; then
+    bun install
+  elif [ -f yarn.lock ]; then
+    yarn install
+  else
+    npm install
+  fi
+fi

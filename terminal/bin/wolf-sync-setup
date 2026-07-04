@@ -1,0 +1,21 @@
+#!/bin/zsh
+# One-time (re)setup of the mutagen sessions that keep this machine and wolf
+# identical. Ignore defaults come from ~/.mutagen.yml. Wolf is alpha: on a
+# simultaneous-write conflict, wolf's copy (the agent's work) wins.
+set -e
+
+create() {
+  local name=$1 dir=$2
+  if mutagen sync list "$name" >/dev/null 2>&1; then
+    echo "session '$name' already exists"
+  else
+    mutagen sync create --name="$name" \
+      --sync-mode=two-way-resolved \
+      --symlink-mode=posix-raw \
+      "wolf:$dir" "$dir"
+  fi
+}
+
+create code "$HOME/code"
+create worktrees "$HOME/.worktrees"
+mutagen sync list

@@ -1,0 +1,26 @@
+#!/bin/zsh
+# Runs on wolf via: ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent <worktree_path> <name> [cmd...]'
+# Attaches to the per-worktree tmux keeper session, creating it (and starting
+# the agent) if it doesn't exist. Waits for mutagen to materialize the
+# directory when the laptop created it moments ago.
+set -u
+worktree=$1
+name=${2//[.:]/-}
+shift 2
+cmd=${*:-'~/code/dotfiles/terminal/bin/wolf-bootstrap; claude'}
+
+waited=0
+while [ ! -d "$worktree" ] && [ "$waited" -lt 120 ]; do
+  sleep 0.5
+  waited=$((waited + 1))
+done
+if [ ! -d "$worktree" ]; then
+  echo "wolf-agent: $worktree has not synced over yet — check 'mutagen sync list' on the laptop" >&2
+  exec zsh -l
+fi
+
+if ! tmux has-session -t "=$name" 2>/dev/null; then
+  tmux new-session -d -s "$name" -c "$worktree"
+  tmux send-keys -t "=$name" "$cmd" Enter
+fi
+exec tmux attach-session -t "=$name"

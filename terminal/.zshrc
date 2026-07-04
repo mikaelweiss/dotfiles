@@ -78,6 +78,12 @@ alias nix-config='nvim /Users/mikaelweiss/code/dotfiles/nix-darwin/flake.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
 alias tm='tmux new-session -A -s main'
 
+# Wolf (Mac mini): attach this directory's agent session there; args replace `claude`
+export PATH="$HOME/code/dotfiles/terminal/bin:$PATH"
+wolf() {
+  ssh -t wolf "~/code/dotfiles/terminal/bin/wolf-agent ${(q)PWD} ${(q)${PWD:t}} $*"
+}
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 

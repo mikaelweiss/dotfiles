@@ -326,7 +326,9 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 # Each worktree lives in a dedicated tmux window / herdr tab named after its
 # branch: switch to it if it exists, otherwise open one at the worktree path.
 # When herdr runs inside tmux, HERDR_ENV wins so only the inner mux reacts.
-[post-switch]
+# Step two splits the tab and attaches the worktree's agent session on wolf
+# (see terminal/bin/wolf-agent); mutagen keeps the two copies identical.
+[[post-switch]]
 tmux-tab = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
 tmux select-window -t ={{ branch }} 2>/dev/null && exit 0
@@ -337,6 +339,35 @@ herdr-tab = '''
 tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] && herdr tab focus "$tab_id" && exit 0
 herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{ worktree_path }} --focus
+'''
+
+[[post-switch]]
+wolf-pane-tmux = '''
+[ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
+[ "$(hostname -s)" = "wolf" ] && exit 0
+[ "$(tmux list-panes -t ={{ branch }} 2>/dev/null | grep -c .)" = "1" ] || exit 0
+tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
+  "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
+'''
+wolf-pane-herdr = '''
+[ -n "${HERDR_ENV:-}" ] || exit 0
+[ "$(hostname -s)" = "wolf" ] && exit 0
+tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
+[ -n "$tab_id" ] || exit 0
+panes=$(herdr pane list --workspace "$HERDR_WORKSPACE_ID")
+echo "$panes" | jq -e --arg t "$tab_id" '.result.panes[] | select(.tab_id == $t and .label == "wolf")' >/dev/null && exit 0
+root=$(echo "$panes" | jq -r --arg t "$tab_id" '[.result.panes[] | select(.tab_id == $t)][0].pane_id')
+new=$(herdr pane split "$root" --direction right --cwd {{ worktree_path }} --focus | jq -r '.result.pane.pane_id')
+herdr pane rename "$new" wolf
+herdr pane run "$new" "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
+'''
+
+# Removing a worktree here also kills its agent session on wolf.
+[pre-remove]
+wolf-tmux-session = '''
+[ "$(hostname -s)" = "wolf" ] && exit 0
+ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$(printf '%s' '{{ branch | sanitize }}' | tr '.:' '--')\"" >/dev/null 2>&1
+exit 0
 '''
 
 [projects."github.com/MikaelWeiss/ask-pip".post-start]

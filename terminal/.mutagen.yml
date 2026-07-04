@@ -1,0 +1,38 @@
+# Defaults for new mutagen sync sessions. Ignores are locked into a session
+# when it is created — recreate sessions (wolf-sync-setup) after changing them.
+# Artifact names come from the github/gitignore templates for each ecosystem.
+sync:
+  defaults:
+    ignore:
+      paths:
+        # macOS
+        - ".DS_Store"
+        # Node
+        - "node_modules"
+        - "dist"
+        - "build"
+        - "coverage"
+        - ".next"
+        - ".turbo"
+        - ".expo"
+        - ".cache"
+        - ".vite"
+        - ".parcel-cache"
+        # Xcode / Swift
+        - "xcuserdata"
+        - "DerivedData"
+        - ".build"
+        - ".swiftpm"
+        # Elixir / Phoenix
+        - "_build"
+        - "deps"
+        - ".elixir_ls"
+        - "erl_crash.dump"
+        # Python
+        - "__pycache__"
+        - ".venv"
+        - ".pytest_cache"
+        - ".ruff_cache"
+        - ".mypy_cache"
+        # Transient git lock files
+        - "index.lock"
