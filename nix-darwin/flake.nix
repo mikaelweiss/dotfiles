@@ -67,6 +67,7 @@
         "obsidian"
         "shottr"
         "signal"
+        "conductor"
       ];
     };
 
