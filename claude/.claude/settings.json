@@ -185,9 +185,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "npx -y ccstatusline@latest",
-    "padding": 0,
-    "refreshInterval": 10
+    "command": "wt list statusline --format=claude-code"
   },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true,
@@ -197,13 +195,20 @@
     "ralph-loop@claude-plugins-official": false,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true,
+    "worktrunk@worktrunk": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
       "source": {
         "source": "github",
         "repo": "sveltejs/ai-tools"
+      }
+    },
+    "worktrunk": {
+      "source": {
+        "source": "github",
+        "repo": "max-sixty/worktrunk"
       }
     }
   },
@@ -224,5 +229,6 @@
   "voiceEnabled": true,
   "lsp": {
     "enabled": true
-  }
+  },
+  "model": "claude-fable-5[1m]"
 }

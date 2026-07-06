@@ -8,6 +8,8 @@ return {
       "flake8",
       "ast-grep",
       "biome",
+      "prettier",
+      "pint",
       "codelldb",
       "elixir-ls",
       "json-lsp",

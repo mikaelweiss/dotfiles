@@ -57,6 +57,7 @@ return {
           "%.conductor/",
           "%.worktrees/",
           "%.nvim/",
+          "node_modules/",
         },
       },
       pickers = {
@@ -77,7 +78,10 @@ return {
           files = {
             hidden = true,
             ignored = true,
-            exclude = { ".conductor", ".worktrees", ".nvim" },
+            exclude = { ".conductor", ".worktrees", ".nvim", "node_modules" },
+          },
+          grep = {
+            exclude = { "node_modules" },
           },
         },
       },
