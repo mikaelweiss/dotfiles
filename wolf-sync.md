@@ -43,10 +43,12 @@ The MacBook Pro is the work computer and is **never** part of this.
 | mutagen pkg + daemon | `nix-darwin/flake.nix` (`macbookAirConfig`) | Installs mutagen on the Air; launchd keeps the daemon alive. Logs: `/tmp/mutagen.log`, `/tmp/mutagen.err` |
 | ignore defaults | `terminal/.mutagen.yml` → `~/.mutagen.yml` | What never syncs (see below). **Locked into sessions at creation** |
 | `wolf-sync-setup` | `terminal/bin/` | Creates the two sessions. Idempotent. The reset-from-scratch command |
+| `wolf-attach` | `terminal/bin/` | Runs **on the laptop**: wraps the ssh to wolf-agent in a reconnect loop. Connection drops (ssh exit 255, e.g. lid close) retry every 2s; a clean exit — tmux detach, session killed — ends the pane |
 | `wolf-agent` | `terminal/bin/` | Runs **on wolf** (over SSH): waits for a just-created worktree to sync over, then attaches-or-creates its tmux keeper session |
 | `wolf-bootstrap` | `terminal/bin/` | Installs node deps in the worktree when missing (lockfile-aware: pnpm/bun/yarn/npm), since node_modules doesn't sync |
 | `worktree-cleanup` | `terminal/bin/` | After a worktree is gone: kills the wolf session, clears wolf's leftover dir, closes the local herdr tab / tmux window |
 | `wolf` function | `terminal/.zshrc` | `wolf` from any dir = that dir's session on wolf; `wolf claude` runs claude in it |
+| `wolf-split` | `terminal/bin/` | Splits the current herdr/tmux pane and attaches this worktree's wolf session in it — re-opens a closed wolf pane, or gives any dir one on demand |
 | wt hooks | `terminal/.config/worktrunk/config.toml` | The workflow glue (below) |
 
 ### Worktrunk hooks
@@ -54,8 +56,9 @@ The MacBook Pro is the work computer and is **never** part of this.
 - **post-switch** is a two-step pipeline. Step 1 (pre-existing): open/focus
   the tmux window / herdr tab named after the branch. Step 2: if the tab has
   no wolf pane yet, split right and run
-  `ssh -t wolf wolf-agent <worktree> <branch>` — a persistent shell on wolf in
-  the same directory, deps installed. Guards: skips when running on wolf
+  `wolf-attach <worktree> <branch>` — a persistent shell on wolf in
+  the same directory, deps installed, reconnecting on its own whenever the
+  link drops. Guards: skips when running on wolf
   itself (dotfiles sync there too), never re-splits an existing pane, and
   **skips the primary worktree entirely** — the `main` tab is a local-only
   launchpad for creating the next worktree; agents work in feature
@@ -73,8 +76,10 @@ cleanup hooks carry the same primary-worktree guard, so nothing ever
 touches a wolf session named `main`.
 
 The keeper sessions on wolf are plain tmux used purely as process keepers —
-close the laptop and the agent keeps running; reattach and you're back. They
-deliberately do **not** auto-start claude (start it yourself, or `wolf claude`).
+close the laptop and the agent keeps running; on wake, wolf-attach notices
+the dead link within ~10s (keepalives) and reattaches the pane by itself.
+They deliberately do **not** auto-start claude (start it yourself, or
+`wolf claude`).
 
 ## Decisions and why
 
@@ -117,6 +122,7 @@ mutagen sync reset code          # full rescan if a session looks wedged
 
 wolf                             # this dir's session on wolf (plain shell)
 wolf claude                      # same, running claude
+wolf-split                       # same, but in a new split next to this pane
 ssh wolf 'tmux ls'               # list keeper sessions (non-interactive ssh skips herdr)
 ssh wolf 'tmux kill-session -t "=name"'
 
@@ -151,6 +157,13 @@ mutagen sync terminate code worktrees && wolf-sync-setup
 - Ignored files never get deleted by sync — that's why `worktree-cleanup`
   rm's the wolf-side worktree dir (its node_modules would otherwise anchor a
   husk forever).
+- **Sleep kills the ssh, never the session.** Agents stream output, so
+  there's always TCP data in flight when the lid closes; the connection
+  cannot survive, only reconnect. ssh signals connection errors with exit
+  255 — that's the one code `wolf-attach` retries on. `wolf-agent` attaches
+  with `-d` to kick the dropped client (otherwise the session stays
+  letterboxed at its size), and the loop switches off stray mouse-reporting
+  modes so clicks don't land as garbage while disconnected.
 
 ## Resetting a machine
 

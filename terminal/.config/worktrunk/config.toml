@@ -327,7 +327,8 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 # branch: switch to it if it exists, otherwise open one at the worktree path.
 # When herdr runs inside tmux, HERDR_ENV wins so only the inner mux reacts.
 # Step two splits the tab and attaches the worktree's agent session on wolf
-# (see terminal/bin/wolf-agent); mutagen keeps the two copies identical.
+# via wolf-attach, which reconnects on its own when the link drops (lid
+# close); mutagen keeps the two copies identical.
 [[post-switch]]
 tmux-tab = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
@@ -348,7 +349,7 @@ wolf-pane-tmux = '''
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 [ "$(tmux list-panes -t ={{ branch }} 2>/dev/null | grep -c .)" = "1" ] || exit 0
 tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
-  "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
+  "~/code/dotfiles/terminal/bin/wolf-attach {{ worktree_path }} {{ branch | sanitize }}"
 '''
 wolf-pane-herdr = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
@@ -361,7 +362,7 @@ echo "$panes" | jq -e --arg t "$tab_id" '.result.panes[] | select(.tab_id == $t 
 root=$(echo "$panes" | jq -r --arg t "$tab_id" '[.result.panes[] | select(.tab_id == $t)][0].pane_id')
 new=$(herdr pane split "$root" --direction right --cwd {{ worktree_path }} --focus | jq -r '.result.pane.pane_id')
 herdr pane rename "$new" wolf
-herdr pane run "$new" "ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent {{ worktree_path }} {{ branch | sanitize }}'"
+herdr pane run "$new" "~/code/dotfiles/terminal/bin/wolf-attach {{ worktree_path }} {{ branch | sanitize }}"
 '''
 
 # Once a worktree is gone (wt remove, or wt merge with removal), kill its

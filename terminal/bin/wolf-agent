@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Runs on wolf via: ssh -t wolf '~/code/dotfiles/terminal/bin/wolf-agent <worktree_path> <name> [cmd...]'
+# Runs on wolf, invoked over ssh by wolf-attach (which owns reconnects).
+# Usage: wolf-agent <worktree_path> <name> [cmd...]
 # Attaches to the per-worktree tmux keeper session, creating it (and starting
 # the agent) if it doesn't exist. Waits for mutagen to materialize the
 # directory when the laptop created it moments ago.
@@ -24,4 +25,6 @@ if ! tmux has-session -t "=$name" 2>/dev/null; then
   tmux new-session -d -s "$name" -c "$worktree" -e SSH_CONNECTION=
   tmux send-keys -t "=$name:" "$cmd" Enter
 fi
-exec tmux attach-session -t "=$name"
+# -d kicks any client left over from a dropped connection, so the session
+# doesn't stay letterboxed at the dead client's size until sshd times it out
+exec tmux attach-session -d -t "=$name"

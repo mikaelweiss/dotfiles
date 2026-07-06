@@ -1,0 +1,31 @@
+#!/bin/zsh
+# Runs on the laptop: keeps a worktree's wolf session attached across
+# connection drops. Closing the lid kills the TCP link (agents stream output,
+# so there's always data in flight during sleep); ssh exits 255 on any
+# connection error, and only then does the loop retry. Everything else —
+# tmux detach, the session dying via worktree-cleanup, ctrl-c — ends the
+# loop so the pane can close. Keepalives make a dead link surface within
+# ~10s of waking instead of hanging for minutes.
+# Usage: wolf-attach <worktree_path> <name> [cmd...]
+set -u
+worktree=$1
+name=$2
+shift 2
+
+attempt=0
+while :; do
+  start=$SECONDS
+  ssh -t \
+    -o ServerAliveInterval=5 -o ServerAliveCountMax=2 -o ConnectTimeout=5 \
+    wolf "~/code/dotfiles/terminal/bin/wolf-agent ${(q)worktree} ${(q)name} $*"
+  code=$?
+  [ "$code" -ne 255 ] && exit "$code"
+  # A dead session never tells the terminal to stop mouse reporting, so
+  # clicks would land as escape-sequence garbage — switch it off while
+  # disconnected; tmux re-enables it on reattach.
+  printf '\e[?1000l\e[?1002l\e[?1003l\e[?1006l'
+  [ $((SECONDS - start)) -ge 30 ] && attempt=0
+  attempt=$((attempt + 1))
+  printf '\r\e[Kwolf-attach: link to wolf down — reconnecting (attempt %d, ctrl-c stops) ' "$attempt"
+  sleep 2
+done

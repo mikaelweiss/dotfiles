@@ -1,3 +1,4 @@
+onboarding = false
 # Keybindings mirror ~/.config/tmux/tmux.conf + tmux.reset.conf where herdr
 # has an equivalent action. Herdr defaults already match tmux for pane focus
 # (prefix+j/k; h/l are set below), zoom (prefix+z), and config reload
@@ -14,6 +15,11 @@ new_tab = "prefix+n"
 # tmux: bind Left/Right previous-window/next-window
 previous_tab = "prefix+left"
 next_tab = "prefix+right"
+# option+1..9 jumps straight to a tab without the prefix; requires the
+# alt+digit esc: keybinds in the ghostty config, since macOS option+digit
+# types special characters (¡™£…) instead of sending alt. Setting this
+# replaces the built-in prefix+1..9 default, so it is restated alongside.
+switch_tab = ["alt+1..9", "prefix+1..9"]
 # tmux: bind r rename-window
 rename_tab = "prefix+r"
 # tmux: bind c kill-pane
@@ -32,9 +38,9 @@ detach = "prefix+ctrl+d"
 last_pane = "prefix+f"
 # tmux: sessionx project picker on prefix+o
 workspace_picker = "prefix+o"
-# cmd+1..9 jumps straight to a workspace without the prefix; requires the
+# ctrl+1..9 jumps straight to a workspace without the prefix; requires the
 # matching super+digit unbinds in the ghostty config so the chords reach herdr
-switch_workspace = ["cmd+1..9", "prefix+shift+1..9"]
+switch_workspace = ["ctrl+1..9", "prefix+shift+1..9"]
 # tmux: bind S choose-session
 goto = "prefix+shift+s"
 # settings moves off prefix+s (taken by split); comma matches macOS Cmd+,
@@ -59,6 +65,7 @@ pane_gaps = false
 # tmux new-window creates instantly without prompting for a name
 prompt_new_tab_name = false
 
+show_agent_labels_on_pane_borders = false
 [experimental]
 # tmux: continuum/resurrect restore across restarts
 pane_history = true

@@ -5,24 +5,18 @@ keybind = shift+enter=text:\n
 keybind = shift+space=text:\x20
 keybind = shift+backspace=text:\x7f
 
-# cmd+1..9 pass through to herdr for workspace switching
-keybind = super+digit_1=unbind
-keybind = super+1=unbind
-keybind = super+digit_2=unbind
-keybind = super+2=unbind
-keybind = super+digit_3=unbind
-keybind = super+3=unbind
-keybind = super+digit_4=unbind
-keybind = super+4=unbind
-keybind = super+digit_5=unbind
-keybind = super+5=unbind
-keybind = super+digit_6=unbind
-keybind = super+6=unbind
-keybind = super+digit_7=unbind
-keybind = super+7=unbind
-keybind = super+digit_8=unbind
-keybind = super+8=unbind
-keybind = super+9=unbind
+# option+digit sends ESC+digit so herdr sees alt+1..9 for switch_tab;
+# macOS otherwise types ¡™£¢∞§¶•ª for these chords
+keybind = alt+digit_1=esc:1
+keybind = alt+digit_2=esc:2
+keybind = alt+digit_3=esc:3
+keybind = alt+digit_4=esc:4
+keybind = alt+digit_5=esc:5
+keybind = alt+digit_6=esc:6
+keybind = alt+digit_7=esc:7
+keybind = alt+digit_8=esc:8
+keybind = alt+digit_9=esc:9
+
 term = xterm-256color
 
 background-opacity = 1.00

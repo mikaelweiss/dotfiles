@@ -1,0 +1,26 @@
+#!/bin/zsh
+# Opens a new split next to the current pane, attached to this worktree's
+# keeper session on wolf — the same session the post-switch hook targets
+# (session name = worktree dir tail = sanitized branch for wt worktrees).
+# Works inside herdr or plain tmux. wolf-agent attaches with -d, so if the
+# session is already on screen somewhere, the new split takes it over and
+# the old viewer's wolf-attach exits cleanly.
+# Usage: wolf-split [cmd...]   (cmd only runs if the session doesn't exist yet)
+set -u
+[ "$(hostname -s)" = "wolf" ] && { echo "wolf-split: already on wolf" >&2; exit 1 }
+
+worktree=$(git rev-parse --show-toplevel 2>/dev/null) || worktree=$PWD
+name=${worktree:t}
+
+if [ -n "${HERDR_ENV:-}" ]; then
+  new=$(herdr pane split --current --direction right --cwd "$worktree" --focus | jq -r '.result.pane.pane_id')
+  [ -n "$new" ] && [ "$new" != "null" ] || { echo "wolf-split: pane split failed" >&2; exit 1 }
+  herdr pane rename "$new" wolf
+  herdr pane run "$new" "~/code/dotfiles/terminal/bin/wolf-attach ${(q)worktree} ${(q)name} $*"
+elif [ -n "${TMUX:-}" ]; then
+  tmux split-window -h -c "$worktree" \
+    "~/code/dotfiles/terminal/bin/wolf-attach ${(q)worktree} ${(q)name} $*"
+else
+  echo "wolf-split: not inside herdr or tmux" >&2
+  exit 1
+fi

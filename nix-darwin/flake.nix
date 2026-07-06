@@ -84,6 +84,7 @@
         "shottr"
         "signal"
         "conductor"
+        "deno"
       ];
     };
 
@@ -121,12 +122,6 @@
       programs.zsh = {
         enable = true;
         interactiveShellInit = ''
-          # Auto-attach herdr on SSH; runs from /etc/zshrc before ~/.zshrc
-          # puts Homebrew on PATH, so use the absolute path
-          if [[ -n "$SSH_CONNECTION" && -z "$HERDR_ENV" && -x /opt/homebrew/bin/herdr ]]; then
-            exec /opt/homebrew/bin/herdr
-          fi
-
           # Tailscale
           alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 
@@ -208,6 +203,12 @@
         silent = true;
         nix-direnv.enable = true;
       };
+
+      # HTML manual fails to build against current nixpkgs (nix-darwin#1817);
+      # man pages are unaffected. The uninstaller embeds its own default-config
+      # system, so it hits the same failure.
+      documentation.doc.enable = false;
+      system.tools.darwin-uninstaller.enable = false;
 
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
