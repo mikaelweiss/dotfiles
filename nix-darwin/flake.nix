@@ -268,6 +268,7 @@
           # "mise" # node/python/etc version manager, per-project pinning
           "worktrunk"
           "herdr"
+          "pngpaste"
         ];
 
         # GUI Applications

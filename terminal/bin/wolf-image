@@ -1,0 +1,83 @@
+#!/bin/zsh
+# wolf-image — put the laptop clipboard's image in front of the claude
+# running in this worktree's wolf keeper session.
+#
+# Native paste (ctrl+v) and drag-drop both read the clipboard on the machine
+# claude runs on — wolf — which is empty over SSH. But mutagen keeps ~/code
+# byte-identical at the same absolute path on both machines, so a file written
+# here appears on wolf at that same path within a sync cycle. We drop the
+# clipboard image into ~/code/.image-drop, flush the sync, and type the path
+# into the wolf claude pane (no Enter — add your question and submit).
+#
+# Usage: wolf-image            copy/screenshot an image first, then run this
+set -u
+
+[ "$(hostname -s)" = "wolf" ] && { echo "wolf-image: run this on the laptop, not wolf" >&2; exit 1 }
+
+drop="$HOME/code/.image-drop"
+mkdir -p "$drop"
+out="$drop/img-$(date +%Y%m%d-%H%M%S).png"
+
+extract() {
+  # pngpaste handles every pasteboard image type in one shot, if installed.
+  if command -v pngpaste >/dev/null 2>&1; then
+    pngpaste "$out" 2>/dev/null && return 0
+    return 1
+  fi
+  # PNG on the pasteboard (screenshots-to-clipboard) — write it straight out.
+  if osascript - "$out" <<'OSA' 2>/dev/null; then return 0; fi
+on run argv
+  set fh to open for access (POSIX file (item 1 of argv)) with write permission
+  set eof of fh to 0
+  write (the clipboard as «class PNGf») to fh
+  close access fh
+end run
+OSA
+  # Fallback for images that live on the pasteboard as TIFF (copied from
+  # apps/browsers): dump TIFF, then convert to PNG with sips.
+  local tiff="${out%.png}.tiff"
+  if osascript - "$tiff" <<'OSA' 2>/dev/null; then
+on run argv
+  set fh to open for access (POSIX file (item 1 of argv)) with write permission
+  set eof of fh to 0
+  write (the clipboard as «class TIFF») to fh
+  close access fh
+end run
+OSA
+    sips -s format png "$tiff" --out "$out" >/dev/null 2>&1 && { rm -f "$tiff"; return 0; }
+    rm -f "$tiff"
+  fi
+  return 1
+}
+
+if ! extract; then
+  echo "wolf-image: no image on the clipboard" >&2
+  echo "            copy an image, or screenshot to clipboard (⌃⇧⌘4), then rerun" >&2
+  rm -f "$out"
+  exit 1
+fi
+
+# Keep the drop folder from growing without bound.
+find "$drop" -name 'img-*.png' -mtime +7 -delete 2>/dev/null
+
+# Push it to wolf and wait for the sync cycle so the path resolves there.
+mutagen sync flush code >/dev/null 2>&1
+
+# Same keeper session wolf-split/post-switch target: name = worktree dir tail.
+# tmux 3.7 needs the "=name:" form for send-keys (pane target), "=name" for
+# has-session (session target).
+worktree=$(git rev-parse --show-toplevel 2>/dev/null) || worktree=$PWD
+name=${worktree:t}
+msg="$out "
+
+result=$(ssh wolf "if tmux has-session -t '=$name' 2>/dev/null; then tmux send-keys -t '=$name:' -l ${(q)msg}; echo SENT; else echo NOSESSION; fi" 2>/dev/null)
+
+if [ "$result" = "SENT" ]; then
+  echo "wolf-image: typed the image path into wolf session '$name'."
+  echo "            $out"
+  echo "            add your question in claude and press Enter."
+else
+  echo "wolf-image: image saved and synced to $out"
+  echo "            no wolf session '$name' found — hand claude this path yourself:"
+  echo "            $out"
+fi

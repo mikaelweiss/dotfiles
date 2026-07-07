@@ -49,6 +49,7 @@ The MacBook Pro is the work computer and is **never** part of this.
 | `worktree-cleanup` | `terminal/bin/` | After a worktree is gone: kills the wolf session, clears wolf's leftover dir, closes the local herdr tab / tmux window |
 | `wolf` function | `terminal/.zshrc` | `wolf` from any dir = that dir's session on wolf; `wolf claude` runs claude in it |
 | `wolf-split` | `terminal/bin/` | Splits the current herdr/tmux pane and attaches this worktree's wolf session in it — re-opens a closed wolf pane, or gives any dir one on demand |
+| `wolf-image` | `terminal/bin/` | Runs **on the laptop**: writes the clipboard image into `~/code/.image-drop`, flushes the `code` sync so it lands on wolf at the identical path, then `send-keys` types that path into this worktree's wolf claude pane. Sidesteps the fact that ctrl+v / drag-drop read wolf's (empty) pasteboard over SSH; the file-path method is the one that survives. `pngpaste` if present, else osascript (PNGf, then TIFF→sips) |
 | wt hooks | `terminal/.config/worktrunk/config.toml` | The workflow glue (below) |
 
 ### Worktrunk hooks
@@ -123,6 +124,7 @@ mutagen sync reset code          # full rescan if a session looks wedged
 wolf                             # this dir's session on wolf (plain shell)
 wolf claude                      # same, running claude
 wolf-split                       # same, but in a new split next to this pane
+wolf-image                       # clipboard image -> synced path -> typed into this dir's wolf claude
 ssh wolf 'tmux ls'               # list keeper sessions (non-interactive ssh skips herdr)
 ssh wolf 'tmux kill-session -t "=name"'
 
