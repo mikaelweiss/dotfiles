@@ -1,10 +1,10 @@
 #!/bin/zsh
 # Cleans up after a worktree is gone (wt remove, or wt merge with removal):
-# kills the wolf keeper session, clears wolf's copy of the worktree (sync
-# can't delete ignored files like node_modules), and closes the local tmux
-# window / herdr tab. Closing the tab can kill the shell that ran wt, so
-# that step is delayed and detached. Idempotent — safe to fire from both
-# post-remove and post-merge.
+# closes the local tmux window / herdr tab first so it doesn't linger, then
+# kills the wolf keeper session and clears wolf's copy of the worktree (sync
+# can't delete ignored files like node_modules). The wolf cleanup is detached
+# because closing the tab tears down the pane this script runs in. Idempotent
+# — safe to fire from both post-remove and post-merge.
 # Usage: worktree-cleanup <branch> <branch-sanitized> <worktree_path>
 branch=$1
 rawname=$2
@@ -28,17 +28,19 @@ if [ -d "$worktree" ]; then
   [ -d "$worktree" ] && exit 0
 fi
 
-ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$name\"" >/dev/null 2>&1
-case "$worktree" in
-  "$HOME/.worktrees/"*)
-    ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "rm -rf '$worktree'" >/dev/null 2>&1
-    ;;
-esac
-
 if [ -n "${HERDR_ENV:-}" ]; then
   tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b "$branch" '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
-  [ -n "$tab_id" ] && nohup sh -c "sleep 1; herdr tab close $tab_id" >/dev/null 2>&1 &
+  [ -n "$tab_id" ] && nohup sh -c "herdr tab close $tab_id" >/dev/null 2>&1 &
 elif [ -n "${TMUX:-}" ]; then
-  nohup sh -c "sleep 1; tmux kill-window -t '=$branch'" >/dev/null 2>&1 &
+  nohup sh -c "tmux kill-window -t '=$branch'" >/dev/null 2>&1 &
 fi
+
+nohup sh -c '
+  ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "tmux kill-session -t \"=$1\"" >/dev/null 2>&1
+  case "$2" in
+    "$3/.worktrees/"*)
+      ssh -o BatchMode=yes -o ConnectTimeout=3 wolf "rm -rf \"$2\"" >/dev/null 2>&1
+      ;;
+  esac
+' _ "$name" "$worktree" "$HOME" >/dev/null 2>&1 &
 exit 0

@@ -2,16 +2,15 @@
   description = "Example nix-darwin system flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-unstable }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs }:
+
   let
     system = "aarch64-darwin";
-    unstable = import nixpkgs-unstable { inherit system; };
 
     # Personal computers
     personalConfig = { pkgs, ... }: {
@@ -78,13 +77,16 @@
         '';
       };
 
+      homebrew.brews = [
+        "deno"
+      ];
+
       homebrew.casks = [
         "modrinth"
         "obsidian"
         "shottr"
         "signal"
         "conductor"
-        "deno"
       ];
     };
 
@@ -261,6 +263,7 @@
         # CLI tools
         brews = [
           "elixir"
+          "erlang@28" # Pin OTP 28; OTP 29 crashes reading macOS CA certs (no_cacerts_found). Keg-only; .zshrc puts it ahead of unversioned erlang.
           "postgresql@18"
           "xcode-build-server"
           "mole"

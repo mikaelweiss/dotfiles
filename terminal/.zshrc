@@ -73,7 +73,8 @@ alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
 alias venv='source .venv/bin/activate'
 alias xc='sh ~/code/dotfiles/resize-xcode.sh'
 alias :q='exit'
-alias nix-rebuild='(cd ~/code/dotfiles/nix-darwin && nix flake update) && sudo darwin-rebuild switch'
+alias nix-rebuild='sudo darwin-rebuild switch --flake ~/code/dotfiles/nix-darwin#Mikaels-MacBook-Air'
+alias nix-update='(cd ~/code/dotfiles/nix-darwin && nix flake update) && nix-rebuild'
 alias nix-config='nvim /Users/mikaelweiss/code/dotfiles/nix-darwin/flake.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
 alias tm='tmux new-session -A -s main'
@@ -98,8 +99,8 @@ export PATH="$FLYCTL_INSTALL/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 # Ruby
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
-# Elixir
-export PATH="$PATH:/path/to/elixir/bin"
+# Erlang/OTP 28 (keg-only; must precede unversioned erlang so elixir/mix run on OTP 28)
+export PATH="/opt/homebrew/opt/erlang@28/bin:$PATH"
 # Local bin
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -115,8 +116,6 @@ esac
 export PATH=/Users/mikaelweiss/.opencode/bin:$PATH
 
 export PATH="/opt/homebrew/opt/node/bin:$PATH"
-export PATH=$HOME//opt/homebrew/bin:$PATH
-export PATH=$HOME//opt/homebrew/Cellar/erlang/28.1/lib/erlang/erts-16.1/bin:$PATH
 
 # Source Kit LSP
 export PATH="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/sourcekit-lsp:$PATH"
