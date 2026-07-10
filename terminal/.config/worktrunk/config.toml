@@ -326,9 +326,10 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 # Each worktree lives in a dedicated tmux window / herdr tab named after its
 # branch: switch to it if it exists, otherwise open one at the worktree path.
 # When herdr runs inside tmux, HERDR_ENV wins so only the inner mux reacts.
-# Step two splits the tab and attaches the worktree's agent session on wolf
-# via wolf-attach, which reconnects on its own when the link drops (lid
-# close); mutagen keeps the two copies identical.
+# Step two runs only on the MacBook Air: it splits the tab and attaches the
+# worktree's agent session on wolf via wolf-attach, which reconnects on its
+# own when the link drops (lid close); mutagen keeps the two copies
+# identical. Every other machine stops at the tab.
 [[post-switch]]
 tmux-tab = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
@@ -345,7 +346,7 @@ herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{
 [[post-switch]]
 wolf-pane-tmux = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
-[ "$(hostname -s)" = "wolf" ] && exit 0
+[ "$(hostname -s)" = "Mikaels-MacBook-Air" ] || exit 0
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 [ "$(tmux list-panes -t ={{ branch }} 2>/dev/null | grep -c .)" = "1" ] || exit 0
 tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
@@ -353,7 +354,7 @@ tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
 '''
 wolf-pane-herdr = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
-[ "$(hostname -s)" = "wolf" ] && exit 0
+[ "$(hostname -s)" = "Mikaels-MacBook-Air" ] || exit 0
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] || exit 0

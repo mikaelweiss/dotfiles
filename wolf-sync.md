@@ -46,7 +46,7 @@ The MacBook Pro is the work computer and is **never** part of this.
 | `wolf-attach` | `terminal/bin/` | Runs **on the laptop**: wraps the ssh to wolf-agent in a reconnect loop. Connection drops (ssh exit 255, e.g. lid close) retry every 2s; a clean exit — tmux detach, session killed — ends the pane |
 | `wolf-agent` | `terminal/bin/` | Runs **on wolf** (over SSH): waits for a just-created worktree to sync over, then attaches-or-creates its tmux keeper session |
 | `wolf-bootstrap` | `terminal/bin/` | Installs node deps in the worktree when missing (lockfile-aware: pnpm/bun/yarn/npm), since node_modules doesn't sync |
-| `worktree-cleanup` | `terminal/bin/` | After a worktree is gone: kills the wolf session, clears wolf's leftover dir, closes the local herdr tab / tmux window |
+| `worktree-cleanup` | `terminal/bin/` | After a worktree is gone: kills the wolf session and clears wolf's leftover dir (Air only), closes the local herdr tab / tmux window (everywhere) |
 | `wolf` function | `terminal/.zshrc` | `wolf` from any dir = that dir's session on wolf; `wolf claude` runs claude in it |
 | `wolf-split` | `terminal/bin/` | Splits the current herdr/tmux pane and attaches this worktree's wolf session in it — re-opens a closed wolf pane, or gives any dir one on demand |
 | `wolf-image` | `terminal/bin/` | Runs **on the laptop**: writes the clipboard image into `~/code/.image-drop`, flushes the `code` sync so it lands on wolf at the identical path, then `send-keys` types that path into this worktree's wolf claude pane. Sidesteps the fact that ctrl+v / drag-drop read wolf's (empty) pasteboard over SSH; the file-path method is the one that survives. `pngpaste` if present, else osascript (PNGf, then TIFF→sips) |
@@ -59,8 +59,9 @@ The MacBook Pro is the work computer and is **never** part of this.
   no wolf pane yet, split right and run
   `wolf-attach <worktree> <branch>` — a persistent shell on wolf in
   the same directory, deps installed, reconnecting on its own whenever the
-  link drops. Guards: skips when running on wolf
-  itself (dotfiles sync there too), never re-splits an existing pane, and
+  link drops. Guards: runs **only on the Air** (wolf and the MacBook Pro
+  share these dotfiles but never open wolf panes), never re-splits an
+  existing pane, and
   **skips the primary worktree entirely** — the `main` tab is a local-only
   launchpad for creating the next worktree; agents work in feature
   worktrees, so only those get wolf panes/sessions.
@@ -74,7 +75,9 @@ The MacBook Pro is the work computer and is **never** part of this.
 
 Keeper sessions are named after the branch, matching the tab name. The
 cleanup hooks carry the same primary-worktree guard, so nothing ever
-touches a wolf session named `main`.
+touches a wolf session named `main`. Like the wolf panes, the wolf side of
+cleanup is Air-only — on the MacBook Pro, `wt remove`/`wt merge` just close
+the local tab.
 
 The keeper sessions on wolf are plain tmux used purely as process keepers —
 close the laptop and the agent keeps running; on wake, wolf-attach notices

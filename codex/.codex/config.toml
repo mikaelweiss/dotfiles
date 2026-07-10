@@ -81,6 +81,9 @@ trust_level = "trusted"
 [projects."/Users/mikaelweiss/code/ask-pip"]
 trust_level = "trusted"
 
+[projects."/Users/mikaelweiss/code/surestake"]
+trust_level = "trusted"
+
 [plugins."github@openai-curated"]
 enabled = true
 
@@ -135,6 +138,8 @@ env = {  }
 [features]
 # cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df begin
 hooks = true
+
+[hooks.state]
 # cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df end
 
 # cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin
@@ -143,7 +148,7 @@ trusted_hash = "sha256:f733716b6c34d17ec2daed4838a829b59ce81644474c35a6f892294f4
 [hooks.state."/Users/mikaelweiss/.codex/hooks.json:permission_request:0:0"]
 trusted_hash = "sha256:4002ae454a1896e506bb32919f6b23bd96884750b3179f110b5ab76aaec52459"
 [hooks.state."/Users/mikaelweiss/.codex/hooks.json:session_start:0:0"]
-trusted_hash = "sha256:f9924f6e26b25f150b3c2ddd63f0ebbdaae1971395e495921ae99b8187f1b036"
+trusted_hash = "sha256:c7563a696b32a3c19f1f1d052413154ae1e0c1341c9cc7f5a67b92a4403414e5"
 [hooks.state."/Users/mikaelweiss/.codex/hooks.json:user_prompt_submit:0:0"]
 trusted_hash = "sha256:a2128e4d0df716f846c8285d680b354e6207e81e3886c8f34542c2b630dc15ef"
 [hooks.state."/Users/mikaelweiss/.codex/hooks.json:stop:0:0"]

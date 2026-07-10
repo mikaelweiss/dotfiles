@@ -142,9 +142,19 @@
       environment.systemPackages = with pkgs; [
       ];
 
+      homebrew.brews = [
+        "nx"
+        "helix"
+        {
+          name = "php@8.2"; # keg-only: brew won't put it on PATH without link
+          link = true;
+        }
+      ];
+
       homebrew.casks = [
         "docker-desktop"
         "harvest"
+        "cursor"
       ];
     };
 
