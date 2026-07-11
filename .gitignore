@@ -50,6 +50,7 @@ claude/.claude/tasks/
 claude/.claude/teams/
 claude/.claude/daemon/
 claude/.claude/daemon*
+claude/.claude/.credentials.json
 
 # Codex runtime/state (keep config.toml and hand-authored skills)
 codex/.codex/history.jsonl
