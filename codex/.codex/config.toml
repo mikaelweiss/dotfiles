@@ -1,5 +1,5 @@
 personality = "pragmatic"
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 approvals_reviewer = "user"
 developer_instructions = """
@@ -124,7 +124,7 @@ status_line_use_colors = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
-"gpt-5.6-sol" = 1
+"gpt-5.6-sol" = 4
 
 [mcp_servers.ast-grep]
 command = "npx"

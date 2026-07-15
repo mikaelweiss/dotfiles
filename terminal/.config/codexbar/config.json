@@ -13,7 +13,7 @@
       "id" : "azureopenai"
     },
     {
-      "enabled" : true,
+      "enabled" : false,
       "id" : "claude",
       "source" : "oauth"
     },
@@ -228,6 +228,14 @@
     {
       "enabled" : false,
       "id" : "clawrouter"
+    },
+    {
+      "enabled" : false,
+      "id" : "sub2api"
+    },
+    {
+      "enabled" : false,
+      "id" : "wayfinder"
     }
   ],
   "version" : 1

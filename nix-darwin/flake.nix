@@ -282,6 +282,7 @@
           "worktrunk"
           "herdr"
           "pngpaste"
+          "cliproxyapi" # Codex/Claude subs as local OpenAI/Anthropic-compatible API on :8317
         ];
 
         # GUI Applications

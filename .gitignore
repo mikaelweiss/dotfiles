@@ -71,6 +71,9 @@ codex/.codex/tmp/
 terminal/.config/herdr/*
 !terminal/.config/herdr/config.toml
 
+# CLIProxyAPI client credential
+terminal/.config/cliproxy/env
+
 # Terminal app runtime/state (keep settings/config files)
 terminal/.config/cagent/.cagent_first_run
 terminal/.config/cagent/user-uuid

@@ -152,6 +152,36 @@ alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
 
+# Claude Code driven by a Codex-backed model, via the local cliproxyapi proxy.
+# CLIPROXY_TOKEN is set in ~/.config/cliproxy/env (not in git) and must match an
+# entry in /opt/homebrew/etc/cliproxyapi.conf `api-keys`. It stays a plain shell
+# var, never exported — an exported ANTHROPIC_AUTH_TOKEN would hijack plain
+# `claude` too.
+[[ -f ~/.config/cliproxy/env ]] && source ~/.config/cliproxy/env
+: ${CLAUDEX_MODEL:=gpt-5.6-sol-fast}
+claudex() {
+  if [[ -z "$CLIPROXY_TOKEN" ]]; then
+    print -u2 "claudex: CLIPROXY_TOKEN unset — create ~/.config/cliproxy/env"
+    return 1
+  fi
+  local proxy_status
+  proxy_status=$(curl -sS -m 2 -o /dev/null -w '%{http_code}' \
+      "http://127.0.0.1:8317/v1/models" \
+      -H "Authorization: Bearer $CLIPROXY_TOKEN")
+  if [[ "$proxy_status" != 200 ]]; then
+    print -u2 "claudex: cliproxyapi health check failed (HTTP ${proxy_status:-unreachable})"
+    print -u2 "claudex: check /opt/homebrew/etc/cliproxyapi.conf and run: brew services restart cliproxyapi"
+    return 1
+  fi
+  ANTHROPIC_BASE_URL=http://127.0.0.1:8317 \
+  ANTHROPIC_AUTH_TOKEN="$CLIPROXY_TOKEN" \
+  CLAUDE_CODE_SUBAGENT_MODEL="$CLAUDEX_MODEL" \
+  CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 \
+  CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 \
+  ENABLE_TOOL_SEARCH=false \
+  command claude --dangerously-skip-permissions --model "$CLAUDEX_MODEL" --effort high "$@"
+}
+
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"
 export PATH="$HOME/.ma/bin:$PATH"
