@@ -171,3 +171,6 @@ xcode/Library/Developer/Xcode/UserData/Capabilities/
 xcode/Library/Developer/Xcode/UserData/Provisioning Profiles/
 xcode/Library/Developer/Xcode/UserData/IDEEditorInteractivityHistory
 xcode/Library/Developer/Xcode/UserData/IB Support/
+
+# Pi
+terminal/.pi/agent/mcp.json

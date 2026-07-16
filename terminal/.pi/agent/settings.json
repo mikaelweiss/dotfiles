@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.80.9",
+  "lastChangelogVersion": "0.80.10",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
@@ -34,7 +34,8 @@
     },
     "npm:pi-rewind",
     "npm:@netandreus/pi-cursor-provider",
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "npm:pi-mcp-adapter"
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
