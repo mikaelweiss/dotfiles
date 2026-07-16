@@ -4,6 +4,12 @@
 # Machine-local Claude Code project settings
 **/.claude/settings.local.json
 
+# Machine-local assistant/app configuration
+claude/.claude/CLAUDE.md
+claude/.claude/settings.json
+codex/.codex/config.toml
+terminal/.config/codexbar/config.json
+
 # tmux plugins (installed by TPM)
 terminal/.config/tmux/plugins/*
 !terminal/.config/tmux/plugins/.gitkeep
@@ -25,7 +31,7 @@ telemetry/
 *.bak
 *.pre-stow.bak
 
-# Claude Code runtime/state (keep config, commands, hand-authored skills, hooks)
+# Claude Code runtime/state
 claude/.claude/ide/
 claude/.claude/plans/
 claude/.claude/.claude.json
@@ -52,11 +58,22 @@ claude/.claude/daemon/
 claude/.claude/daemon*
 claude/.claude/.credentials.json
 
-# Codex runtime/state (keep config.toml and hand-authored skills)
+# Codex runtime/state
+codex/.codex/.codex-global-state.json
+codex/.codex/ambient-suggestions/
+codex/.codex/archived_sessions/
+codex/.codex/computer-use/
+codex/.codex/external_agent_session_imports.json
 codex/.codex/history.jsonl
+codex/.codex/mcp-oauth-locks/
+codex/.codex/process_manager/
+codex/.codex/session_index.jsonl
 codex/.codex/skills/.system/
 codex/.codex/shell_snapshots/
 codex/.codex/sessions/
+codex/.codex/sqlite/
+codex/.codex/vendor_imports/
+codex/.codex/worktrees/
 codex/.codex/auth.json
 codex/.codex/version.json
 codex/.codex/models_cache.json
@@ -81,10 +98,22 @@ terminal/.config/raycast/
 terminal/.config/cmux/
 terminal/.config/gh/
 terminal/.config/worktrunk/approvals.toml
+terminal/.config/worktrunk/*.lock
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
 
 # Auto-installed Cloudflare skill packs (vendor, not hand-authored)
+agents/.agents/skills/agents-sdk/
+agents/.agents/skills/cloudflare/
+agents/.agents/skills/cloudflare-email-service/
+agents/.agents/skills/cloudflare-one/
+agents/.agents/skills/cloudflare-one-migrations/
+agents/.agents/skills/durable-objects/
+agents/.agents/skills/sandbox-sdk/
+agents/.agents/skills/turnstile-spin/
+agents/.agents/skills/web-perf/
+agents/.agents/skills/workers-best-practices/
+agents/.agents/skills/wrangler/
 claude/.claude/skills/agents-sdk/
 claude/.claude/skills/cloudflare/
 claude/.claude/skills/cloudflare-email-service/
@@ -138,3 +167,4 @@ xcode/Library/Developer/Xcode/UserData/CodingAssistant/
 xcode/Library/Developer/Xcode/UserData/Capabilities/
 xcode/Library/Developer/Xcode/UserData/Provisioning Profiles/
 xcode/Library/Developer/Xcode/UserData/IDEEditorInteractivityHistory
+xcode/Library/Developer/Xcode/UserData/IB Support/
