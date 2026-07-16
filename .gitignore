@@ -174,3 +174,4 @@ xcode/Library/Developer/Xcode/UserData/IB Support/
 
 # Pi
 terminal/.pi/agent/mcp.json
+terminal/.pi/agent/mcp-cache.json
