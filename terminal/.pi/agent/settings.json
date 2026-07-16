@@ -1,8 +1,8 @@
 {
-  "lastChangelogVersion": "0.75.5",
-  "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/models/kimi-k2p6",
-  "defaultThinkingLevel": "medium",
+  "lastChangelogVersion": "0.80.9",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "high",
   "compaction": {
     "enabled": false
   },
@@ -33,12 +33,10 @@
       ]
     },
     "npm:pi-rewind",
-    "npm:@netandreus/pi-cursor-provider"
+    "npm:@netandreus/pi-cursor-provider",
+    "npm:pi-subagents"
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
-  "doubleEscapeAction": "tree",
-  "skills": [
-    "~/.claude/skills"
-  ]
+  "doubleEscapeAction": "tree"
 }

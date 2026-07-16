@@ -101,6 +101,9 @@ terminal/.config/worktrunk/approvals.toml
 terminal/.config/worktrunk/*.lock
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
+terminal/.pi/agent/models-store.json
+terminal/.pi/agent/run-history.jsonl
+terminal/.pi/agent/trust.json
 
 # Auto-installed Cloudflare skill packs (vendor, not hand-authored)
 agents/.agents/skills/agents-sdk/
