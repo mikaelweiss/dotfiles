@@ -35,7 +35,9 @@
     "npm:pi-rewind",
     "npm:@netandreus/pi-cursor-provider",
     "npm:pi-subagents",
-    "npm:pi-mcp-adapter"
+    "npm:pi-mcp-adapter",
+    "npm:pi-web-access",
+    "npm:bun-docx"
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
