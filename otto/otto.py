@@ -2,7 +2,8 @@
 
 Watches for issues the operator labels `AI Ready`, runs the ideate skill
 headlessly against the repo clone, relays genuine questions through the
-issue's Slack thread, and writes the finished spec into the issue (or into
+issue's Slack thread (acknowledging the operator's answers as they
+arrive), and writes the finished spec into the issue (or into
 sub-issues for multi-unit work) under `status:spec-ready`. Spec-ready
 issues are then driven through the implement and review skills in a
 dedicated worktree and opened as pull requests for human review — a leaf
@@ -10,7 +11,8 @@ issue as one commit, a parent with sub-issues as one commit per sub-issue
 in blocked-by order on a single feature branch. Before a PR opens, a
 verify gate builds and tests the branch (bouncing failures back into fix
 rounds), captures a launch screenshot on the simulator, and posts a
-verification report as the PR body and an issue comment. Open otto PRs are
+verification report as the PR body and an issue comment; the opened PR is
+announced in the issue's Slack thread. Open otto PRs are
 polled for operator review feedback and revised by resuming the PR's
 session; orphaned claims are routed to a human, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
@@ -64,6 +66,8 @@ FENCED_JSON_RE = re.compile(r"```(?:json)?[ \t]*\n(.*)```", re.DOTALL)
 
 QUESTIONS_SENTINEL = "OTTO_QUESTIONS"
 SPEC_SENTINEL = "OTTO_SPEC"
+
+ACK_TEXT = "Got your answers — working on them now."
 
 PRIORITY_RE = re.compile(r"priority:(\d+)")
 VERDICT_RE = re.compile(r"^VERDICT: (CLEAN|ISSUES)\s*$", re.MULTILINE)
@@ -586,10 +590,13 @@ def reply_pass(config: dict, state: dict) -> None:
             raise OttoFailure("parked issue has no ideate-session marker")
         messages = slack.fetch_thread(number, config)
         operator = config["slack"]["operator_member_id"]
+        # Acks must not advance the cutoff: if the run after an ack dies,
+        # the answers behind it have to stay detectable.
         otto_stamps = [
             float(message["ts"])
             for message in messages
             if message["user"] != operator
+            and not message["text"].startswith(ACK_TEXT)
         ]
         last_otto = max(otto_stamps) if otto_stamps else 0.0
         replies = [
@@ -600,6 +607,9 @@ def reply_pass(config: dict, state: dict) -> None:
         if not replies:
             log("replies", number, "no-new-replies")
             return
+        slack.post_to_thread(number, ACK_TEXT, config)
+        swap_status(config, number, LABEL_IDEATING)
+        log("replies", number, "answers-received")
         prompt = "Operator answers:\n\n" + "\n\n".join(replies) + "\n\n" + OVERRIDES
         result_text, new_session_id = run_claude(config, prompt, resume_id=session_id)
         if withdrawn(config, number):
@@ -612,7 +622,11 @@ def reply_pass(config: dict, state: dict) -> None:
         fail_issue(config, number, str(error))
         log("replies", number, f"failed: {error}")
     except Exception as error:
-        log("replies", number, f"transient, still parked: {error}")
+        log("replies", number, f"transient: {error}")
+        try:
+            swap_status(config, number, LABEL_AWAITING)
+        except Exception as swap_error:
+            log("replies", number, f"re-park failed: {swap_error}")
 
 
 def cancellation_pass(config: dict) -> None:
@@ -631,11 +645,15 @@ def reclaim_pass(config: dict) -> None:
     """Requeue stale claims.
 
     Claims are made and resolved inside a single cycle, so `status:ideating`
-    at the start of a cycle means a crash or a failed release — the issue is
-    requeued, unless spec sub-issues already exist, in which case re-running
-    would duplicate them and a human must finish.
+    at the start of a cycle means a crash or a failed release. An issue with
+    a parked session goes back to `status:awaiting-answers` — its thread
+    replies resume that session — and one without is requeued, unless spec
+    sub-issues already exist, in which case re-running would duplicate them
+    and a human must finish.
     """
-    issues = gh_issue_list(config, LABEL_IDEATING, "open", "number,labels,subIssues")
+    issues = gh_issue_list(
+        config, LABEL_IDEATING, "open", "number,labels,subIssues,body"
+    )
     for issue in issues:
         number = issue["number"]
         crashed_multi = False
@@ -661,6 +679,11 @@ def reclaim_pass(config: dict) -> None:
                 f"then relabel: {issue_url(config, number)}",
             )
             log("reclaim", number, "needs-human")
+        elif find_session_marker(issue.get("body") or ""):
+            swap_status(
+                config, number, LABEL_AWAITING, current_names=label_names(issue)
+            )
+            log("reclaim", number, "re-parked")
         else:
             swap_status(config, number, None, current_names=label_names(issue))
             log("reclaim", number, "requeued")
@@ -1114,7 +1137,7 @@ def post_report_comment(config: dict, number: int, report: str) -> None:
 
 def open_pull_request(
     config: dict, number: int, branch: str, title: str, body: str
-) -> None:
+) -> str:
     out = _gh(
         config,
         [
@@ -1133,7 +1156,17 @@ def open_pull_request(
         ],
         input_text=body,
     )
-    log_step(number, "pr", out.strip().splitlines()[-1] if out.strip() else "opened")
+    url = out.strip().splitlines()[-1] if out.strip() else ""
+    log_step(number, "pr", url or "opened")
+    return url
+
+
+def announce_pr(config: dict, number: int, url: str) -> None:
+    """Post the PR link to the issue's Slack thread, best-effort."""
+    try:
+        slack.post_to_thread(number, f"PR is ready for review: {url}", config)
+    except Exception as error:
+        log_step(number, "slack", f"pr notice failed: {error}")
 
 
 def finish_in_review(config: dict, number: int) -> None:
@@ -1156,13 +1189,14 @@ def run_implementation(
     commit_and_push(config, number, issue["title"], branch, worktree)
     report = verify_stage(config, number, worktree, branch, session_id)
     check_run_cancelled(config, number)
-    open_pull_request(
+    pr_url = open_pull_request(
         config,
         number,
         branch,
         commit_message(issue["title"]),
         f"Closes #{number}\n\n{report}",
     )
+    announce_pr(config, number, pr_url)
     post_report_comment(config, number, report)
     finish_in_review(config, number)
 
@@ -1241,13 +1275,14 @@ def run_feature(config: dict, issue: dict, branch: str, worktree: str) -> None:
         closes.append(f"Closes #{number}")
     report = verify_stage(config, number, worktree, branch, session_id)
     check_run_cancelled(config, number)
-    open_pull_request(
+    pr_url = open_pull_request(
         config,
         number,
         branch,
         commit_message(issue["title"]),
         "\n".join(closes) + "\n\n" + report,
     )
+    announce_pr(config, number, pr_url)
     post_report_comment(config, number, report)
     finish_in_review(config, number)
 
