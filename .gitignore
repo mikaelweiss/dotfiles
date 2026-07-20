@@ -104,6 +104,7 @@ terminal/.pi/agent/global-input-history.jsonl
 terminal/.pi/agent/models-store.json
 terminal/.pi/agent/run-history.jsonl
 terminal/.pi/agent/trust.json
+terminal/.pi/web-search.json
 
 # Auto-installed Cloudflare skill packs (vendor, not hand-authored)
 agents/.agents/skills/agents-sdk/
