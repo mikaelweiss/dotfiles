@@ -4,9 +4,13 @@ Watches for issues the operator labels `AI Ready`, runs the ideate skill
 headlessly against the repo clone, relays genuine questions through the
 issue's Slack thread (acknowledging the operator's answers as they
 arrive), and writes the finished spec into the issue (or into
-sub-issues for multi-unit work) under `status:spec-ready`. Spec-ready
-issues are then driven through the implement and review skills in a
-dedicated worktree and opened as pull requests for human review: a leaf
+sub-issues for multi-unit work) under `status:spec-ready`. Ideation and
+reply handling run on their own scheduler thread with up to
+max_ideation_agents claude sessions at once, so the conversation never
+waits on a build. Spec-ready
+issues are driven through the implement and review skills by a worker
+pool of up to max_implementation_agents builds at once, each in its own
+worktree, and opened as pull requests for human review: a leaf
 issue as one commit, a parent with sub-issues as one commit per sub-issue
 in blocked-by order on a single feature branch. Before a PR opens, a
 verify gate builds and tests the branch (bouncing failures back into fix
@@ -16,7 +20,10 @@ announced in the issue's Slack thread. Open otto PRs are
 polled for operator review feedback and revised by resuming the PR's
 session; orphaned claims are routed to a human, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
-up, and a `PAUSED` file in data_dir halts the loop entirely. Labels are
+up, and a `PAUSED` file in data_dir halts the loop entirely. The main
+loop is a pure orchestrator: it never runs claude itself, only reads
+the label state machine and dispatches workers, so no worker ever
+blocks another stage. Labels are
 the whole state machine; GitHub is the only durable store. Stdlib only.
 """
 
@@ -25,8 +32,10 @@ import os
 import re
 import signal
 import subprocess
+import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import linear
@@ -89,6 +98,14 @@ OVERRIDES = """Overrides for this run:
 - Research first: read this repository and search the web to answer your own questions. Ask the operator only what genuinely requires their judgment: product/UX preference, scope tradeoffs, constraints you cannot discover.
 - If questions remain after research, end your final message with a line reading exactly OTTO_QUESTIONS followed by a numbered list of the questions, nothing after the list.
 - When the spec is settled, end your final message with a line reading exactly OTTO_SPEC followed by one fenced json block: {"overview": "<markdown feature overview>", "units": [{"title": "<issue title>", "spec": "<full markdown spec with Objective, Context, Requirements, Files, Test expectations, Boundaries>", "depends_on": [<zero-based indexes of units this unit builds on>]}]}. A single-unit decomposition has exactly one entry in units."""
+
+
+CLONE_LOCK = threading.Lock()
+VERIFY_LOCK = threading.Lock()
+IN_FLIGHT_LOCK = threading.Lock()
+IDEATION_IN_FLIGHT: set[int] = set()
+IMPLEMENTATION_IN_FLIGHT: set[int] = set()
+REVISIONS_IN_FLIGHT: set[int] = set()
 
 
 class OttoFailure(Exception):
@@ -383,6 +400,11 @@ def spec_section(markdown: str) -> str:
 
 def sync_clone(config: dict) -> None:
     branch = config["default_branch"]
+    with CLONE_LOCK:
+        _sync_clone_locked(config, branch)
+
+
+def _sync_clone_locked(config: dict, branch: str) -> None:
     for cmd in (
         ["git", "fetch", "origin", branch],
         ["git", "checkout", branch],
@@ -550,17 +572,17 @@ def release_claim(config: dict, number: int) -> None:
         log("ideation", number, f"claim release failed: {error}")
 
 
-def ideation_pass(config: dict) -> None:
+def eligible_for_ideation(config: dict) -> list[int]:
     issues = gh_issue_list(config, AI_READY, "open", "number,labels,parent")
-    eligible = [
+    return sorted(
         issue["number"]
         for issue in issues
         if not any(name.startswith("status:") for name in label_names(issue))
         and not issue.get("parent")
-    ]
-    if not eligible:
-        return
-    number = min(eligible)
+    )
+
+
+def ideate_issue(config: dict, number: int) -> None:
     swap_status(config, number, LABEL_IDEATING)
     log("ideation", number, "claimed")
     try:
@@ -582,40 +604,39 @@ def ideation_pass(config: dict) -> None:
         release_claim(config, number)
 
 
-def reply_pass(config: dict, state: dict) -> None:
+def awaiting_reply_numbers(config: dict) -> list[int]:
     issues = gh_issue_list(config, LABEL_AWAITING, "open", "number")
-    numbers = sorted(issue["number"] for issue in issues)
-    if not numbers:
-        return
-    number = next((n for n in numbers if n > state["last_polled"]), numbers[0])
-    state["last_polled"] = number
+    return sorted(issue["number"] for issue in issues)
+
+
+def new_replies(config: dict, number: int) -> list[str]:
+    """Operator messages newer than otto's last non-ack thread message.
+
+    Acks must not advance the cutoff: if the run after an ack dies, the
+    answers behind it have to stay detectable.
+    """
+    messages = slack.fetch_thread(number, config)
+    operator = config["slack"]["operator_member_id"]
+    otto_stamps = [
+        float(message["ts"])
+        for message in messages
+        if message["user"] != operator
+        and not message["text"].startswith(ACK_PREFIX)
+    ]
+    last_otto = max(otto_stamps) if otto_stamps else 0.0
+    return [
+        message["text"]
+        for message in messages
+        if message["user"] == operator and float(message["ts"]) > last_otto
+    ]
+
+
+def process_replies(config: dict, number: int, replies: list[str]) -> None:
     try:
         issue = gh_issue_view(config, number, "body")
         session_id = find_session_marker(issue.get("body") or "")
         if not session_id:
             raise OttoFailure("parked issue has no ideate-session marker")
-        messages = slack.fetch_thread(number, config)
-        operator = config["slack"]["operator_member_id"]
-        # Acks must not advance the cutoff: if the run after an ack dies,
-        # the answers behind it have to stay detectable.
-        otto_stamps = [
-            float(message["ts"])
-            for message in messages
-            if message["user"] != operator
-            and not message["text"].startswith(ACK_PREFIX)
-        ]
-        last_otto = max(otto_stamps) if otto_stamps else 0.0
-        replies = [
-            message["text"]
-            for message in messages
-            if message["user"] == operator and float(message["ts"]) > last_otto
-        ]
-        if not replies:
-            log("replies", number, "no-new-replies")
-            return
-        slack.post_to_thread(number, ACK_TEXT, config)
-        swap_status(config, number, LABEL_IDEATING)
-        log("replies", number, "answers-received")
         prompt = "Operator answers:\n\n" + "\n\n".join(replies) + "\n\n" + OVERRIDES
         result_text, new_session_id = run_claude(config, prompt, resume_id=session_id)
         if withdrawn(config, number):
@@ -635,6 +656,98 @@ def reply_pass(config: dict, state: dict) -> None:
             log("replies", number, f"re-park failed: {swap_error}")
 
 
+def run_guarded(number: int, registry: set, work) -> None:
+    try:
+        work()
+    except Exception:
+        log("worker", number, f"error: {traceback.format_exc(limit=3).strip()}")
+    finally:
+        with IN_FLIGHT_LOCK:
+            registry.discard(number)
+
+
+def schedule_reply(pool: ThreadPoolExecutor, config: dict, number: int) -> None:
+    """Detect and ack new answers immediately; queue the claude run.
+
+    Detection and the ack run here in the scheduler thread so the
+    operator hears back within one tick even when every agent slot is
+    busy; only the session resume waits for a slot.
+    """
+    with IN_FLIGHT_LOCK:
+        if number in IDEATION_IN_FLIGHT:
+            return
+    try:
+        replies = new_replies(config, number)
+    except Exception as error:
+        log("replies", number, f"transient: {error}")
+        return
+    if not replies:
+        return
+    with IN_FLIGHT_LOCK:
+        IDEATION_IN_FLIGHT.add(number)
+    try:
+        slack.post_to_thread(number, ACK_TEXT, config)
+        swap_status(config, number, LABEL_IDEATING)
+        log("replies", number, "answers-received")
+    except Exception as error:
+        log("replies", number, f"transient: {error}")
+        with IN_FLIGHT_LOCK:
+            IDEATION_IN_FLIGHT.discard(number)
+        try:
+            swap_status(config, number, LABEL_AWAITING)
+        except Exception:
+            pass
+        return
+    pool.submit(
+        run_guarded,
+        number,
+        IDEATION_IN_FLIGHT,
+        lambda: process_replies(config, number, replies),
+    )
+
+
+def schedule_ideation(pool: ThreadPoolExecutor, config: dict, number: int) -> None:
+    """Queue a fresh ideation unless the agent slots are already spoken for.
+
+    Unlike replies, fresh ideations are capped by total in-flight work so
+    a deep backlog never builds a stale queue; skipped issues are simply
+    reconsidered next tick.
+    """
+    with IN_FLIGHT_LOCK:
+        if (
+            number in IDEATION_IN_FLIGHT
+            or len(IDEATION_IN_FLIGHT) >= config["max_ideation_agents"]
+        ):
+            return
+        IDEATION_IN_FLIGHT.add(number)
+    pool.submit(
+        run_guarded, number, IDEATION_IN_FLIGHT, lambda: ideate_issue(config, number)
+    )
+
+
+def ideation_loop(config: dict) -> None:
+    """Scheduler thread: keep answers and fresh ideations flowing.
+
+    Replies are scheduled before fresh ideations each tick so operator
+    answers get agent slots first.
+    """
+    pool = ThreadPoolExecutor(max_workers=config["max_ideation_agents"])
+    while True:
+        try:
+            if not (Path(config["data_dir"]) / "PAUSED").exists():
+                for number in awaiting_reply_numbers(config):
+                    schedule_reply(pool, config, number)
+                for number in eligible_for_ideation(config):
+                    schedule_ideation(pool, config, number)
+        except Exception:
+            log(
+                "ideation-loop",
+                "-",
+                f"error: {traceback.format_exc(limit=3).strip()}",
+            )
+        time.sleep(config["poll_seconds"])
+
+
 def cancellation_pass(config: dict) -> None:
     for status_label in (LABEL_IDEATING, LABEL_AWAITING):
         for issue_state in ("open", "closed"):
@@ -650,18 +763,22 @@ def cancellation_pass(config: dict) -> None:
 def reclaim_pass(config: dict) -> None:
     """Requeue stale claims.
 
-    Claims are made and resolved inside a single cycle, so `status:ideating`
-    at the start of a cycle means a crash or a failed release. An issue with
-    a parked session goes back to `status:awaiting-answers` (its thread
-    replies resume that session) and one without is requeued, unless spec
-    sub-issues already exist, in which case re-running would duplicate them
-    and a human must finish.
+    Live ideation work is tracked in IDEATION_IN_FLIGHT, so a
+    `status:ideating` issue outside that set means a crash or a failed
+    release. An issue with a parked session goes back to
+    `status:awaiting-answers` (its thread replies resume that session)
+    and one without is requeued, unless spec sub-issues already exist, in
+    which case re-running would duplicate them and a human must finish.
     """
     issues = gh_issue_list(
         config, LABEL_IDEATING, "open", "number,labels,subIssues,body"
     )
+    with IN_FLIGHT_LOCK:
+        active = set(IDEATION_IN_FLIGHT)
     for issue in issues:
         number = issue["number"]
+        if number in active:
+            continue
         crashed_multi = False
         for sub in (issue.get("subIssues") or {}).get("nodes") or []:
             sub_body = gh_issue_view(config, sub["number"], "body").get("body") or ""
@@ -734,7 +851,7 @@ def priority_rank(issue: dict) -> float:
     return min(ranks) if ranks else float("inf")
 
 
-def select_spec_ready(config: dict) -> dict | None:
+def select_spec_ready(config: dict, exclude: set[int] = frozenset()) -> dict | None:
     issues = gh_issue_list(
         config,
         LABEL_SPEC_READY,
@@ -743,7 +860,7 @@ def select_spec_ready(config: dict) -> dict | None:
     )
     candidates = []
     for issue in issues:
-        if issue.get("parent"):
+        if issue["number"] in exclude or issue.get("parent"):
             continue
         if SPEC_MARKER not in (issue.get("body") or ""):
             continue
@@ -1124,13 +1241,19 @@ def render_report(gate: dict, screenshot_url: str | None) -> str:
 def verify_stage(
     config: dict, number: int, worktree: str, branch: str, session_id: str
 ) -> str:
-    """Run the pre-PR gate: build, test, screenshot; return the report."""
-    gate = build_test_gate(config, number, worktree, branch, session_id)
-    screenshot_url = None
-    if gate["build_ok"]:
-        shot_path = capture_screenshot(config, number)
-        if shot_path:
-            screenshot_url = upload_screenshot(config, number, shot_path)
+    """Run the pre-PR gate: build, test, screenshot; return the report.
+
+    The gate serializes across implementation workers: DerivedData and
+    the simulator are shared, so concurrent verifies would corrupt each
+    other's builds and screenshots.
+    """
+    with VERIFY_LOCK:
+        gate = build_test_gate(config, number, worktree, branch, session_id)
+        screenshot_url = None
+        if gate["build_ok"]:
+            shot_path = capture_screenshot(config, number)
+            if shot_path:
+                screenshot_url = upload_screenshot(config, number, shot_path)
     return render_report(gate, screenshot_url)
 
 
@@ -1321,23 +1444,8 @@ def run_feature(config: dict, issue: dict, branch: str, worktree: str) -> None:
     finish_in_review(config, number)
 
 
-def implementation_pass(config: dict, open_prs: list[dict]) -> None:
-    if len(open_prs) >= config["max_open_prs"]:
-        log_step(
-            "-",
-            "select",
-            f"waiting-on-review: {len(open_prs)} open otto PRs at "
-            f"max_open_prs ({config['max_open_prs']})",
-        )
-        return
-    issue = select_spec_ready(config)
-    if issue is None:
-        log_step("-", "select", "idle")
-        return
+def implement_issue(config: dict, issue: dict, branch: str, worktree: str) -> None:
     number = issue["number"]
-    branch = f"{config['branch_prefix']}iss-{number}"
-    worktree = str(Path(config["worktree_root"]) / sanitize_branch(branch))
-    log_step(number, "select", "picked")
     try:
         if ((issue.get("subIssues") or {}).get("totalCount") or 0) > 0:
             run_feature(config, issue, branch, worktree)
@@ -1349,6 +1457,49 @@ def implementation_pass(config: dict, open_prs: list[dict]) -> None:
     except Exception as error:
         log_step(number, "failure", f"failed: {error}")
         fail_implementation(config, number, str(error), worktree, branch)
+
+
+def dispatch_implementation(
+    config: dict, pool: ThreadPoolExecutor, open_prs: list[dict]
+) -> None:
+    """Fill free implementation slots with spec-ready issues.
+
+    Open PRs plus live builds count against max_open_prs so a burst of
+    dispatches cannot overshoot the review backlog cap.
+    """
+    while True:
+        with IN_FLIGHT_LOCK:
+            building = set(IMPLEMENTATION_IN_FLIGHT)
+        if len(open_prs) + len(building) >= config["max_open_prs"]:
+            log_step(
+                "-",
+                "select",
+                f"waiting-on-review: {len(open_prs)} open otto PRs and "
+                f"{len(building)} live builds at max_open_prs "
+                f"({config['max_open_prs']})",
+            )
+            return
+        if len(building) >= config["max_implementation_agents"]:
+            return
+        issue = select_spec_ready(config, exclude=building)
+        if issue is None:
+            if not building:
+                log_step("-", "select", "idle")
+            return
+        number = issue["number"]
+        branch = f"{config['branch_prefix']}iss-{number}"
+        worktree = str(Path(config["worktree_root"]) / sanitize_branch(branch))
+        with IN_FLIGHT_LOCK:
+            IMPLEMENTATION_IN_FLIGHT.add(number)
+        log_step(number, "select", "picked")
+        pool.submit(
+            run_guarded,
+            number,
+            IMPLEMENTATION_IN_FLIGHT,
+            lambda issue=issue, branch=branch, worktree=worktree: implement_issue(
+                config, issue, branch, worktree
+            ),
+        )
 
 
 # --- robustness: revisions, watchdog, pacing, cleanup ---------------------
@@ -1617,26 +1768,45 @@ def escalate_revision(
     )
 
 
-def revision_pass(config: dict, open_prs: list[dict]) -> bool:
-    """Revise at most one PR from operator feedback; True if a run happened."""
+def revise_pr(config: dict, pr: dict, feedback: list[dict]) -> None:
+    try:
+        run_revision(config, pr, feedback)
+    except OttoFailure as error:
+        log_step(pr["number"], "revise", f"failed: {error}")
+        escalate_revision(config, pr, feedback, str(error))
+    except Exception as error:
+        log_step(pr["number"], "revise", f"transient, retries next cycle: {error}")
+
+
+def dispatch_revisions(
+    config: dict, pool: ThreadPoolExecutor, open_prs: list[dict]
+) -> None:
+    """Queue a revision for every PR with fresh operator feedback.
+
+    Revisions share the implementation pool and are dispatched first, so
+    review feedback gets a slot ahead of new builds.
+    """
     for pr in sorted(open_prs, key=lambda pr: pr["number"]):
+        number = pr["number"]
+        with IN_FLIGHT_LOCK:
+            if number in REVISIONS_IN_FLIGHT:
+                continue
         try:
             feedback = collect_pr_feedback(config, pr)
         except Exception as error:
-            log_step(pr["number"], "revise", f"feedback check failed: {error}")
+            log_step(number, "revise", f"feedback check failed: {error}")
             continue
         if not feedback:
             continue
-        log_step(pr["number"], "revise", f"{len(feedback)} feedback items")
-        try:
-            run_revision(config, pr, feedback)
-        except OttoFailure as error:
-            log_step(pr["number"], "revise", f"failed: {error}")
-            escalate_revision(config, pr, feedback, str(error))
-        except Exception as error:
-            log_step(pr["number"], "revise", f"transient, retries next cycle: {error}")
-        return True
-    return False
+        log_step(number, "revise", f"{len(feedback)} feedback items")
+        with IN_FLIGHT_LOCK:
+            REVISIONS_IN_FLIGHT.add(number)
+        pool.submit(
+            run_guarded,
+            number,
+            REVISIONS_IN_FLIGHT,
+            lambda pr=pr, feedback=feedback: revise_pr(config, pr, feedback),
+        )
 
 
 def remove_stale_checkout(config: dict, number: int, branch: str) -> None:
@@ -1663,15 +1833,20 @@ def remove_stale_checkout(config: dict, number: int, branch: str) -> None:
 def orphan_pass(config: dict, open_prs: list[dict]) -> None:
     """Route claimed issues whose runs died to a human.
 
-    A `status:in-progress` issue with no open otto PR lost its subprocess
-    with the process: a crash or reboot.
+    Live builds are tracked in IMPLEMENTATION_IN_FLIGHT, so a
+    `status:in-progress` issue outside that set with no open otto PR
+    lost its run to a crash or reboot.
     """
     issues = gh_issue_list(config, LABEL_IN_PROGRESS, "open", "number,labels")
     if not issues:
         return
+    with IN_FLIGHT_LOCK:
+        building = set(IMPLEMENTATION_IN_FLIGHT)
     open_heads = {pr["headRefName"] for pr in open_prs}
     for issue in issues:
         number = issue["number"]
+        if number in building:
+            continue
         branch = f"{config['branch_prefix']}iss-{number}"
         if branch in open_heads:
             continue
@@ -1746,33 +1921,35 @@ def cleanup_pass(config: dict) -> None:
 # --- loop ----------------------------------------------------------------
 
 
-def run_cycle(config: dict, state: dict) -> None:
+def run_cycle(config: dict, impl_pool: ThreadPoolExecutor) -> None:
     reclaim_pass(config)
     cancellation_pass(config)
     open_prs = list_otto_prs(config)
     orphan_pass(config, open_prs)
     cleanup_pass(config)
-    revised = revision_pass(config, open_prs)
-    reply_pass(config, state)
-    ideation_pass(config)
-    if revised:
-        log_step("-", "select", "deferred: a revision ran this cycle")
-    else:
-        implementation_pass(config, open_prs)
+    dispatch_revisions(config, impl_pool, open_prs)
+    dispatch_implementation(config, impl_pool, open_prs)
 
 
 def main() -> None:
     config = slack.load_config()
-    state = {"labels_ensured": False, "last_polled": 0}
+    impl_pool = ThreadPoolExecutor(max_workers=config["max_implementation_agents"])
+    labels_ensured = False
+    ideation_started = False
     while True:
         try:
             if (Path(config["data_dir"]) / "PAUSED").exists():
                 log("cycle", "-", "paused")
             else:
-                if not state["labels_ensured"]:
+                if not labels_ensured:
                     ensure_status_labels(config)
-                    state["labels_ensured"] = True
-                run_cycle(config, state)
+                    labels_ensured = True
+                if not ideation_started:
+                    threading.Thread(
+                        target=ideation_loop, args=(config,), daemon=True
+                    ).start()
+                    ideation_started = True
+                run_cycle(config, impl_pool)
                 log("cycle", "-", "complete")
         except Exception:
             log("cycle", "-", f"error: {traceback.format_exc(limit=3).strip()}")

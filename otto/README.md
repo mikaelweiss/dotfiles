@@ -2,8 +2,13 @@
 
 Label-driven GitHub automation loop. Otto watches a repo for issues labeled
 `AI Ready`, ideates them into specs, implements the specs in worktrees, and
-opens PRs for human review. Labels are the whole state machine; GitHub is the
-only durable store. It runs 24/7 on wolf as a launchd user agent
+opens PRs for human review. The loop is a pure orchestrator that only
+dispatches workers: ideation and Slack replies run on a scheduler thread
+with up to `max_ideation_agents` concurrent sessions, and implementations
+plus PR revisions run on a worker pool sized by `max_implementation_agents`
+(raise it to build several at once; the pre-PR verify gate still serializes
+on the shared simulator). Nothing blocks anything else. Labels are the whole
+state machine; GitHub is the only durable store. It runs 24/7 on wolf as a launchd user agent
 (`org.nixos.otto`, defined in `nix-darwin/flake.nix`) so it inherits the
 user's `gh` and `claude` logins and can drive the simulator.
 

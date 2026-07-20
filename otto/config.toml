@@ -10,6 +10,8 @@ worktree_root = "/Users/mikaelweiss/.worktrees/strive"
 branch_prefix = "otto/"
 max_fix_rounds = 3
 max_open_prs = 3
+max_ideation_agents = 3
+max_implementation_agents = 1
 operator_login = "mikaelweiss"
 build_cmd = "set -o pipefail && xcodebuild -project Strive.xcodeproj -scheme Strive -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' build 2>&1 | /run/current-system/sw/bin/xcbeautify"
 test_cmd = "set -o pipefail && xcodebuild test -project Strive.xcodeproj -scheme Strive -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' 2>&1 | /run/current-system/sw/bin/xcbeautify"
