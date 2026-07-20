@@ -660,7 +660,7 @@ def reclaim_pass(config: dict) -> None:
     for issue in issues:
         number = issue["number"]
         crashed_multi = False
-        for sub in issue.get("subIssues") or []:
+        for sub in (issue.get("subIssues") or {}).get("nodes") or []:
             sub_body = gh_issue_view(config, sub["number"], "body").get("body") or ""
             if SPEC_MARKER in sub_body:
                 crashed_multi = True
