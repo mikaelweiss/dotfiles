@@ -270,6 +270,10 @@
       homebrew = {
         enable = true;
 
+        taps = [
+          "modem-dev/tap"
+        ];
+
         # CLI tools
         brews = [
           "elixir"
@@ -283,6 +287,7 @@
           "herdr"
           "pngpaste"
           "cliproxyapi" # Codex/Claude subs as local OpenAI/Anthropic-compatible API on :8317
+          "modem-dev/tap/hunk"
         ];
 
         # GUI Applications
