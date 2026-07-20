@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.80.10",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultProvider": "moonshotai",
+  "defaultModel": "kimi-k3",
   "defaultThinkingLevel": "high",
   "compaction": {
     "enabled": false
