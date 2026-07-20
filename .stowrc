@@ -3,3 +3,5 @@
 --ignore='\.DS_Store'
 --ignore='nix-darwin'
 --ignore='fix-ios-dev.sh'
+--ignore='otto'
+--ignore='\.specs'

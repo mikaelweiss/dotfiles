@@ -121,6 +121,27 @@
         };
       };
 
+      launchd.user.agents.otto = {
+        serviceConfig = {
+          ProgramArguments = [
+            "/run/current-system/sw/bin/python3"
+            "/Users/mikaelweiss/code/dotfiles/otto/otto.py"
+          ];
+          EnvironmentVariables = {
+            HOME = "/Users/mikaelweiss";
+            # launchd never reads shell init, so the PATH otto's subprocesses
+            # need (claude, gh, git, xcodebuild, xcbeautify, tmux) is set here.
+            PATH = "/Users/mikaelweiss/.local/bin:/run/current-system/sw/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+          };
+          WorkingDirectory = "/Users/mikaelweiss/code/dotfiles/otto";
+          RunAtLoad = true;
+          KeepAlive = true;
+          ThrottleInterval = 30;
+          StandardOutPath = "/Users/mikaelweiss/.otto/otto.log";
+          StandardErrorPath = "/Users/mikaelweiss/.otto/otto.err";
+        };
+      };
+
       programs.zsh = {
         enable = true;
         interactiveShellInit = ''

@@ -1,0 +1,20 @@
+repo = "MikaelWeiss/strive"
+data_dir = "/Users/mikaelweiss/.otto"
+clone_path = "/Users/mikaelweiss/code/strive"
+default_branch = "main"
+poll_seconds = 60
+step_timeout_s = 3600
+claude_bin = "/Users/mikaelweiss/.local/bin/claude"
+worktree_root = "/Users/mikaelweiss/.worktrees/strive"
+branch_prefix = "otto/"
+max_fix_rounds = 3
+max_open_prs = 3
+operator_login = "mikaelweiss"
+build_cmd = "set -o pipefail && xcodebuild -project Strive.xcodeproj -scheme Strive -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' build 2>&1 | /run/current-system/sw/bin/xcbeautify"
+test_cmd = "set -o pipefail && xcodebuild test -project Strive.xcodeproj -scheme Strive -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' 2>&1 | /run/current-system/sw/bin/xcbeautify"
+sim_name = "iPhone 17 Pro"
+artifacts_release_tag = "otto-artifacts"
+
+[slack]
+token_file = "/Users/mikaelweiss/.otto/slack_token"
+operator_member_id = "U0680P4PPK6"
