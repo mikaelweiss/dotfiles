@@ -79,15 +79,31 @@ On wolf, before the agent can do anything useful:
 | Action | Command |
 | --- | --- |
 | Install / update | `sudo darwin-rebuild switch --flake ~/code/dotfiles/nix-darwin#wolf` |
+| Dashboard | `~/code/dotfiles/otto/status.py` (live: `status.py --watch [sec]`) |
 | Watch | `tail -f ~/.otto/otto.log` (errors: `~/.otto/otto.err`) |
 | Restart | `launchctl kickstart -k gui/$(id -u)/org.nixos.otto` |
 | Stop | `launchctl bootout gui/$(id -u)/org.nixos.otto` |
 | Pause the loop | `touch ~/.otto/PAUSED` |
 | Resume | `rm ~/.otto/PAUSED` |
 
-Pausing halts the loop at the top of the next cycle without killing the
-process; launchd's `KeepAlive` only restarts otto after a crash, with a 30s
-throttle so a crash loop can't spin.
+Pausing halts dispatch (orchestrator and ideation scheduler) without
+killing the process; workers already running finish normally. launchd's
+`KeepAlive` only restarts otto after a crash, with a 30s throttle so a
+crash loop can't spin.
+
+**Safe restart** (config or code changes): killing otto mid-build orphans
+the build and routes its issue to needs-human, so drain first. A worker
+is running whenever a headless claude session OR a verify step (xcodebuild
+or simctl, which run without any claude process) is alive:
+
+```sh
+touch ~/.otto/PAUSED
+while pgrep -f "claude -p --output-format" > /dev/null \
+   || pgrep -x xcodebuild > /dev/null || pgrep -x simctl > /dev/null \
+   || ! tail -1 ~/.otto/otto.log | grep -q "outcome=paused"; do sleep 15; done
+launchctl kickstart -k gui/$(id -u)/org.nixos.otto
+rm ~/.otto/PAUSED
+```
 
 **Babysit** (run otto interactively to watch a session live): stop the
 agent, then run it in tmux:

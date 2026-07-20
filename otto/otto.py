@@ -773,11 +773,16 @@ def reclaim_pass(config: dict) -> None:
     issues = gh_issue_list(
         config, LABEL_IDEATING, "open", "number,labels,subIssues,body"
     )
-    with IN_FLIGHT_LOCK:
-        active = set(IDEATION_IN_FLIGHT)
     for issue in issues:
         number = issue["number"]
-        if number in active:
+        # The list is a snapshot; a worker may have finished (or a reply
+        # may have claimed the issue) since it was taken. Only live state
+        # is safe to act on.
+        with IN_FLIGHT_LOCK:
+            if number in IDEATION_IN_FLIGHT:
+                continue
+        live = label_names(gh_issue_view(config, number, "labels"))
+        if LABEL_IDEATING not in live:
             continue
         crashed_multi = False
         for sub in (issue.get("subIssues") or {}).get("nodes") or []:
@@ -786,7 +791,7 @@ def reclaim_pass(config: dict) -> None:
                 crashed_multi = True
                 break
         if crashed_multi:
-            swap_status(config, number, LABEL_NEEDS_HUMAN, current_names=label_names(issue))
+            swap_status(config, number, LABEL_NEEDS_HUMAN, current_names=live)
             gh_comment(
                 config,
                 number,
@@ -803,12 +808,10 @@ def reclaim_pass(config: dict) -> None:
             )
             log("reclaim", number, "needs-human")
         elif find_session_marker(issue.get("body") or ""):
-            swap_status(
-                config, number, LABEL_AWAITING, current_names=label_names(issue)
-            )
+            swap_status(config, number, LABEL_AWAITING, current_names=live)
             log("reclaim", number, "re-parked")
         else:
-            swap_status(config, number, None, current_names=label_names(issue))
+            swap_status(config, number, None, current_names=live)
             log("reclaim", number, "requeued")
 
 
@@ -1840,20 +1843,25 @@ def orphan_pass(config: dict, open_prs: list[dict]) -> None:
     issues = gh_issue_list(config, LABEL_IN_PROGRESS, "open", "number,labels")
     if not issues:
         return
-    with IN_FLIGHT_LOCK:
-        building = set(IMPLEMENTATION_IN_FLIGHT)
     open_heads = {pr["headRefName"] for pr in open_prs}
     for issue in issues:
         number = issue["number"]
-        if number in building:
-            continue
         branch = f"{config['branch_prefix']}iss-{number}"
         if branch in open_heads:
             continue
+        # The list and open_prs are snapshots; a build may have finished
+        # (or been dispatched) since they were taken. Only live state is
+        # safe to declare dead.
+        with IN_FLIGHT_LOCK:
+            if number in IMPLEMENTATION_IN_FLIGHT:
+                continue
+        live = label_names(gh_issue_view(config, number, "labels"))
+        if LABEL_IN_PROGRESS not in live:
+            continue
+        if branch in {pr["headRefName"] for pr in list_otto_prs(config)}:
+            continue
         try:
-            swap_status(
-                config, number, LABEL_NEEDS_HUMAN, current_names=label_names(issue)
-            )
+            swap_status(config, number, LABEL_NEEDS_HUMAN, current_names=live)
         except Exception as error:
             log("orphan", number, f"relabel failed: {error}")
             continue
