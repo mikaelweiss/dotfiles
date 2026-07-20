@@ -5,12 +5,34 @@ Usage: status.py [--watch [seconds]]
 """
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+# The macOS system python is 3.9, but slack.py needs tomllib (3.11+);
+# re-exec into the first interpreter that has it: nix on wolf, homebrew
+# or a versioned install on the laptop.
+if sys.version_info < (3, 11):
+    for candidate in (
+        "/run/current-system/sw/bin/python3",
+        "/opt/homebrew/bin/python3",
+        "/usr/local/bin/python3",
+        "python3.13",
+        "python3.12",
+        "python3.11",
+    ):
+        found = shutil.which(candidate)
+        if not found:
+            continue
+        check = subprocess.run([found, "-c", "import tomllib"], capture_output=True)
+        if check.returncode == 0:
+            os.execv(found, [found, *sys.argv])
+    sys.exit("status.py needs Python 3.11+; none found on this machine")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import slack
