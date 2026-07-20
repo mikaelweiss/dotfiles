@@ -66,6 +66,7 @@ pane_gaps = false
 prompt_new_tab_name = false
 
 show_agent_labels_on_pane_borders = false
+agent_panel_sort = "spaces"
 [experimental]
 # tmux: continuum/resurrect restore across restarts
 pane_history = true

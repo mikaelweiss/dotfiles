@@ -196,3 +196,10 @@ export PATH="$HOME/.cog/bin:$PATH"
 export HOMEBREW_DEVELOPER=1
 
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+
+export CONTEXT7_API_KEY="$(
+  security find-generic-password \
+    -a "$USER" \
+    -s "context7-api-key" \
+    -w 2>/dev/null
+  )"

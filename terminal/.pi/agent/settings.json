@@ -38,6 +38,7 @@
     "npm:pi-mcp-adapter",
     "npm:pi-web-access",
     "npm:bun-docx"
+    "npm:@upstash/context7-pi"
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
