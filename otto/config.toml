@@ -1,10 +1,11 @@
-repo = "MikaelWeiss/strive"
+repo = "MikaelWeiss/Strive"
 data_dir = "/Users/mikaelweiss/.otto"
 clone_path = "/Users/mikaelweiss/code/strive"
 default_branch = "main"
 poll_seconds = 60
 step_timeout_s = 3600
 claude_bin = "/Users/mikaelweiss/.local/bin/claude"
+model = "claude-opus-4-8"
 worktree_root = "/Users/mikaelweiss/.worktrees/strive"
 branch_prefix = "otto/"
 max_fix_rounds = 3
@@ -18,3 +19,6 @@ artifacts_release_tag = "otto-artifacts"
 [slack]
 token_file = "/Users/mikaelweiss/.otto/slack_token"
 operator_member_id = "U0680P4PPK6"
+
+[linear]
+token_file = "/Users/mikaelweiss/.otto/linear_token"

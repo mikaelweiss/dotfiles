@@ -29,6 +29,7 @@ import time
 import traceback
 from pathlib import Path
 
+import linear
 import slack
 
 AI_READY = "AI Ready"
@@ -267,6 +268,8 @@ def run_claude(
         "--output-format",
         "json",
         "--dangerously-skip-permissions",
+        "--model",
+        config["model"],
     ]
     if resume_id:
         cmd += ["--resume", resume_id]
@@ -826,6 +829,7 @@ def claim_issue(config: dict, issue: dict) -> None:
         ["issue", "edit", str(number), "--repo", config["repo"], "--add-assignee", "@me"],
     )
     log_step(number, "claim", "claimed")
+    linear_state(config, number, "In Progress")
 
 
 def create_worktree(config: dict, number: int, branch: str, worktree: str) -> None:
@@ -1164,12 +1168,27 @@ def open_pull_request(
     return url
 
 
+def linear_state(config: dict, number: int, state_name: str) -> None:
+    """Move the issue's synced Linear counterpart, best-effort."""
+    try:
+        log_step(
+            number,
+            "linear",
+            linear.set_state(issue_url(config, number), state_name, config),
+        )
+    except FileNotFoundError:
+        log_step(number, "linear", "no token file, skipped")
+    except Exception as error:
+        log_step(number, "linear", f"update failed: {error}")
+
+
 def announce_pr(config: dict, number: int, url: str) -> None:
     """Post the PR link to the issue's Slack thread, best-effort."""
     try:
         slack.post_to_thread(number, f"PR is ready for review: {url}", config)
     except Exception as error:
         log_step(number, "slack", f"pr notice failed: {error}")
+    linear_state(config, number, "In Review")
 
 
 def finish_in_review(config: dict, number: int) -> None:
@@ -1249,8 +1268,22 @@ def run_feature(config: dict, issue: dict, branch: str, worktree: str) -> None:
     create_worktree(config, number, branch, worktree)
 
     subs = open_sub_issues(config, issue)
+    unspecced = sorted(
+        sub_number
+        for sub_number, sub in subs.items()
+        if SPEC_MARKER not in (sub.get("body") or "")
+    )
+    for sub_number in unspecced:
+        del subs[sub_number]
+    if unspecced:
+        log_step(
+            number,
+            "select",
+            "skipped sub-issues without a spec section: "
+            + ", ".join(f"#{sub_number}" for sub_number in unspecced),
+        )
     if not subs:
-        raise OttoFailure("feature has no open sub-issues to implement")
+        raise OttoFailure("feature has no open sub-issues with a spec section")
 
     completed: list[int] = []
     session_id = ""
@@ -1258,8 +1291,6 @@ def run_feature(config: dict, issue: dict, branch: str, worktree: str) -> None:
         check_run_cancelled(config, number)
         sub = subs[sub_number]
         try:
-            if SPEC_MARKER not in (sub.get("body") or ""):
-                raise OttoFailure("no spec section in the sub-issue body")
             spec_path = write_spec_file(config, sub_number, sub["body"])
             session_id = implement_and_review(config, sub_number, spec_path, worktree)
             commit_and_push(config, sub_number, sub["title"], branch, worktree)

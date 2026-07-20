@@ -30,6 +30,27 @@ Otto relays ideation questions and status updates through Slack DMs.
 The token lives only in `~/.otto/slack_token`: never in the repo, the
 flake, or any synced file.
 
+## Linear setup (one time)
+
+Otto drives the synced Linear issue through Linear's API: In Progress
+when it claims the issue for implementation, In Review when the PR
+opens. Done needs no call; merging the PR closes the GitHub issue and
+the GitHub Issues sync closes the Linear side. (The sync alone cannot
+do the first two: it only reacts to a linked PR, which otto's branch
+naming never triggers, and only when the PR opens, which is too late.)
+
+1. In Linear: **Settings -> Security & access -> Personal API keys**,
+   create a key.
+2. On wolf, write it to `~/.otto/linear_token` with mode 600:
+
+   ```sh
+   printf '%s\n' 'lin_api_...' > ~/.otto/linear_token
+   chmod 600 ~/.otto/linear_token
+   ```
+
+Until the token file exists, otto logs `linear ... skipped` and carries on;
+a Linear outage or unlinked issue never blocks a run.
+
 ## Preconditions
 
 On wolf, before the agent can do anything useful:
