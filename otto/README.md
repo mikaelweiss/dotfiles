@@ -27,7 +27,7 @@ Otto relays ideation questions and status updates through Slack DMs.
 5. Put the operator's Slack member ID (Slack profile → **⋮ → Copy member
    ID**) in `config.toml` as `operator_member_id` under `[slack]`.
 
-The token lives only in `~/.otto/slack_token` — never in the repo, the
+The token lives only in `~/.otto/slack_token`: never in the repo, the
 flake, or any synced file.
 
 ## Preconditions
@@ -35,7 +35,7 @@ flake, or any synced file.
 On wolf, before the agent can do anything useful:
 
 - `gh auth login` completed and `claude` logged in.
-- Dotfiles pulled to `~/code/dotfiles` with `stow claude` applied — the
+- Dotfiles pulled to `~/code/dotfiles` with `stow claude` applied; the
   ideate/implement/review skills must resolve from `~/.claude`.
 - The target repo cloned at its `clone_path` from `config.toml`
   (`/Users/mikaelweiss/code/strive` for strive).
@@ -45,7 +45,7 @@ On wolf, before the agent can do anything useful:
   ./setup.sh MikaelWeiss/strive
   ```
 
-  Idempotent — existing labels are left untouched, so it can be re-run on
+  Idempotent: existing labels are left untouched, so it can be re-run on
   any repo at any time.
 
 ## Operations
@@ -64,7 +64,7 @@ process; launchd's `KeepAlive` only restarts otto after a crash, with a 30s
 throttle so a crash loop can't spin.
 
 **Babysit** (run otto interactively to watch a session live): stop the
-agent, then run it in tmux —
+agent, then run it in tmux:
 
 ```sh
 launchctl bootout gui/$(id -u)/org.nixos.otto
@@ -75,11 +75,11 @@ tmux new -s otto '/run/current-system/sw/bin/python3 ~/code/dotfiles/otto/otto.p
 
 ## Working with otto's output
 
-- **Test a PR's branch from the laptop:** `wt switch <branch>` — the
+- **Test a PR's branch from the laptop:** `wt switch <branch>`. The
   worktree under `~/.worktrees/strive` is already synced to the laptop, so
   the branch is ready to build and run locally.
 - **Recover a `status:needs-human` issue:** fix the underlying cause (the
-  issue comment says what failed), then relabel — `status:spec-ready` to
+  issue comment says what failed), then relabel: `status:spec-ready` to
   re-queue implementation, or clear all `status:*` labels to re-ideate from
   scratch.
 - **Lingering laptop tab after a merge:** otto removes a merged PR's

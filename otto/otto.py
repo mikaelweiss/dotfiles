@@ -6,7 +6,7 @@ issue's Slack thread (acknowledging the operator's answers as they
 arrive), and writes the finished spec into the issue (or into
 sub-issues for multi-unit work) under `status:spec-ready`. Spec-ready
 issues are then driven through the implement and review skills in a
-dedicated worktree and opened as pull requests for human review — a leaf
+dedicated worktree and opened as pull requests for human review: a leaf
 issue as one commit, a parent with sub-issues as one commit per sub-issue
 in blocked-by order on a single feature branch. Before a PR opens, a
 verify gate builds and tests the branch (bouncing failures back into fix
@@ -55,7 +55,7 @@ SPEC_MARKER = "<!-- otto:spec -->"
 # still count as operator feedback.
 PR_COMMENT_MARKER = "<!-- otto:pr-comment -->"
 # Stamps an otto reply with the timestamp of the newest feedback item it
-# covers — feedback posted while a revision run was underway stays newer
+# covers; feedback posted while a revision run was underway stays newer
 # than this cutoff and is picked up on a later cycle.
 FEEDBACK_THROUGH_TEMPLATE = "<!-- otto:feedback-through:{ts} -->"
 FEEDBACK_THROUGH_RE = re.compile(r"<!-- otto:feedback-through:(\S+) -->")
@@ -67,7 +67,10 @@ FENCED_JSON_RE = re.compile(r"```(?:json)?[ \t]*\n(.*)```", re.DOTALL)
 QUESTIONS_SENTINEL = "OTTO_QUESTIONS"
 SPEC_SENTINEL = "OTTO_SPEC"
 
-ACK_TEXT = "Got your answers — working on them now."
+# ACK_PREFIX identifies acks in reply detection; every ack ever posted
+# starts with it, including early ones whose wording differed after it.
+ACK_PREFIX = "Got your answers"
+ACK_TEXT = ACK_PREFIX + ". Working on them now."
 
 PRIORITY_RE = re.compile(r"priority:(\d+)")
 VERDICT_RE = re.compile(r"^VERDICT: (CLEAN|ISSUES)\s*$", re.MULTILINE)
@@ -82,7 +85,7 @@ ISSUE_TAG_RE = re.compile(r"^\[\d+\]\s*")
 
 OVERRIDES = """Overrides for this run:
 - Do NOT write any files. Deliver spec content only in your final message, in the format below.
-- Research first: read this repository and search the web to answer your own questions. Ask the operator only what genuinely requires their judgment — product/UX preference, scope tradeoffs, constraints you cannot discover.
+- Research first: read this repository and search the web to answer your own questions. Ask the operator only what genuinely requires their judgment: product/UX preference, scope tradeoffs, constraints you cannot discover.
 - If questions remain after research, end your final message with a line reading exactly OTTO_QUESTIONS followed by a numbered list of the questions, nothing after the list.
 - When the spec is settled, end your final message with a line reading exactly OTTO_SPEC followed by one fenced json block: {"overview": "<markdown feature overview>", "units": [{"title": "<issue title>", "spec": "<full markdown spec with Objective, Context, Requirements, Files, Test expectations, Boundaries>", "depends_on": [<zero-based indexes of units this unit builds on>]}]}. A single-unit decomposition has exactly one entry in units."""
 
@@ -491,7 +494,7 @@ def land_spec(config: dict, number: int, payload: dict) -> None:
         if slack.find_thread_marker(issue.get("body") or ""):
             slack.post_to_thread(
                 number,
-                f"Spec is ready — your answers settled it: {issue['url']}",
+                f"Spec is ready. Your answers settled it: {issue['url']}",
                 config,
             )
     except Exception as error:
@@ -596,7 +599,7 @@ def reply_pass(config: dict, state: dict) -> None:
             float(message["ts"])
             for message in messages
             if message["user"] != operator
-            and not message["text"].startswith(ACK_TEXT)
+            and not message["text"].startswith(ACK_PREFIX)
         ]
         last_otto = max(otto_stamps) if otto_stamps else 0.0
         replies = [
@@ -646,8 +649,8 @@ def reclaim_pass(config: dict) -> None:
 
     Claims are made and resolved inside a single cycle, so `status:ideating`
     at the start of a cycle means a crash or a failed release. An issue with
-    a parked session goes back to `status:awaiting-answers` — its thread
-    replies resume that session — and one without is requeued, unless spec
+    a parked session goes back to `status:awaiting-answers` (its thread
+    replies resume that session) and one without is requeued, unless spec
     sub-issues already exist, in which case re-running would duplicate them
     and a human must finish.
     """
@@ -910,7 +913,7 @@ def verify_fix_round(
     """Feed a build/test failure back as a finding; commit and push any fix."""
     fix_prompt = (
         f"The {stage} command failed after implementation. The failure is a "
-        "code defect in this branch — find and fix it.\n\n"
+        "code defect in this branch; find and fix it.\n\n"
         f"Command output:\n\n```\n{tail(output, 20000)}\n```\n\n"
         "Fix the underlying defects. Leave all changes uncommitted."
     )
@@ -1351,7 +1354,7 @@ def is_otto_comment(body: str) -> bool:
 
 
 def list_otto_prs(config: dict, pr_state: str = "open") -> list[dict]:
-    """PRs whose head branch starts with branch_prefix — otto's own."""
+    """PRs whose head branch starts with branch_prefix: otto's own."""
     out = _gh(
         config,
         [
@@ -1403,7 +1406,7 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
     apart by PR_COMMENT_MARKER on its own line, not by author. The cutoff
     is the newest feedback timestamp otto's replies say they cover (their
     feedback-through stamp), falling back to a reply's own timestamp when
-    it carries no stamp — so feedback posted mid-run is not lost behind
+    it carries no stamp, so feedback posted mid-run is not lost behind
     the reply that follows it.
     """
     number = pr["number"]
@@ -1507,7 +1510,7 @@ def build_revision_prompt(config: dict, pr: dict, feedback: list[dict]) -> str:
         f"Operator review feedback on PR #{pr['number']} ({pr.get('url') or ''}). "
         "Address every item below with code changes on this branch, leave all "
         "changes uncommitted, and end your final message with a short summary "
-        "of what you changed — that summary is posted back to the PR.",
+        "of what you changed; that summary is posted back to the PR.",
     ]
     for item in feedback:
         parts += ["", f"{item['kind']}:", "", item["body"]]
@@ -1630,7 +1633,7 @@ def orphan_pass(config: dict, open_prs: list[dict]) -> None:
     """Route claimed issues whose runs died to a human.
 
     A `status:in-progress` issue with no open otto PR lost its subprocess
-    with the process — a crash or reboot.
+    with the process: a crash or reboot.
     """
     issues = gh_issue_list(config, LABEL_IN_PROGRESS, "open", "number,labels")
     if not issues:
