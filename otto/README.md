@@ -117,6 +117,14 @@ tmux new -s otto '/run/current-system/sw/bin/python3 ~/code/dotfiles/otto/otto.p
 
 ## Working with otto's output
 
+- **PR review feedback:** otto acts on feedback from anyone, the operator,
+  Copilot, or any other reviewer. It replies to every inline comment
+  thread with what it changed (or why nothing needed to change) and then
+  resolves the conversation. To push back on a reply, unresolve the
+  thread or leave a new comment elsewhere on the PR; comments added to a
+  thread that stays resolved are treated as settled and ignored, as is
+  anything posted by an author in `ignored_feedback_authors` (CI status
+  bots like `github-actions`).
 - **Test a PR's branch from the laptop:** `wt switch <branch>`. The
   worktree under `~/.worktrees/strive` is already synced to the laptop, so
   the branch is ready to build and run locally.

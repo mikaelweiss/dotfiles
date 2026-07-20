@@ -17,8 +17,11 @@ verify gate builds and tests the branch (bouncing failures back into fix
 rounds), captures a launch screenshot on the simulator, and posts a
 verification report as the PR body and an issue comment; the opened PR is
 announced in the issue's Slack thread. Open otto PRs are
-polled for operator review feedback and revised by resuming the PR's
-session; orphaned claims are routed to a human, closed-PR worktrees are
+polled for review feedback from anyone (the operator, Copilot, other
+reviewers) and revised by resuming the PR's session; every inline
+comment thread gets a reply saying what changed or why nothing needed
+to, then the thread is resolved. Orphaned
+claims are routed to a human, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
 up, and a `PAUSED` file in data_dir halts the loop entirely. The main
 loop is a pure orchestrator: it never runs claude itself, only reads
@@ -76,6 +79,7 @@ FENCED_JSON_RE = re.compile(r"```(?:json)?[ \t]*\n(.*)```", re.DOTALL)
 
 QUESTIONS_SENTINEL = "OTTO_QUESTIONS"
 SPEC_SENTINEL = "OTTO_SPEC"
+REPLIES_SENTINEL = "OTTO_REPLIES"
 
 # ACK_PREFIX identifies acks in reply detection; every ack ever posted
 # starts with it, including early ones whose wording differed after it.
@@ -1516,8 +1520,8 @@ def otto_pr_comment(
     Otto runs under the operator's gh login, so authorship cannot tell its
     messages apart from the operator's; the embedded marker can. When the
     comment answers review feedback, feedback_through records the newest
-    feedback timestamp it covers, so operator comments posted during the
-    run remain newer than the cutoff and get handled next cycle.
+    feedback timestamp it covers, so feedback posted during the run
+    remains newer than the cutoff and gets handled next cycle.
     """
     markers = [PR_COMMENT_MARKER]
     if feedback_through:
@@ -1583,16 +1587,76 @@ def list_inline_comments(config: dict, number: int) -> list[dict]:
         page += 1
 
 
+def fetch_review_threads(config: dict, number: int) -> dict[int, dict]:
+    """Map each inline comment's database id to its review thread.
+
+    Thread ids drive replies and resolution; isResolved lets feedback in
+    threads a human already resolved be skipped.
+    """
+    owner, name = config["repo"].split("/", 1)
+    query = """
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          isResolved
+          comments(first: 100) { nodes { databaseId } }
+        }
+      }
+    }
+  }
+}"""
+    threads: dict[int, dict] = {}
+    cursor = ""
+    while True:
+        args = [
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-f",
+            f"owner={owner}",
+            "-f",
+            f"name={name}",
+            "-F",
+            f"number={number}",
+        ]
+        if cursor:
+            args += ["-f", f"cursor={cursor}"]
+        payload = json.loads(_gh(config, args))
+        connection = payload["data"]["repository"]["pullRequest"]["reviewThreads"]
+        for node in connection["nodes"] or []:
+            for comment in (node.get("comments") or {}).get("nodes") or []:
+                if comment.get("databaseId") is not None:
+                    threads[comment["databaseId"]] = {
+                        "thread_id": node["id"],
+                        "resolved": bool(node["isResolved"]),
+                    }
+        page = connection["pageInfo"]
+        if not page["hasNextPage"]:
+            return threads
+        cursor = page["endCursor"]
+
+
 def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
-    """Operator feedback on the PR that otto has not yet answered.
+    """Review feedback on the PR that otto has not yet answered.
 
     Top-level PR comments, review bodies, and inline review comments all
-    count. Otto shares the operator's gh login, so its own replies are told
-    apart by PR_COMMENT_MARKER on its own line, not by author. The cutoff
+    count, from any author: the operator, Copilot, and other reviewers
+    alike. Otto shares the operator's gh login, so its own replies are told
+    apart by PR_COMMENT_MARKER on its own line, not by author. A cutoff
     is the newest feedback timestamp otto's replies say they cover (their
     feedback-through stamp), falling back to a reply's own timestamp when
     it carries no stamp, so feedback posted mid-run is not lost behind
-    the reply that follows it.
+    the reply that follows it. Inline comments answer to their own
+    thread's cutoff, not the PR-wide one: an unresolved thread otto has
+    not replied in is pending no matter what otto said elsewhere on the
+    PR. Comments in already-resolved threads are settled conversations
+    and never feedback, and authors in ignored_feedback_authors (CI
+    status bots) are never feedback either.
     """
     number = pr["number"]
     view = json.loads(
@@ -1610,6 +1674,7 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
         )
     )
     inline = list_inline_comments(config, number)
+    threads = fetch_review_threads(config, number)
     items = []
     for comment in view.get("comments") or []:
         items.append(
@@ -1631,29 +1696,46 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
         )
     for comment in inline:
         line = comment.get("line") or comment.get("original_line") or "?"
+        thread = threads.get(comment.get("id")) or {}
         items.append(
             {
                 "author": ((comment.get("user") or {}).get("login") or "").lower(),
                 "ts": comment.get("created_at") or "",
                 "kind": f"Inline comment on {comment.get('path') or '?'}:{line}",
                 "body": comment.get("body") or "",
+                "comment_id": comment.get("id"),
+                "thread_id": thread.get("thread_id"),
+                "resolved": thread.get("resolved", False),
             }
         )
-    operator = config["operator_login"].lower()
     cutoff = ""
+    thread_cutoff: dict[str, str] = {}
     for item in items:
         if not is_otto_comment(item["body"]):
             continue
         stamps = FEEDBACK_THROUGH_RE.findall(item["body"])
-        cutoff = max(cutoff, max(stamps) if stamps else item["ts"])
-    feedback = [
-        item
-        for item in items
-        if item["author"] == operator
-        and not is_otto_comment(item["body"])
-        and item["ts"] > cutoff
-        and item["body"].strip()
-    ]
+        stamp = max(stamps) if stamps else item["ts"]
+        if item.get("thread_id"):
+            thread_cutoff[item["thread_id"]] = max(
+                thread_cutoff.get(item["thread_id"], ""), stamp
+            )
+        else:
+            cutoff = max(cutoff, stamp)
+    ignored = {name.lower() for name in config.get("ignored_feedback_authors") or []}
+    feedback = []
+    for item in items:
+        if is_otto_comment(item["body"]) or not item["body"].strip():
+            continue
+        if item["author"].removesuffix("[bot]") in ignored:
+            continue
+        if item.get("resolved"):
+            continue
+        if item.get("thread_id"):
+            if item["ts"] <= thread_cutoff.get(item["thread_id"], ""):
+                continue
+        elif item["ts"] <= cutoff:
+            continue
+        feedback.append(item)
     feedback.sort(key=lambda item: item["ts"])
     return feedback
 
@@ -1691,21 +1773,93 @@ def ensure_pr_worktree(config: dict, number: int, branch: str, worktree: str) ->
 
 
 def build_revision_prompt(config: dict, pr: dict, feedback: list[dict]) -> str:
-    parts = [
-        f"Operator review feedback on PR #{pr['number']} ({pr.get('url') or ''}). "
-        "Address every item below with code changes on this branch, leave all "
-        "changes uncommitted, and end your final message with a short summary "
-        "of what you changed; that summary is posted back to the PR.",
-    ]
+    instructions = (
+        f"Review feedback on PR #{pr['number']} ({pr.get('url') or ''}). "
+        "For every item below, either fix it with code changes on this branch "
+        "or conclude the code is right as it stands; never ignore an item. "
+        "Leave all changes uncommitted. End your final message with a short "
+        "summary of what you changed and what you left alone and why; that "
+        "summary is posted back to the PR."
+    )
+    if any(item.get("tag") for item in feedback):
+        instructions += (
+            " Items tagged like [T1] are inline comment threads. After the "
+            f"summary, add a line reading exactly {REPLIES_SENTINEL} followed "
+            "by one fenced json block mapping every tag to the reply to post "
+            'on that thread, e.g. {"T1": "Fixed by ...", "T2": "No change: '
+            '..."}. Each reply states either what you changed or why the '
+            "comment needs no change; the thread is resolved right after the "
+            "reply posts."
+        )
+    parts = [instructions]
     for item in feedback:
-        parts += ["", f"{item['kind']}:", "", item["body"]]
+        tag = f"[{item['tag']}] " if item.get("tag") else ""
+        parts += ["", f"{tag}{item['kind']} by {item['author']}:", "", item["body"]]
     return "\n".join(parts)
+
+
+def parse_revision_replies(
+    result_text: str, tags: list[str]
+) -> tuple[str, dict[str, str]]:
+    """Split a revision result into (summary, tag -> thread reply)."""
+    lines = result_text.splitlines()
+    sentinel_idx = None
+    for index, line in enumerate(lines):
+        if line.strip() == REPLIES_SENTINEL:
+            sentinel_idx = index
+    if sentinel_idx is None:
+        raise OttoFailure("revision output has no OTTO_REPLIES sentinel")
+    summary = "\n".join(lines[:sentinel_idx]).strip()
+    match = FENCED_JSON_RE.search("\n".join(lines[sentinel_idx + 1 :]))
+    if not match:
+        raise OttoFailure("OTTO_REPLIES sentinel without a fenced json block")
+    try:
+        replies = json.loads(match.group(1))
+    except json.JSONDecodeError as error:
+        raise OttoFailure(f"OTTO_REPLIES json invalid: {error}") from None
+    if not isinstance(replies, dict):
+        raise OttoFailure("OTTO_REPLIES json is not an object")
+    missing = [tag for tag in tags if not str(replies.get(tag) or "").strip()]
+    if missing:
+        raise OttoFailure("OTTO_REPLIES has no reply for " + ", ".join(missing))
+    return summary, {tag: str(replies[tag]).strip() for tag in tags}
+
+
+def reply_in_thread(config: dict, number: int, comment_id: int, body: str) -> None:
+    _gh(
+        config,
+        [
+            "api",
+            "-X",
+            "POST",
+            f"repos/{config['repo']}/pulls/{number}/comments/{comment_id}/replies",
+            "--input",
+            "-",
+        ],
+        input_text=json.dumps({"body": body}),
+    )
+
+
+def resolve_thread(config: dict, thread_id: str) -> None:
+    mutation = (
+        "mutation($thread: ID!) { resolveReviewThread(input: {threadId: "
+        "$thread}) { thread { id } } }"
+    )
+    _gh(
+        config,
+        ["api", "graphql", "-f", f"query={mutation}", "-f", f"thread={thread_id}"],
+    )
 
 
 def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
     number = pr["number"]
     branch = pr["headRefName"]
     worktree = str(Path(config["worktree_root"]) / sanitize_branch(branch))
+    threaded = [
+        item for item in feedback if item.get("thread_id") and item.get("comment_id")
+    ]
+    for index, item in enumerate(threaded, start=1):
+        item["tag"] = f"T{index}"
     ensure_pr_worktree(config, number, branch, worktree)
     result_text, _ = run_claude(
         config,
@@ -1724,7 +1878,26 @@ def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
         log_step(number, "revise", "pushed")
     else:
         log_step(number, "revise", "no-changes")
-    reply = result_text.strip() or "Revised per the review feedback."
+    if threaded:
+        summary, replies = parse_revision_replies(
+            result_text, [item["tag"] for item in threaded]
+        )
+    else:
+        summary, replies = result_text.strip(), {}
+    # Each thread reply carries its own item's timestamp and suppression
+    # is per-thread, so a failure partway through leaves the unanswered
+    # threads with no otto reply and they are picked up next cycle.
+    for item in threaded:
+        reply_in_thread(
+            config,
+            number,
+            item["comment_id"],
+            f"{tail(replies[item['tag']], 60000)}\n\n{PR_COMMENT_MARKER}\n"
+            + FEEDBACK_THROUGH_TEMPLATE.format(ts=item["ts"]),
+        )
+        resolve_thread(config, item["thread_id"])
+        log_step(number, "revise", f"thread {item['tag']} answered and resolved")
+    reply = summary or "Revised per the review feedback."
     otto_pr_comment(
         config,
         number,
@@ -1739,18 +1912,36 @@ def escalate_revision(
 ) -> None:
     """Route a failed revision to a human.
 
-    The PR comment's feedback-through stamp covers the feedback that
-    failed, so the same feedback does not re-trigger a revision every
-    cycle while feedback posted mid-run still gets picked up.
+    The failure notice lands both as a PR comment and as a reply in every
+    inline thread the failed batch covered, each with a feedback-through
+    stamp, so the same feedback does not re-trigger a revision every
+    cycle while feedback posted mid-run still gets picked up. Threads are
+    left unresolved for the human to settle.
     """
     number = pr["number"]
+    notice = (
+        f"Otto could not revise this PR from the review feedback: {reason}"
+        "\n\nA human needs to handle the feedback; otto acts only on "
+        "feedback newer than the items this comment covers."
+    )
+    for item in feedback:
+        if not (item.get("thread_id") and item.get("comment_id")):
+            continue
+        try:
+            reply_in_thread(
+                config,
+                number,
+                item["comment_id"],
+                f"{notice}\n\n{PR_COMMENT_MARKER}\n"
+                + FEEDBACK_THROUGH_TEMPLATE.format(ts=item["ts"]),
+            )
+        except Exception as error:
+            log_step(number, "revise", f"thread failure notice incomplete: {error}")
     try:
         otto_pr_comment(
             config,
             number,
-            f"Otto could not revise this PR from the review feedback: "
-            f"{reason}\n\nA human needs to handle the feedback; otto acts "
-            "only on feedback newer than the items this comment covers.",
+            notice,
             feedback_through=max((item["ts"] for item in feedback), default=""),
         )
     except Exception as error:
@@ -1784,7 +1975,7 @@ def revise_pr(config: dict, pr: dict, feedback: list[dict]) -> None:
 def dispatch_revisions(
     config: dict, pool: ThreadPoolExecutor, open_prs: list[dict]
 ) -> None:
-    """Queue a revision for every PR with fresh operator feedback.
+    """Queue a revision for every PR with fresh review feedback.
 
     Revisions share the implementation pool and are dispatched first, so
     review feedback gets a slot ahead of new builds.
