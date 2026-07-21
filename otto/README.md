@@ -91,8 +91,10 @@ killing the process; workers already running finish normally. launchd's
 `KeepAlive` only restarts otto after a crash, with a 30s throttle so a
 crash loop can't spin.
 
-**Safe restart** (config or code changes): killing otto mid-build orphans
-the build and routes its issue to needs-human, so drain first. A worker
+**Safe restart** (config or code changes): killing otto mid-run recovers
+on its own (a dead ideation re-runs, a dead build re-queues from
+`status:spec-ready` with a fresh worktree), but the interrupted work is
+redone from scratch, so drain first to avoid the waste. A worker
 is running whenever a headless claude session OR a verify step (xcodebuild
 or simctl, which run without any claude process) is alive:
 

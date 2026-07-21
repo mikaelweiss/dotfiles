@@ -20,8 +20,8 @@ announced in the issue's Slack thread. Open otto PRs are
 polled for review feedback from anyone (the operator, Copilot, other
 reviewers) and revised by resuming the PR's session; every inline
 comment thread gets a reply saying what changed or why nothing needed
-to, then the thread is resolved. Orphaned
-claims are routed to a human, closed-PR worktrees are
+to, then the thread is resolved. Claims orphaned
+by a crash or reboot re-queue themselves, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
 up, and a `PAUSED` file in data_dir halts the loop entirely. The main
 loop is a pure orchestrator: it never runs claude itself, only reads
@@ -430,6 +430,31 @@ def _sync_clone_locked(config: dict, branch: str) -> None:
             )
 
 
+def slack_thread_context(config: dict, number: int, body: str) -> str:
+    """Prior otto/operator conversation from the issue's Slack thread.
+
+    A fresh ideation of an issue that already went through a question
+    round (a crashed run being redone, or an operator-triggered
+    re-ideation) must not re-ask what the operator already answered;
+    the thread transcript carries those answers into the prompt.
+    """
+    if not slack.find_thread_marker(body):
+        return ""
+    try:
+        messages = slack.fetch_thread(number, config)
+    except Exception as error:
+        log("ideation", number, f"slack history unavailable: {error}")
+        return ""
+    operator = config["slack"]["operator_member_id"]
+    lines = []
+    for message in messages[1:]:
+        text = message["text"].strip()
+        if text:
+            speaker = "operator" if message["user"] == operator else "otto"
+            lines.append(f"{speaker}: {text}")
+    return "\n\n".join(lines)
+
+
 def build_ideation_prompt(config: dict, number: int, issue: dict) -> str:
     parts = [
         f"/ideate for GitHub issue #{number} of {config['repo']}.",
@@ -441,6 +466,15 @@ def build_ideation_prompt(config: dict, number: int, issue: dict) -> str:
     for comment in issue.get("comments", []):
         author = (comment.get("author") or {}).get("login", "unknown")
         parts += ["", f"Comment by {author}:", comment.get("body") or ""]
+    thread = slack_thread_context(config, number, issue.get("body") or "")
+    if thread:
+        parts += [
+            "",
+            "Slack conversation between otto and the operator about this "
+            "issue; questions answered here are settled, do not re-ask them:",
+            "",
+            thread,
+        ]
     parts += ["", OVERRIDES]
     return "\n".join(parts)
 
@@ -456,14 +490,52 @@ def park_with_questions(
     swap_status(config, number, LABEL_AWAITING)
 
 
+def open_spec_sub_issues(config: dict, number: int) -> list[int]:
+    """Open sub-issues of number that carry an otto spec section."""
+    parent = gh_issue_view(config, number, "subIssues")
+    found = []
+    for node in (parent.get("subIssues") or {}).get("nodes") or []:
+        if node.get("state") != "OPEN":
+            continue
+        sub_body = gh_issue_view(config, node["number"], "body").get("body") or ""
+        if SPEC_MARKER in sub_body:
+            found.append(node["number"])
+    return sorted(found)
+
+
+def close_superseded_sub_issue(config: dict, parent: int, number: int) -> None:
+    _gh(
+        config,
+        [
+            "issue",
+            "close",
+            str(number),
+            "--repo",
+            config["repo"],
+            "--reason",
+            "not planned",
+            "--comment",
+            f"Superseded: the decomposition of #{parent} that created this "
+            "sub-issue did not complete, and the next landing recreates the "
+            "full set.",
+        ],
+    )
+
+
 def land_spec(config: dict, number: int, payload: dict) -> None:
+    # Landing is idempotent: spec sub-issues a crashed or interrupted
+    # earlier landing left behind are closed before this one lands, so
+    # redoing a decomposition never duplicates them.
+    for stale in open_spec_sub_issues(config, number):
+        close_superseded_sub_issue(config, number, stale)
+        log("land", number, f"stale spec sub-issue #{stale} closed")
     units = payload["units"]
     if len(units) == 1:
         body = gh_issue_view(config, number, "body").get("body") or ""
         gh_edit_body(config, number, f"{body}\n\n{spec_section(units[0]['spec'])}")
     else:
+        created = []
         try:
-            created = []
             for unit in units:
                 out = _gh(
                     config,
@@ -505,18 +577,25 @@ def land_spec(config: dict, number: int, payload: dict) -> None:
             overview = payload.get("overview") or ""
             gh_edit_body(config, number, f"{body}\n\n{spec_section(overview)}")
         except TransientError as error:
-            raise OttoFailure(
-                "multi-unit landing interrupted; re-running would duplicate "
-                f"sub-issues: {error}"
+            for sub_number in created:
+                try:
+                    close_superseded_sub_issue(config, number, sub_number)
+                except Exception as cleanup_error:
+                    log("land", number, f"cleanup of #{sub_number} failed: {cleanup_error}")
+            raise TransientError(
+                f"multi-unit landing interrupted after {len(created)} "
+                f"sub-issues; they were closed so a retry lands clean: {error}"
             ) from None
 
     try:
         swap_status(config, number, LABEL_SPEC_READY)
     except TransientError as error:
-        raise OttoFailure(
-            "spec landed but the swap to status:spec-ready failed; "
-            f"re-running would duplicate the landed spec: {error}"
-        ) from None
+        log(
+            "land",
+            number,
+            f"spec landed but the swap to spec-ready failed; the reclaim "
+            f"pass promotes it from the landed body: {error}",
+        )
 
     try:
         issue = gh_issue_view(config, number, "body,url")
@@ -765,18 +844,18 @@ def cancellation_pass(config: dict) -> None:
 
 
 def reclaim_pass(config: dict) -> None:
-    """Requeue stale claims.
+    """Recover stale claims.
 
     Live ideation work is tracked in IDEATION_IN_FLIGHT, so a
     `status:ideating` issue outside that set means a crash or a failed
-    release. An issue with a parked session goes back to
-    `status:awaiting-answers` (its thread replies resume that session)
-    and one without is requeued, unless spec sub-issues already exist, in
-    which case re-running would duplicate them and a human must finish.
+    release. A body that already carries a landed spec section lost only
+    its label swap and is promoted straight to `status:spec-ready`. An
+    issue with a parked session goes back to `status:awaiting-answers`
+    (its thread replies resume that session) and one without is requeued
+    for a fresh ideation; either way the next landing sweeps whatever
+    sub-issues a crashed landing left behind.
     """
-    issues = gh_issue_list(
-        config, LABEL_IDEATING, "open", "number,labels,subIssues,body"
-    )
+    issues = gh_issue_list(config, LABEL_IDEATING, "open", "number,body")
     for issue in issues:
         number = issue["number"]
         # The list is a snapshot; a worker may have finished (or a reply
@@ -788,30 +867,11 @@ def reclaim_pass(config: dict) -> None:
         live = label_names(gh_issue_view(config, number, "labels"))
         if LABEL_IDEATING not in live:
             continue
-        crashed_multi = False
-        for sub in (issue.get("subIssues") or {}).get("nodes") or []:
-            sub_body = gh_issue_view(config, sub["number"], "body").get("body") or ""
-            if SPEC_MARKER in sub_body:
-                crashed_multi = True
-                break
-        if crashed_multi:
-            swap_status(config, number, LABEL_NEEDS_HUMAN, current_names=live)
-            gh_comment(
-                config,
-                number,
-                "Otto restarted mid-ideation after spec sub-issues were already "
-                "created; re-running would duplicate them. A human needs to "
-                "finish or clean up the decomposition.",
-            )
-            slack_escalate(
-                config,
-                number,
-                f"Ideation of issue #{number} needs a human (a restart left "
-                "spec sub-issues mid-decomposition); finish or clean them up, "
-                f"then relabel: {issue_url(config, number)}",
-            )
-            log("reclaim", number, "needs-human")
-        elif find_session_marker(issue.get("body") or ""):
+        body = issue.get("body") or ""
+        if SPEC_MARKER in body:
+            swap_status(config, number, LABEL_SPEC_READY, current_names=live)
+            log("reclaim", number, "landed-spec-promoted")
+        elif find_session_marker(body):
             swap_status(config, number, LABEL_AWAITING, current_names=live)
             log("reclaim", number, "re-parked")
         else:
@@ -1453,8 +1513,15 @@ def run_feature(config: dict, issue: dict, branch: str, worktree: str) -> None:
 
 def implement_issue(config: dict, issue: dict, branch: str, worktree: str) -> None:
     number = issue["number"]
+    # Closed sub-issues do not make a feature: a superseded decomposition
+    # leaves closed subs on an issue whose landed spec lives in its own
+    # body, and that spec builds as a single unit.
+    has_open_subs = any(
+        node.get("state") == "OPEN"
+        for node in (issue.get("subIssues") or {}).get("nodes") or []
+    )
     try:
-        if ((issue.get("subIssues") or {}).get("totalCount") or 0) > 0:
+        if has_open_subs:
             run_feature(config, issue, branch, worktree)
         else:
             run_implementation(config, issue, branch, worktree)
@@ -2004,10 +2071,11 @@ def dispatch_revisions(
 
 
 def remove_stale_checkout(config: dict, number: int, branch: str) -> None:
-    """Remove the worktree and local branch a dead run left behind.
+    """Remove the worktree and branches a dead run left behind.
 
-    Left in place they make `create_worktree` fail when the operator
-    relabels the issue `status:spec-ready` to re-queue it.
+    Left in place, the worktree and local branch make `create_worktree`
+    fail on the re-queued build, and a remote branch with the dead run's
+    pushed commits rejects the fresh build's push as non-fast-forward.
     """
     worktree = Path(config["worktree_root"]) / sanitize_branch(branch)
     if worktree.exists():
@@ -2022,14 +2090,23 @@ def remove_stale_checkout(config: dict, number: int, branch: str) -> None:
             log("orphan", number, "stale local branch removed")
     except Exception as error:
         log("orphan", number, f"branch delete failed: {error}")
+    try:
+        if _git(config, ["ls-remote", "--heads", "origin", branch]).strip():
+            _git(config, ["push", "origin", "--delete", branch])
+            log("orphan", number, "stale remote branch removed")
+    except Exception as error:
+        log("orphan", number, f"remote branch delete failed: {error}")
 
 
 def orphan_pass(config: dict, open_prs: list[dict]) -> None:
-    """Route claimed issues whose runs died to a human.
+    """Re-queue claimed issues whose runs died.
 
     Live builds are tracked in IMPLEMENTATION_IN_FLIGHT, so a
     `status:in-progress` issue outside that set with no open otto PR
-    lost its run to a crash or reboot.
+    lost its run to a crash or reboot. The dead run's checkout and
+    branches are discarded and the issue goes back to
+    `status:spec-ready` for a fresh build; nothing about a died process
+    needs a human decision.
     """
     issues = gh_issue_list(config, LABEL_IN_PROGRESS, "open", "number,labels")
     if not issues:
@@ -2052,31 +2129,12 @@ def orphan_pass(config: dict, open_prs: list[dict]) -> None:
         if branch in {pr["headRefName"] for pr in list_otto_prs(config)}:
             continue
         try:
-            swap_status(config, number, LABEL_NEEDS_HUMAN, current_names=live)
+            swap_status(config, number, LABEL_SPEC_READY, current_names=live)
         except Exception as error:
             log("orphan", number, f"relabel failed: {error}")
             continue
         remove_stale_checkout(config, number, branch)
-        try:
-            gh_comment(
-                config,
-                number,
-                "Otto claimed this issue but its run died with the process "
-                "(crash or reboot) before a pull request opened.\n\n"
-                f"Automation labels were replaced with `{LABEL_NEEDS_HUMAN}`. "
-                f"Relabel `{LABEL_SPEC_READY}` to re-queue implementation, or "
-                "remove all `status:*` labels to re-ideate.",
-            )
-        except Exception as error:
-            log("orphan", number, f"failure notice incomplete: {error}")
-        slack_escalate(
-            config,
-            number,
-            f"Issue #{number} was in progress with no open PR (its run died); "
-            f"fix, then relabel `{LABEL_SPEC_READY}` to re-queue: "
-            f"{issue_url(config, number)}",
-        )
-        log("orphan", number, "needs-human")
+        log("orphan", number, "re-queued")
 
 
 def cleanup_pass(config: dict) -> None:
