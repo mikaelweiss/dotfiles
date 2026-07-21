@@ -151,6 +151,7 @@ alias st='bun run dev:desktop'
 alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
+alias claudef='claude --model fable'
 
 # Claude Code driven by a Codex-backed model, via the local cliproxyapi proxy.
 # CLIPROXY_TOKEN is set in ~/.config/cliproxy/env (not in git) and must match an
