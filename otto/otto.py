@@ -17,10 +17,11 @@ verify gate builds and tests the branch (bouncing failures back into fix
 rounds), captures a launch screenshot on the simulator, and posts a
 verification report as the PR body and an issue comment; the opened PR is
 announced in the issue's Slack thread. Open otto PRs are
-polled for review feedback from anyone (the operator, Copilot, other
-reviewers) and revised by resuming the PR's session; every inline
+polled for review feedback from anyone (the operator, Copilot, CI bots,
+other reviewers) and revised by resuming the PR's session; every inline
 comment thread gets a reply saying what changed or why nothing needed
-to, then the thread is resolved. Claims orphaned
+to, then the thread is resolved, and every top-level comment gets a
+thumbs-up reaction plus a summary comment covering what changed. Claims orphaned
 by a crash or reboot re-queue themselves, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
 up, and a `PAUSED` file in data_dir halts the loop entirely. The main
@@ -45,6 +46,7 @@ import linear
 import slack
 
 AI_READY = "AI Ready"
+USER_REQUEST = "User Request"
 LABEL_IDEATING = "status:ideating"
 LABEL_AWAITING = "status:awaiting-answers"
 LABEL_SPEC_READY = "status:spec-ready"
@@ -657,12 +659,14 @@ def release_claim(config: dict, number: int) -> None:
 
 def eligible_for_ideation(config: dict) -> list[int]:
     issues = gh_issue_list(config, AI_READY, "open", "number,labels,parent")
-    return sorted(
-        issue["number"]
+    eligible = [
+        issue
         for issue in issues
         if not any(name.startswith("status:") for name in label_names(issue))
         and not issue.get("parent")
-    )
+    ]
+    eligible.sort(key=lambda issue: (not is_user_request(issue), issue["number"]))
+    return [issue["number"] for issue in eligible]
 
 
 def ideate_issue(config: dict, number: int) -> None:
@@ -909,6 +913,10 @@ def sanitize_branch(branch: str) -> str:
     return branch.replace("/", "-").replace("\\", "-")
 
 
+def is_user_request(issue: dict) -> bool:
+    return USER_REQUEST in label_names(issue)
+
+
 def priority_rank(issue: dict) -> float:
     ranks = [
         int(match.group(1))
@@ -937,7 +945,14 @@ def select_spec_ready(config: dict, exclude: set[int] = frozenset()) -> dict | N
         candidates.append(issue)
     if not candidates:
         return None
-    return min(candidates, key=lambda issue: (priority_rank(issue), issue["number"]))
+    return min(
+        candidates,
+        key=lambda issue: (
+            not is_user_request(issue),
+            priority_rank(issue),
+            issue["number"],
+        ),
+    )
 
 
 def write_spec_file(config: dict, number: int, body: str) -> str:
@@ -1654,6 +1669,82 @@ def list_inline_comments(config: dict, number: int) -> list[dict]:
         page += 1
 
 
+def list_top_level_comments(config: dict, number: int) -> list[dict]:
+    """All top-level comments on a PR, following pagination.
+
+    GraphQL rather than `gh pr view` because feedback needs what gh's
+    comments json does not expose: each comment's node id (to react to
+    it), its updatedAt (a status bot edits one comment in place after
+    every push, and the edit must read as fresh feedback), and the
+    viewer's existing 👍 reactions, whose newest timestamp is returned
+    as `acked`, the comment's acknowledgment marker.
+    """
+    owner, name = config["repo"].split("/", 1)
+    query = """
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  viewer { login }
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      comments(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          body
+          createdAt
+          updatedAt
+          author { login }
+          reactions(content: THUMBS_UP, first: 100) {
+            nodes { createdAt user { login } }
+          }
+        }
+      }
+    }
+  }
+}"""
+    comments: list[dict] = []
+    cursor = ""
+    while True:
+        args = [
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-f",
+            f"owner={owner}",
+            "-f",
+            f"name={name}",
+            "-F",
+            f"number={number}",
+        ]
+        if cursor:
+            args += ["-f", f"cursor={cursor}"]
+        payload = json.loads(_gh(config, args))
+        viewer = payload["data"]["viewer"]["login"]
+        connection = payload["data"]["repository"]["pullRequest"]["comments"]
+        for node in connection["nodes"] or []:
+            acked = max(
+                (
+                    reaction.get("createdAt") or ""
+                    for reaction in (node.get("reactions") or {}).get("nodes") or []
+                    if ((reaction.get("user") or {}).get("login") or "") == viewer
+                ),
+                default="",
+            )
+            comments.append(
+                {
+                    "node_id": node["id"],
+                    "author": (node.get("author") or {}).get("login") or "",
+                    "body": node.get("body") or "",
+                    "ts": node.get("updatedAt") or node.get("createdAt") or "",
+                    "acked": acked,
+                }
+            )
+        page = connection["pageInfo"]
+        if not page["hasNextPage"]:
+            return comments
+        cursor = page["endCursor"]
+
+
 def fetch_review_threads(config: dict, number: int) -> dict[int, dict]:
     """Map each inline comment's database id to its review thread.
 
@@ -1712,18 +1803,20 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
     """Review feedback on the PR that otto has not yet answered.
 
     Top-level PR comments, review bodies, and inline review comments all
-    count, from any author: the operator, Copilot, and other reviewers
-    alike. Otto shares the operator's gh login, so its own replies are told
-    apart by PR_COMMENT_MARKER on its own line, not by author. A cutoff
-    is the newest feedback timestamp otto's replies say they cover (their
-    feedback-through stamp), falling back to a reply's own timestamp when
-    it carries no stamp, so feedback posted mid-run is not lost behind
-    the reply that follows it. Inline comments answer to their own
-    thread's cutoff, not the PR-wide one: an unresolved thread otto has
-    not replied in is pending no matter what otto said elsewhere on the
-    PR. Comments in already-resolved threads are settled conversations
-    and never feedback, and authors in ignored_feedback_authors (CI
-    status bots) are never feedback either.
+    count, from any author: the operator, Copilot, CI bots, and other
+    reviewers alike. Otto shares the operator's gh login, so its own
+    replies are told apart by PR_COMMENT_MARKER on its own line, not by
+    author. Each kind of feedback has its own settled marker. A
+    top-level comment is settled by otto's 👍 reaction: it is pending
+    whenever its last edit (updatedAt) is newer than the newest 👍, so a
+    status bot editing its comment in place after a push makes it fresh
+    feedback again. An inline comment answers to its own thread: pending
+    unless the thread is resolved or otto's reply there stamps a
+    feedback-through cutoff at or past it. A review body answers to the
+    PR-wide cutoff, the newest feedback timestamp otto's summary
+    comments say they cover, falling back to a reply's own timestamp
+    when it carries no stamp, so feedback posted mid-run is not lost
+    behind the reply that follows it.
     """
     number = pr["number"]
     view = json.loads(
@@ -1736,20 +1829,22 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
                 "--repo",
                 config["repo"],
                 "--json",
-                "comments,reviews",
+                "reviews",
             ],
         )
     )
     inline = list_inline_comments(config, number)
     threads = fetch_review_threads(config, number)
     items = []
-    for comment in view.get("comments") or []:
+    for comment in list_top_level_comments(config, number):
         items.append(
             {
-                "author": ((comment.get("author") or {}).get("login") or "").lower(),
-                "ts": comment.get("createdAt") or "",
+                "author": comment["author"].lower(),
+                "ts": comment["ts"],
                 "kind": "PR comment",
-                "body": comment.get("body") or "",
+                "body": comment["body"],
+                "reactable_id": comment["node_id"],
+                "acked": comment["acked"],
             }
         )
     for review in view.get("reviews") or []:
@@ -1788,17 +1883,17 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
             )
         else:
             cutoff = max(cutoff, stamp)
-    ignored = {name.lower() for name in config.get("ignored_feedback_authors") or []}
     feedback = []
     for item in items:
         if is_otto_comment(item["body"]) or not item["body"].strip():
-            continue
-        if item["author"].removesuffix("[bot]") in ignored:
             continue
         if item.get("resolved"):
             continue
         if item.get("thread_id"):
             if item["ts"] <= thread_cutoff.get(item["thread_id"], ""):
+                continue
+        elif item.get("reactable_id"):
+            if item["ts"] <= item["acked"]:
                 continue
         elif item["ts"] <= cutoff:
             continue
@@ -1918,6 +2013,35 @@ def resolve_thread(config: dict, thread_id: str) -> None:
     )
 
 
+def thumbs_up(config: dict, subject_id: str) -> None:
+    """React 👍 to a comment, refreshing the reaction's timestamp.
+
+    The reaction's createdAt is the comment's acknowledgment marker, and
+    addReaction on an already-reacted comment returns the old reaction
+    with its old timestamp; removing first makes a re-acknowledgment
+    (after the comment was edited) newer than the edit it answers.
+    """
+    remove = (
+        "mutation($subject: ID!) { removeReaction(input: {subjectId: $subject, "
+        "content: THUMBS_UP}) { reaction { id } } }"
+    )
+    add = (
+        "mutation($subject: ID!) { addReaction(input: {subjectId: $subject, "
+        "content: THUMBS_UP}) { reaction { id } } }"
+    )
+    try:
+        _gh(
+            config,
+            ["api", "graphql", "-f", f"query={remove}", "-f", f"subject={subject_id}"],
+        )
+    except TransientError:
+        pass
+    _gh(
+        config,
+        ["api", "graphql", "-f", f"query={add}", "-f", f"subject={subject_id}"],
+    )
+
+
 def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
     number = pr["number"]
     branch = pr["headRefName"]
@@ -1941,6 +2065,13 @@ def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
             ["commit", "-m", "fix: address PR review feedback"],
             cwd=worktree,
         )
+    # Push whenever the branch is ahead, not only when this run changed
+    # something: a crash between a prior run's commit and its push leaves
+    # finished work stranded locally, and this run must publish it even
+    # if it concluded nothing more needed changing.
+    if _git(
+        config, ["rev-list", "--count", f"origin/{branch}..HEAD"], cwd=worktree
+    ).strip() != "0":
         _git(config, ["push", "origin", branch], cwd=worktree)
         log_step(number, "revise", "pushed")
     else:
@@ -1964,14 +2095,32 @@ def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
         )
         resolve_thread(config, item["thread_id"])
         log_step(number, "revise", f"thread {item['tag']} answered and resolved")
-    reply = summary or "Revised per the review feedback."
-    otto_pr_comment(
-        config,
-        number,
-        tail(reply, 60000),
-        feedback_through=max(item["ts"] for item in feedback),
-    )
-    log_step(number, "revise", "replied")
+    # Non-threaded feedback is acknowledged where it sits: each top-level
+    # comment gets the 👍 that marks it settled, and one summary comment
+    # answers the batch, its feedback-through stamp settling any review
+    # bodies (which are not reactable). When the batch was all inline
+    # threads, the thread replies say everything and no PR-wide comment
+    # is added.
+    unthreaded = [item for item in feedback if not item.get("tag")]
+    for item in unthreaded:
+        if not item.get("reactable_id"):
+            continue
+        try:
+            thumbs_up(config, item["reactable_id"])
+            log_step(
+                number, "revise", f"{item['kind']} by {item['author']} acknowledged"
+            )
+        except Exception as error:
+            log_step(number, "revise", f"reaction failed: {error}")
+    if unthreaded:
+        reply = summary or "Revised per the review feedback."
+        otto_pr_comment(
+            config,
+            number,
+            tail(reply, 60000),
+            feedback_through=max(item["ts"] for item in unthreaded),
+        )
+        log_step(number, "revise", "replied")
 
 
 def escalate_revision(
@@ -2004,6 +2153,17 @@ def escalate_revision(
             )
         except Exception as error:
             log_step(number, "revise", f"thread failure notice incomplete: {error}")
+    # A top-level comment is settled only by the 👍 marker, so the failed
+    # batch's comments are acknowledged here too; without this they would
+    # re-trigger a doomed revision every cycle. The notice comment tells
+    # the human the 👍 means escalated, not fixed.
+    for item in feedback:
+        if item.get("thread_id") or not item.get("reactable_id"):
+            continue
+        try:
+            thumbs_up(config, item["reactable_id"])
+        except Exception as error:
+            log_step(number, "revise", f"failure ack incomplete: {error}")
     try:
         otto_pr_comment(
             config,

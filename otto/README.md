@@ -119,14 +119,22 @@ tmux new -s otto '/run/current-system/sw/bin/python3 ~/code/dotfiles/otto/otto.p
 
 ## Working with otto's output
 
-- **PR review feedback:** otto acts on feedback from anyone, the operator,
-  Copilot, or any other reviewer. It replies to every inline comment
-  thread with what it changed (or why nothing needed to change) and then
-  resolves the conversation. To push back on a reply, unresolve the
-  thread or leave a new comment elsewhere on the PR; comments added to a
-  thread that stays resolved are treated as settled and ignored, as is
-  anything posted by an author in `ignored_feedback_authors` (CI status
-  bots like `github-actions`).
+- **Ordering:** otto works `User Request` issues before anything else, at
+  both the ideation and implementation stages. Within each group it falls
+  back to the lowest `priority:N` label, then the lowest issue number. A
+  `User Request` issue outranks even `priority:1`.
+- **PR review feedback:** otto acts on every comment from anyone: the
+  operator, Copilot, CI bots, or any other reviewer. It replies to every
+  inline comment thread with what it changed (or why nothing needed to
+  change) and then resolves the conversation; each top-level comment gets
+  a 👍 reaction and the batch gets one summary comment saying what changed
+  and what needed no change. The 👍 is the settled marker: a top-level
+  comment edited after it (a status bot like the platform sync check
+  updates one comment in place after every push) counts as fresh feedback,
+  so otto re-reads it until it stops asking for changes. To push back on a
+  reply, unresolve the thread, remove the 👍, or leave a new comment
+  elsewhere on the PR; comments added to a thread that stays resolved are
+  treated as settled and ignored.
 - **Test a PR's branch from the laptop:** `wt switch <branch>`. The
   worktree under `~/.worktrees/strive` is already synced to the laptop, so
   the branch is ready to build and run locally.
