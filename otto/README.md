@@ -95,13 +95,13 @@ crash loop can't spin.
 on its own (a dead ideation re-runs, a dead build re-queues from
 `status:spec-ready` with a fresh worktree), but the interrupted work is
 redone from scratch, so drain first to avoid the waste. A worker
-is running whenever a headless claude session OR a verify step (xcodebuild
-or simctl, which run without any claude process) is alive:
+is running whenever a headless claude session OR a verify step (xcodebuild,
+which runs without any claude process) is alive:
 
 ```sh
 touch ~/.otto/PAUSED
 while pgrep -f "claude -p --output-format" > /dev/null \
-   || pgrep -x xcodebuild > /dev/null || pgrep -x simctl > /dev/null \
+   || pgrep -x xcodebuild > /dev/null \
    || ! tail -1 ~/.otto/otto.log | grep -q "outcome=paused"; do sleep 15; done
 launchctl kickstart -k gui/$(id -u)/org.nixos.otto
 rm ~/.otto/PAUSED

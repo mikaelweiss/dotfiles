@@ -14,8 +14,6 @@ max_ideation_agents = 3
 max_implementation_agents = 1
 build_cmd = "set -o pipefail && xcodebuild -project Strive.xcodeproj -scheme Strive -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' build 2>&1 | /run/current-system/sw/bin/xcbeautify"
 test_cmd = "set -o pipefail && xcodebuild test -project Strive.xcodeproj -scheme Strive -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' 2>&1 | /run/current-system/sw/bin/xcbeautify"
-sim_name = "iPhone 17 Pro"
-artifacts_release_tag = "otto-artifacts"
 
 [slack]
 token_file = "/Users/mikaelweiss/.otto/slack_token"

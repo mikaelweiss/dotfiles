@@ -14,7 +14,7 @@ worktree, and opened as pull requests for human review: a leaf
 issue as one commit, a parent with sub-issues as one commit per sub-issue
 in blocked-by order on a single feature branch. Before a PR opens, a
 verify gate builds and tests the branch (bouncing failures back into fix
-rounds), captures a launch screenshot on the simulator, and posts a
+rounds) and posts a
 verification report as the PR body and an issue comment; the opened PR is
 announced in the issue's Slack thread. Open otto PRs are
 polled for review feedback from anyone (the operator, Copilot, CI bots,
@@ -1193,121 +1193,17 @@ def build_test_gate(
         }
 
 
-def _simctl(args: list[str], timeout: int = 180) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["xcrun", "simctl", *args], capture_output=True, text=True, timeout=timeout
-    )
-
-
-def latest_built_app() -> str:
-    derived = Path.home() / "Library/Developer/Xcode/DerivedData"
-    apps = sorted(
-        derived.glob("*/Build/Products/Debug-iphonesimulator/*.app"),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
-    )
-    if not apps:
-        raise RuntimeError("no built .app under DerivedData")
-    return str(apps[0])
-
-
-def simulator_capture(config: dict, number: int) -> str:
-    """Boot sim_name, install and launch the freshly built app, screenshot it."""
-    sim = config["sim_name"]
-    boot = _simctl(["bootstatus", sim, "-b"], timeout=300)
-    if boot.returncode != 0:
-        raise RuntimeError(f"simulator boot failed: {boot.stderr.strip()[:200]}")
-    app_path = latest_built_app()
-    install = _simctl(["install", sim, app_path])
-    if install.returncode != 0:
-        raise RuntimeError(f"install failed: {install.stderr.strip()[:200]}")
-    plist = subprocess.run(
-        ["plutil", "-extract", "CFBundleIdentifier", "raw", f"{app_path}/Info.plist"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if plist.returncode != 0:
-        raise RuntimeError(f"bundle id read failed: {plist.stderr.strip()[:200]}")
-    bundle_id = plist.stdout.strip()
-    _simctl(["terminate", sim, bundle_id])
-    launch = _simctl(["launch", sim, bundle_id])
-    if launch.returncode != 0:
-        raise RuntimeError(f"launch failed: {launch.stderr.strip()[:200]}")
-    time.sleep(5)
-    shots_dir = Path(config["data_dir"]) / "screenshots"
-    shots_dir.mkdir(parents=True, exist_ok=True)
-    shot_path = shots_dir / f"iss-{number}-{int(time.time())}.png"
-    shot = _simctl(["io", sim, "screenshot", str(shot_path)])
-    if shot.returncode != 0:
-        raise RuntimeError(f"screenshot failed: {shot.stderr.strip()[:200]}")
-    return str(shot_path)
-
-
-def capture_screenshot(config: dict, number: int) -> str | None:
-    """Capture the launch state; a failure is environmental, so retry once."""
-    for attempt in (1, 2):
-        try:
-            path = simulator_capture(config, number)
-            log_step(number, "screenshot", "captured")
-            return path
-        except Exception as error:
-            log_step(number, "screenshot", f"attempt {attempt} failed: {error}")
-    return None
-
-
-def upload_screenshot(config: dict, number: int, path: str) -> str | None:
-    """Upload the screenshot to the artifacts prerelease; return its URL."""
-    tag = config["artifacts_release_tag"]
-    repo = config["repo"]
-    try:
-        try:
-            _gh(config, ["release", "view", tag, "--repo", repo, "--json", "name"])
-        except TransientError:
-            _gh(
-                config,
-                [
-                    "release",
-                    "create",
-                    tag,
-                    "--repo",
-                    repo,
-                    "--prerelease",
-                    "--title",
-                    "Otto artifacts",
-                    "--notes",
-                    "Screenshots otto attaches to pull request reports.",
-                ],
-            )
-        _gh(config, ["release", "upload", tag, path, "--repo", repo, "--clobber"])
-        assets = json.loads(
-            _gh(config, ["release", "view", tag, "--repo", repo, "--json", "assets"])
-        )
-        name = Path(path).name
-        for asset in assets.get("assets") or []:
-            if asset.get("name") == name and asset.get("url"):
-                return asset["url"]
-        return f"https://github.com/{repo}/releases/download/{tag}/{name}"
-    except Exception as error:
-        log_step(number, "screenshot", f"upload failed: {error}")
-        return None
-
-
-def render_report(gate: dict, screenshot_url: str | None) -> str:
+def render_report(gate: dict) -> str:
     build_line = "✓ passed" if gate["build_ok"] else "✗ failed"
     if gate["test_ok"] is None:
         test_line = "not run (build failed)"
     else:
         test_line = "✓ passed" if gate["test_ok"] else "✗ failed"
-    shot_line = (
-        f"[app launch]({screenshot_url})" if screenshot_url else "unavailable"
-    )
     lines = [
         "## Otto verification report",
         "",
         f"- Build: {build_line}",
         f"- Tests: {test_line}",
-        f"- Screenshot: {shot_line}",
     ]
     failures = []
     if not gate["build_ok"]:
@@ -1326,8 +1222,8 @@ def render_report(gate: dict, screenshot_url: str | None) -> str:
             lines += ["", f"**{stage}**", "", "```", tail(output), "```"]
     lines += [
         "",
-        "**Needs your eyes:** visual correctness of the launch screenshot, "
-        "product behavior beyond the automated checks, and the diff itself.",
+        "**Needs your eyes:** product behavior beyond the automated checks, "
+        "and the diff itself.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -1335,20 +1231,15 @@ def render_report(gate: dict, screenshot_url: str | None) -> str:
 def verify_stage(
     config: dict, number: int, worktree: str, branch: str, session_id: str
 ) -> str:
-    """Run the pre-PR gate: build, test, screenshot; return the report.
+    """Run the pre-PR gate: build, test; return the report.
 
     The gate serializes across implementation workers: DerivedData and
     the simulator are shared, so concurrent verifies would corrupt each
-    other's builds and screenshots.
+    other's builds.
     """
     with VERIFY_LOCK:
         gate = build_test_gate(config, number, worktree, branch, session_id)
-        screenshot_url = None
-        if gate["build_ok"]:
-            shot_path = capture_screenshot(config, number)
-            if shot_path:
-                screenshot_url = upload_screenshot(config, number, shot_path)
-    return render_report(gate, screenshot_url)
+    return render_report(gate)
 
 
 def post_report_comment(config: dict, number: int, report: str) -> None:
