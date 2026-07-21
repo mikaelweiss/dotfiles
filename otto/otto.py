@@ -59,6 +59,14 @@ STATUS_LABELS = {
     LABEL_SPEC_READY: ("0e8a16", "spec written into the issue, ready to build"),
     LABEL_NEEDS_HUMAN: ("d93f0b", "otto could not proceed without a human"),
 }
+STATUS_EMOJI = {
+    LABEL_IDEATING: "🧠",
+    LABEL_AWAITING: "🙋",
+    LABEL_SPEC_READY: "📋",
+    LABEL_IN_PROGRESS: "🔨",
+    LABEL_IN_REVIEW: "👀",
+    LABEL_NEEDS_HUMAN: "🚨",
+}
 
 SPEC_MARKER = "<!-- otto:spec -->"
 # Spec 006 requirement 3 asks otto to tell its comments apart from the
@@ -83,10 +91,11 @@ QUESTIONS_SENTINEL = "OTTO_QUESTIONS"
 SPEC_SENTINEL = "OTTO_SPEC"
 REPLIES_SENTINEL = "OTTO_REPLIES"
 
-# ACK_PREFIX identifies acks in reply detection; every ack ever posted
-# starts with it, including early ones whose wording differed after it.
+# Answers are now acknowledged with a 👍 on the operator's message, but
+# threads still hold text acks from before that change. ACK_PREFIX keeps
+# those historical acks from advancing the reply cutoff.
 ACK_PREFIX = "Got your answers"
-ACK_TEXT = ACK_PREFIX + ". Working on them now."
+ACK_REACTION = "thumbsup"
 
 PRIORITY_RE = re.compile(r"priority:(\d+)")
 VERDICT_RE = re.compile(r"^VERDICT: (CLEAN|ISSUES)\s*$", re.MULTILINE)
@@ -248,6 +257,19 @@ def swap_status(
         changed = True
     if changed:
         _gh(config, args)
+        if new_label:
+            update_root_emoji(config, number, new_label)
+
+
+def update_root_emoji(config: dict, number: int, label: str) -> None:
+    """Reflect the issue's new status on its Slack thread root, best-effort."""
+    emoji = STATUS_EMOJI.get(label)
+    if not emoji:
+        return
+    try:
+        slack.set_root_status(number, emoji, config)
+    except Exception as error:
+        log("slack", number, f"root emoji update failed: {error}")
 
 
 def ensure_status_labels(config: dict) -> None:
@@ -599,17 +621,6 @@ def land_spec(config: dict, number: int, payload: dict) -> None:
             f"pass promotes it from the landed body: {error}",
         )
 
-    try:
-        issue = gh_issue_view(config, number, "body,url")
-        if slack.find_thread_marker(issue.get("body") or ""):
-            slack.post_to_thread(
-                number,
-                f"Spec is ready. Your answers settled it: {issue['url']}",
-                config,
-            )
-    except Exception as error:
-        log("slack", number, f"closing message failed: {error}")
-
 
 def handle_outcome(
     config: dict, number: int, result_text: str, session_id: str
@@ -696,11 +707,11 @@ def awaiting_reply_numbers(config: dict) -> list[int]:
     return sorted(issue["number"] for issue in issues)
 
 
-def new_replies(config: dict, number: int) -> list[str]:
+def new_replies(config: dict, number: int) -> list[dict]:
     """Operator messages newer than otto's last non-ack thread message.
 
-    Acks must not advance the cutoff: if the run after an ack dies, the
-    answers behind it have to stay detectable.
+    Historical text acks must not advance the cutoff: if the run after an
+    ack dies, the answers behind it have to stay detectable.
     """
     messages = slack.fetch_thread(number, config)
     operator = config["slack"]["operator_member_id"]
@@ -712,7 +723,7 @@ def new_replies(config: dict, number: int) -> list[str]:
     ]
     last_otto = max(otto_stamps) if otto_stamps else 0.0
     return [
-        message["text"]
+        message
         for message in messages
         if message["user"] == operator and float(message["ts"]) > last_otto
     ]
@@ -773,7 +784,7 @@ def schedule_reply(pool: ThreadPoolExecutor, config: dict, number: int) -> None:
     with IN_FLIGHT_LOCK:
         IDEATION_IN_FLIGHT.add(number)
     try:
-        slack.post_to_thread(number, ACK_TEXT, config)
+        slack.add_reaction(number, replies[-1]["ts"], ACK_REACTION, config)
         swap_status(config, number, LABEL_IDEATING)
         log("replies", number, "answers-received")
     except Exception as error:
@@ -785,11 +796,12 @@ def schedule_reply(pool: ThreadPoolExecutor, config: dict, number: int) -> None:
         except Exception:
             pass
         return
+    texts = [message["text"] for message in replies]
     pool.submit(
         run_guarded,
         number,
         IDEATION_IN_FLIGHT,
-        lambda: process_replies(config, number, replies),
+        lambda: process_replies(config, number, texts),
     )
 
 

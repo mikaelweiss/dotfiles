@@ -35,6 +35,14 @@ def find_thread_marker(body: str) -> tuple[str, str] | None:
     return (match.group(1), match.group(2)) if match else None
 
 
+def _root_text(
+    config: dict, issue_number: int, title: str, url: str, emoji: str = ""
+) -> str:
+    prefix = f"{emoji} " if emoji else ""
+    branch = f"{config['branch_prefix']}iss-{issue_number}"
+    return f"{prefix}Issue #{issue_number}: {title}\n{url}\n`wt switch {branch}`"
+
+
 def ensure_thread(issue_number: int, config: dict | None = None) -> tuple[str, str]:
     """Return (channel, root_ts) for the issue's DM thread, creating it if needed.
 
@@ -54,7 +62,7 @@ def ensure_thread(issue_number: int, config: dict | None = None) -> tuple[str, s
         {"users": config["slack"]["operator_member_id"]},
     )
     channel = opened["channel"]["id"]
-    root_text = f"Issue #{issue_number}: {issue['title']}\n{issue['url']}"
+    root_text = _root_text(config, issue_number, issue["title"], issue["url"])
     posted = _slack_call(
         config, "chat.postMessage", {"channel": channel, "text": root_text}
     )
@@ -65,6 +73,41 @@ def ensure_thread(issue_number: int, config: dict | None = None) -> tuple[str, s
     new_body = f"{body}\n\n{marker}" if body else marker
     _gh_issue_edit_body(config, issue_number, new_body)
     return channel, ts
+
+
+def set_root_status(issue_number: int, emoji: str, config: dict | None = None) -> None:
+    """Rewrite the issue's thread root to lead with `emoji`; no-op without a thread.
+
+    The root text is rebuilt from the issue's current title and url, so an
+    edited title also refreshes here.
+    """
+    config = config or load_config()
+    issue = _gh_issue_view(config, issue_number)
+    thread = find_thread_marker(issue["body"])
+    if not thread:
+        return
+    channel, ts = thread
+    root_text = _root_text(config, issue_number, issue["title"], issue["url"], emoji)
+    _slack_call(
+        config, "chat.update", {"channel": channel, "ts": ts, "text": root_text}
+    )
+
+
+def add_reaction(
+    issue_number: int, message_ts: str, name: str, config: dict | None = None
+) -> None:
+    """React to a message in the issue's thread; a repeat reaction is a no-op."""
+    config = config or load_config()
+    channel, _ = ensure_thread(issue_number, config)
+    try:
+        _slack_call(
+            config,
+            "reactions.add",
+            {"channel": channel, "timestamp": message_ts, "name": name},
+        )
+    except SlackApiError as error:
+        if "already_reacted" not in str(error):
+            raise
 
 
 def post_to_thread(issue_number: int, text: str, config: dict | None = None) -> str:
