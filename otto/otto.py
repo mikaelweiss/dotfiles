@@ -21,7 +21,10 @@ polled for review feedback from anyone (the operator, Copilot, CI bots,
 other reviewers) and revised by resuming the PR's session; every inline
 comment thread gets a reply saying what changed or why nothing needed
 to, then the thread is resolved, and every top-level comment gets a
-thumbs-up reaction plus a summary comment covering what changed. Claims orphaned
+thumbs-up reaction plus a summary comment covering what changed. An open
+PR that falls into merge conflict with the default branch is rebased
+onto it in the PR's worktree, a claude session resolving any conflicts,
+and force-pushed. Claims orphaned
 by a crash or reboot re-queue themselves, closed-PR worktrees are
 cleaned up, `max_open_prs` pauses new implementation while review backs
 up, and a `PAUSED` file in data_dir halts the loop entirely. The main
@@ -59,14 +62,15 @@ STATUS_LABELS = {
     LABEL_SPEC_READY: ("0e8a16", "spec written into the issue, ready to build"),
     LABEL_NEEDS_HUMAN: ("d93f0b", "otto could not proceed without a human"),
 }
-STATUS_EMOJI = {
-    LABEL_IDEATING: "🧠",
-    LABEL_AWAITING: "🙋",
-    LABEL_SPEC_READY: "📋",
-    LABEL_IN_PROGRESS: "🔨",
-    LABEL_IN_REVIEW: "👀",
-    LABEL_NEEDS_HUMAN: "🚨",
+STATUS_REACTION = {
+    LABEL_IDEATING: "brain",
+    LABEL_AWAITING: "raising_hand",
+    LABEL_SPEC_READY: "clipboard",
+    LABEL_IN_PROGRESS: "hammer",
+    LABEL_IN_REVIEW: "eyes",
+    LABEL_NEEDS_HUMAN: "rotating_light",
 }
+MERGED_REACTION = "white_check_mark"
 
 SPEC_MARKER = "<!-- otto:spec -->"
 # Spec 006 requirement 3 asks otto to tell its comments apart from the
@@ -90,6 +94,7 @@ FENCED_JSON_RE = re.compile(r"```(?:json)?[ \t]*\n(.*)```", re.DOTALL)
 QUESTIONS_SENTINEL = "OTTO_QUESTIONS"
 SPEC_SENTINEL = "OTTO_SPEC"
 REPLIES_SENTINEL = "OTTO_REPLIES"
+COMMIT_TITLE_RE = re.compile(r"OTTO_COMMIT:[ \t]*(\S.*)")
 
 # Answers are now acknowledged with a 👍 on the operator's message, but
 # threads still hold text acks from before that change. ACK_PREFIX keeps
@@ -258,18 +263,22 @@ def swap_status(
     if changed:
         _gh(config, args)
         if new_label:
-            update_root_emoji(config, number, new_label)
+            reaction = STATUS_REACTION.get(new_label)
+            if reaction:
+                update_root_status(config, number, reaction)
 
 
-def update_root_emoji(config: dict, number: int, label: str) -> None:
-    """Reflect the issue's new status on its Slack thread root, best-effort."""
-    emoji = STATUS_EMOJI.get(label)
-    if not emoji:
-        return
+def update_root_status(config: dict, number: int, reaction: str) -> None:
+    """Make `reaction` the sole status reaction on the Slack root, best-effort."""
+    retired = tuple(
+        name
+        for name in (*STATUS_REACTION.values(), MERGED_REACTION)
+        if name != reaction
+    )
     try:
-        slack.set_root_status(number, emoji, config)
+        slack.set_root_status(number, reaction, retired, config)
     except Exception as error:
-        log("slack", number, f"root emoji update failed: {error}")
+        log("slack", number, f"root status reaction failed: {error}")
 
 
 def ensure_status_labels(config: dict) -> None:
@@ -857,6 +866,37 @@ def cancellation_pass(config: dict) -> None:
                 if issue_state == "closed" or AI_READY not in names:
                     swap_status(config, issue["number"], None, current_names=names)
                     log("cancel", issue["number"], "status-cleared")
+
+
+def branch_pr_merged(config: dict, number: int) -> bool:
+    out = _gh(
+        config,
+        [
+            "pr", "list", "--repo", config["repo"],
+            "--head", f"{config['branch_prefix']}iss-{number}",
+            "--state", "merged", "--json", "number", "--limit", "1",
+        ],
+    )
+    return bool(json.loads(out or "[]"))
+
+
+def merged_pass(config: dict) -> None:
+    """React ✅ on the Slack root of issues closed by a merged otto PR.
+
+    Otto PRs carry `Closes #N`, so merging one closes its issue while the
+    `status:in-review` label is still on it; a closed issue with that
+    label has just left review. Clearing the label makes the pass
+    one-shot. An issue closed by hand while its PR never merged gets the
+    label cleared but no ✅.
+    """
+    for issue in gh_issue_list(config, LABEL_IN_REVIEW, "closed", "number,labels"):
+        number = issue["number"]
+        swap_status(config, number, None, current_names=label_names(issue))
+        if branch_pr_merged(config, number):
+            update_root_status(config, number, MERGED_REACTION)
+            log_step(number, "merged", "root reaction set")
+        else:
+            log_step(number, "merged", "closed without merge, label cleared")
 
 
 def reclaim_pass(config: dict) -> None:
@@ -1539,7 +1579,7 @@ def list_otto_prs(config: dict, pr_state: str = "open") -> list[dict]:
             "--state",
             pr_state,
             "--json",
-            "number,state,headRefName,url",
+            "number,state,headRefName,url,mergeable",
             "--limit",
             "200",
         ],
@@ -1769,6 +1809,7 @@ def collect_pr_feedback(config: dict, pr: dict) -> list[dict]:
                 "kind": f"Inline comment on {comment.get('path') or '?'}:{line}",
                 "body": comment.get("body") or "",
                 "comment_id": comment.get("id"),
+                "reactable_id": comment.get("node_id"),
                 "thread_id": thread.get("thread_id"),
                 "resolved": thread.get("resolved", False),
             }
@@ -1844,7 +1885,13 @@ def build_revision_prompt(config: dict, pr: dict, feedback: list[dict]) -> str:
         "or conclude the code is right as it stands; never ignore an item. "
         "Leave all changes uncommitted. End your final message with a short "
         "summary of what you changed and what you left alone and why; that "
-        "summary is posted back to the PR."
+        "summary is posted back to the PR. If you changed any code, also "
+        "include a line reading exactly 'OTTO_COMMIT: <title>' where <title> "
+        "is a conventional commit title for those changes (fix:/feat:/"
+        "refactor: prefix, imperative, specific, 72 characters max), e.g. "
+        "'OTTO_COMMIT: fix: guard bulk mailto behind canOpen'. That title "
+        "becomes the commit message for this revision; omit the line if you "
+        "changed nothing."
     )
     if any(item.get("tag") for item in feedback):
         instructions += (
@@ -1861,6 +1908,24 @@ def build_revision_prompt(config: dict, pr: dict, feedback: list[dict]) -> str:
         tag = f"[{item['tag']}] " if item.get("tag") else ""
         parts += ["", f"{tag}{item['kind']} by {item['author']}:", "", item["body"]]
     return "\n".join(parts)
+
+
+def extract_commit_title(result_text: str) -> tuple[str, str]:
+    """Split a revision result into (text without marker lines, commit title).
+
+    The first OTTO_COMMIT line supplies the title; every OTTO_COMMIT line
+    is dropped from the text so the marker never reaches the PR.
+    """
+    title = ""
+    kept = []
+    for line in result_text.splitlines():
+        match = COMMIT_TITLE_RE.fullmatch(line.strip())
+        if match:
+            if not title:
+                title = " ".join(match.group(1).split())[:72]
+            continue
+        kept.append(line)
+    return "\n".join(kept).strip(), title
 
 
 def parse_revision_replies(
@@ -1916,6 +1981,18 @@ def resolve_thread(config: dict, thread_id: str) -> None:
     )
 
 
+def add_reaction(config: dict, subject_id: str, content: str) -> None:
+    """Add a reaction (EYES, THUMBS_UP, ...) to a comment node, idempotently."""
+    mutation = (
+        "mutation($subject: ID!) { addReaction(input: {subjectId: $subject, "
+        "content: " + content + "}) { reaction { id } } }"
+    )
+    _gh(
+        config,
+        ["api", "graphql", "-f", f"query={mutation}", "-f", f"subject={subject_id}"],
+    )
+
+
 def thumbs_up(config: dict, subject_id: str) -> None:
     """React 👍 to a comment, refreshing the reaction's timestamp.
 
@@ -1928,10 +2005,6 @@ def thumbs_up(config: dict, subject_id: str) -> None:
         "mutation($subject: ID!) { removeReaction(input: {subjectId: $subject, "
         "content: THUMBS_UP}) { reaction { id } } }"
     )
-    add = (
-        "mutation($subject: ID!) { addReaction(input: {subjectId: $subject, "
-        "content: THUMBS_UP}) { reaction { id } } }"
-    )
     try:
         _gh(
             config,
@@ -1939,10 +2012,7 @@ def thumbs_up(config: dict, subject_id: str) -> None:
         )
     except TransientError:
         pass
-    _gh(
-        config,
-        ["api", "graphql", "-f", f"query={add}", "-f", f"subject={subject_id}"],
-    )
+    add_reaction(config, subject_id, "THUMBS_UP")
 
 
 def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
@@ -1961,11 +2031,12 @@ def run_revision(config: dict, pr: dict, feedback: list[dict]) -> None:
         cwd=worktree,
         from_pr=number,
     )
+    result_text, commit_title = extract_commit_title(result_text)
     if _git(config, ["status", "--porcelain"], cwd=worktree).strip():
         _git(config, ["add", "-A"], cwd=worktree)
         _git(
             config,
-            ["commit", "-m", "fix: address PR review feedback"],
+            ["commit", "-m", commit_title or "fix: address PR review feedback"],
             cwd=worktree,
         )
     # Push whenever the branch is ahead, not only when this run changed
@@ -2102,6 +2173,26 @@ def revise_pr(config: dict, pr: dict, feedback: list[dict]) -> None:
         log_step(pr["number"], "revise", f"transient, retries next cycle: {error}")
 
 
+def acknowledge_feedback(config: dict, number: int, feedback: list[dict]) -> None:
+    """React 👀 to each fresh feedback item so its author sees otto has it.
+
+    Runs in the orchestrator thread the moment feedback is detected, not
+    in the revision worker, so the reaction lands within a poll cycle even
+    when every build slot is busy and the revision itself is still queued.
+    The settled marker (a 👍 or a thread reply) still follows when the
+    revision finishes. Review bodies carry no reactable node and are
+    acknowledged by that later reply instead.
+    """
+    for item in feedback:
+        subject = item.get("reactable_id")
+        if not subject:
+            continue
+        try:
+            add_reaction(config, subject, "EYES")
+        except Exception as error:
+            log_step(number, "revise", f"eyes reaction failed: {error}")
+
+
 def dispatch_revisions(
     config: dict, pool: ThreadPoolExecutor, open_prs: list[dict]
 ) -> None:
@@ -2123,6 +2214,7 @@ def dispatch_revisions(
         if not feedback:
             continue
         log_step(number, "revise", f"{len(feedback)} feedback items")
+        acknowledge_feedback(config, number, feedback)
         with IN_FLIGHT_LOCK:
             REVISIONS_IN_FLIGHT.add(number)
         pool.submit(
@@ -2130,6 +2222,172 @@ def dispatch_revisions(
             number,
             REVISIONS_IN_FLIGHT,
             lambda pr=pr, feedback=feedback: revise_pr(config, pr, feedback),
+        )
+
+
+def abort_rebase(config: dict, worktree: str) -> None:
+    """Abort any in-progress rebase in the worktree, best-effort."""
+    try:
+        subprocess.run(
+            ["git", "rebase", "--abort"],
+            cwd=worktree,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except Exception:
+        pass
+
+
+def rebase_in_progress(config: dict, worktree: str) -> bool:
+    for name in ("rebase-merge", "rebase-apply"):
+        path = _git(config, ["rev-parse", "--git-path", name], cwd=worktree).strip()
+        if (Path(worktree) / path).exists():
+            return True
+    return False
+
+
+def run_rebase(config: dict, pr: dict) -> None:
+    """Rebase a conflicted PR branch onto the default branch and force-push.
+
+    A clean rebase pushes straight away; one that stops on conflicts hands
+    the worktree to a claude session (with the PR's context) to resolve
+    them and finish the rebase. Any outcome short of a completed rebase
+    with a clean tree aborts back to the pre-rebase branch, so the
+    worktree stays usable for revisions either way.
+    """
+    number = pr["number"]
+    branch = pr["headRefName"]
+    base = config["default_branch"]
+    worktree = str(Path(config["worktree_root"]) / sanitize_branch(branch))
+    if Path(worktree).exists():
+        abort_rebase(config, worktree)
+    ensure_pr_worktree(config, number, branch, worktree)
+    _git(config, ["fetch", "origin", base], cwd=worktree)
+    try:
+        result = subprocess.run(
+            ["git", "rebase", f"origin/{base}"],
+            cwd=worktree,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired:
+        abort_rebase(config, worktree)
+        raise OttoFailure(f"git rebase onto origin/{base} timed out") from None
+    if result.returncode != 0:
+        if not rebase_in_progress(config, worktree):
+            raise OttoFailure(
+                f"git rebase failed without conflicts: "
+                f"{result.stderr.strip()[:300]}"
+            )
+        log_step(number, "rebase", "conflicts, resolving")
+        prompt = (
+            f"A rebase of branch {branch} onto origin/{base} stopped on "
+            "merge conflicts in this worktree. Resolve every conflict so "
+            "the branch keeps its intended behavior on top of the updated "
+            "base: inspect each conflicted file, edit it to the correct "
+            "merged result, `git add` it, and run `git rebase --continue`, "
+            "repeating until the rebase completes. Never run `git rebase "
+            "--abort` or `git rebase --skip`, never discard the branch's "
+            "changes wholesale, and do not push."
+        )
+        try:
+            run_claude(config, prompt, cwd=worktree, from_pr=number)
+        except OttoFailure:
+            abort_rebase(config, worktree)
+            raise
+        if rebase_in_progress(config, worktree):
+            abort_rebase(config, worktree)
+            raise OttoFailure("conflict resolution left the rebase unfinished")
+    if _git(config, ["status", "--porcelain"], cwd=worktree).strip():
+        raise OttoFailure("rebase left uncommitted changes in the worktree")
+    _git(config, ["push", "--force-with-lease", "origin", branch], cwd=worktree)
+    log_step(number, "rebase", "rebased and pushed")
+
+
+def escalate_rebase(config: dict, pr: dict, reason: str) -> None:
+    """Route a failed rebase to a human.
+
+    The issue's `status:needs-human` label is also the suppression
+    marker: dispatch_rebases skips conflicted PRs whose issue carries it,
+    so the same conflict does not re-trigger a doomed rebase every cycle.
+    """
+    number = pr["number"]
+    try:
+        otto_pr_comment(
+            config,
+            number,
+            f"Otto could not rebase this PR onto `{config['default_branch']}` "
+            f"to clear its merge conflicts: {reason}\n\n"
+            "A human needs to resolve the conflicts on this branch.",
+        )
+    except Exception as error:
+        log_step(number, "rebase", f"failure notice incomplete: {error}")
+    match = re.search(r"iss-(\d+)$", pr["headRefName"])
+    if not match:
+        return
+    issue_number = int(match.group(1))
+    try:
+        swap_status(config, issue_number, LABEL_NEEDS_HUMAN)
+    except Exception as error:
+        log_step(issue_number, "rebase", f"needs-human relabel failed: {error}")
+    slack_escalate(
+        config,
+        issue_number,
+        f"PR #{number} has merge conflicts otto could not rebase away "
+        f"({reason}); resolve them on the branch yourself: "
+        f"{pr.get('url') or ''}",
+    )
+
+
+def rebase_pr(config: dict, pr: dict) -> None:
+    try:
+        run_rebase(config, pr)
+    except OttoFailure as error:
+        log_step(pr["number"], "rebase", f"failed: {error}")
+        escalate_rebase(config, pr, str(error))
+    except Exception as error:
+        log_step(pr["number"], "rebase", f"transient, retries next cycle: {error}")
+
+
+def dispatch_rebases(
+    config: dict, pool: ThreadPoolExecutor, open_prs: list[dict]
+) -> None:
+    """Queue a rebase for every open PR that conflicts with its base.
+
+    GitHub's mergeable state drives detection: CONFLICTING dispatches,
+    UNKNOWN (still computing) waits for a later cycle. Rebases share
+    REVISIONS_IN_FLIGHT with dispatch_revisions so a PR is never rebased
+    and revised at the same time, and a PR whose issue is already
+    `status:needs-human` is a human's problem until the conflict clears.
+    """
+    for pr in sorted(open_prs, key=lambda pr: pr["number"]):
+        if pr.get("mergeable") != "CONFLICTING":
+            continue
+        number = pr["number"]
+        with IN_FLIGHT_LOCK:
+            if number in REVISIONS_IN_FLIGHT:
+                continue
+        match = re.search(r"iss-(\d+)$", pr["headRefName"])
+        if match:
+            try:
+                labels = label_names(
+                    gh_issue_view(config, int(match.group(1)), "labels")
+                )
+            except Exception as error:
+                log_step(number, "rebase", f"label check failed: {error}")
+                continue
+            if LABEL_NEEDS_HUMAN in labels:
+                continue
+        log_step(number, "rebase", "merge conflicts detected")
+        with IN_FLIGHT_LOCK:
+            REVISIONS_IN_FLIGHT.add(number)
+        pool.submit(
+            run_guarded,
+            number,
+            REVISIONS_IN_FLIGHT,
+            lambda pr=pr: rebase_pr(config, pr),
         )
 
 
@@ -2244,10 +2502,12 @@ def cleanup_pass(config: dict) -> None:
 def run_cycle(config: dict, impl_pool: ThreadPoolExecutor) -> None:
     reclaim_pass(config)
     cancellation_pass(config)
+    merged_pass(config)
     open_prs = list_otto_prs(config)
     orphan_pass(config, open_prs)
     cleanup_pass(config)
     dispatch_revisions(config, impl_pool, open_prs)
+    dispatch_rebases(config, impl_pool, open_prs)
     dispatch_implementation(config, impl_pool, open_prs)
 
 

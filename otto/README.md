@@ -123,18 +123,33 @@ tmux new -s otto '/run/current-system/sw/bin/python3 ~/code/dotfiles/otto/otto.p
   both the ideation and implementation stages. Within each group it falls
   back to the lowest `priority:N` label, then the lowest issue number. A
   `User Request` issue outranks even `priority:1`.
+- **Slack thread status:** each issue's DM thread root carries one
+  reaction mirroring its `status:*` label: 🧠 ideating, 🙋 awaiting your
+  answers, 📋 spec ready, 🔨 building, 👀 in review, 🚨 needs human. When
+  the issue's otto PR merges (closing it via `Closes #N`), the reaction
+  becomes ✅. Status changes swap the reaction; the message body stays
+  emoji-free.
 - **PR review feedback:** otto acts on every comment from anyone: the
-  operator, Copilot, CI bots, or any other reviewer. It replies to every
-  inline comment thread with what it changed (or why nothing needed to
-  change) and then resolves the conversation; each top-level comment gets
-  a 👍 reaction and the batch gets one summary comment saying what changed
-  and what needed no change. The 👍 is the settled marker: a top-level
+  operator, Copilot, CI bots, or any other reviewer. The moment it detects
+  fresh feedback it reacts 👀 on each comment so the author sees it has
+  been picked up, before the revision (which can take minutes) even
+  starts. It then replies to every inline comment thread with what it
+  changed (or why nothing needed to change) and then resolves the
+  conversation; each top-level comment gets a 👍 reaction and the batch
+  gets one summary comment saying what changed and what needed no change. The 👍 is the settled marker: a top-level
   comment edited after it (a status bot like the platform sync check
   updates one comment in place after every push) counts as fresh feedback,
   so otto re-reads it until it stops asking for changes. To push back on a
   reply, unresolve the thread, remove the 👍, or leave a new comment
   elsewhere on the PR; comments added to a thread that stays resolved are
   treated as settled and ignored.
+- **Merge conflicts:** when an open otto PR falls into conflict with
+  `main` (GitHub reports it as CONFLICTING), otto rebases the branch onto
+  `origin/main` in the PR's worktree, has a claude session resolve any
+  conflicts, and force-pushes (`--force-with-lease`). If the rebase can't
+  be completed, the branch is restored to its pre-rebase state, the issue
+  goes `status:needs-human`, and the PR gets a comment; resolve the
+  conflicts on the branch yourself, after which the PR merges as usual.
 - **Test a PR's branch from the laptop:** `wt switch <branch>`. The
   worktree under `~/.worktrees/strive` is already synced to the laptop, so
   the branch is ready to build and run locally.

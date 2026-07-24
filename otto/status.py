@@ -139,6 +139,34 @@ def otto_prs(config: dict) -> list[dict]:
     ]
 
 
+def revising(config: dict) -> dict[int, str]:
+    """PR numbers otto is mid-revision on, mapped to how long ago it began.
+
+    A revision logs 'N feedback items' when it picks feedback up and a
+    terminal line (pushed/no-changes/replied/...) when it finishes, so a
+    PR whose latest revise line is still the dispatch is being worked.
+    """
+    path = Path(config["data_dir"]) / "otto.log"
+    if not path.exists():
+        return {}
+    latest: dict[int, tuple[str, str]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines()[-300:]:
+        match = re.match(r"(\S+) issue=(\d+) step=revise .*?outcome=(.*)", line)
+        if match:
+            stamp, number, outcome = match.groups()
+            latest[int(number)] = (stamp, outcome)
+    return {
+        number: age(stamp)
+        for number, (stamp, outcome) in latest.items()
+        if "feedback items" in outcome
+    }
+
+
+def pr_issue_number(pr: dict) -> int | None:
+    match = re.search(r"iss-(\d+)$", pr["headRefName"])
+    return int(match.group(1)) if match else None
+
+
 def last_activity(config: dict) -> dict[int, tuple[str, int, str]]:
     """Latest log line per issue, as (stamp, issue, 'step outcome (age)')."""
     path = Path(config["data_dir"]) / "otto.log"
@@ -178,6 +206,10 @@ def render(config: dict) -> str:
     grouped = issues_by_status(config)
     prs = otto_prs(config)
     activity = last_activity(config)
+    active = revising(config)
+    pr_by_issue = {
+        issue: pr for pr in prs if (issue := pr_issue_number(pr)) is not None
+    }
     lines = [daemon_line(config)]
     if activity:
         _, source, text = max(activity.values())
@@ -193,10 +225,13 @@ def render(config: dict) -> str:
                 + color("33", "answer in Slack")
             )
         for pr in prs:
-            lines.append(
-                f"  PR #{pr['number']:<3} {pr['title'][:46]}  "
-                + color("33", f"review ({age(pr['createdAt'])} old)")
-            )
+            if pr["number"] in active:
+                tag = color(
+                    "1;35", f"↻ responding to feedback ({active[pr['number']]} ago)"
+                )
+            else:
+                tag = color("33", f"review ({age(pr['createdAt'])} old)")
+            lines.append(f"  PR #{pr['number']:<3} {pr['title'][:46]}  " + tag)
         lines.append("")
 
     lines.append(color("1", "PIPELINE"))
@@ -212,6 +247,9 @@ def render(config: dict) -> str:
             numbers = [issue["number"]]
             if label == "status:in-progress":
                 numbers += sub_numbers(config, issue["number"])
+            pr = pr_by_issue.get(issue["number"]) if label == "status:in-review" else None
+            if pr:
+                numbers.append(pr["number"])
             latest = max(
                 (activity[n] for n in numbers if n in activity), default=None
             )
@@ -219,10 +257,15 @@ def render(config: dict) -> str:
             if latest:
                 _, source, text = latest
                 extra = text if source == issue["number"] else f"#{source} {text}"
-            lines.append(
-                f"    #{issue['number']:<4} {title_of(issue)}"
-                + (color("90", f"  {extra}") if extra else "")
-            )
+            if pr and pr["number"] in active:
+                tag = color(
+                    "1;35", f"  ↻ responding to feedback ({active[pr['number']]} ago)"
+                )
+            elif extra:
+                tag = color("90", f"  {extra}")
+            else:
+                tag = ""
+            lines.append(f"    #{issue['number']:<4} {title_of(issue)}" + tag)
     lines.append("")
 
     lines.append(

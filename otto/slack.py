@@ -35,12 +35,9 @@ def find_thread_marker(body: str) -> tuple[str, str] | None:
     return (match.group(1), match.group(2)) if match else None
 
 
-def _root_text(
-    config: dict, issue_number: int, title: str, url: str, emoji: str = ""
-) -> str:
-    prefix = f"{emoji} " if emoji else ""
+def _root_text(config: dict, issue_number: int, title: str, url: str) -> str:
     branch = f"{config['branch_prefix']}iss-{issue_number}"
-    return f"{prefix}Issue #{issue_number}: {title}\n{url}\n`wt switch {branch}`"
+    return f"Issue #{issue_number}: {title}\n{url}\n`wt switch {branch}`"
 
 
 def ensure_thread(issue_number: int, config: dict | None = None) -> tuple[str, str]:
@@ -75,11 +72,18 @@ def ensure_thread(issue_number: int, config: dict | None = None) -> tuple[str, s
     return channel, ts
 
 
-def set_root_status(issue_number: int, emoji: str, config: dict | None = None) -> None:
-    """Rewrite the issue's thread root to lead with `emoji`; no-op without a thread.
+def set_root_status(
+    issue_number: int,
+    reaction: str,
+    retired: tuple[str, ...] = (),
+    config: dict | None = None,
+) -> None:
+    """Show the issue's status as a reaction on its thread root; no-op without a thread.
 
-    The root text is rebuilt from the issue's current title and url, so an
-    edited title also refreshes here.
+    `reaction` is added to the root message and every name in `retired` is
+    removed, so the root carries exactly one status reaction. The root text
+    is also rebuilt from the issue's current title and url, so an edited
+    title refreshes here.
     """
     config = config or load_config()
     issue = _gh_issue_view(config, issue_number)
@@ -87,10 +91,31 @@ def set_root_status(issue_number: int, emoji: str, config: dict | None = None) -
     if not thread:
         return
     channel, ts = thread
-    root_text = _root_text(config, issue_number, issue["title"], issue["url"], emoji)
+    root_text = _root_text(config, issue_number, issue["title"], issue["url"])
     _slack_call(
         config, "chat.update", {"channel": channel, "ts": ts, "text": root_text}
     )
+    for name in retired:
+        if name == reaction:
+            continue
+        try:
+            _slack_call(
+                config,
+                "reactions.remove",
+                {"channel": channel, "timestamp": ts, "name": name},
+            )
+        except SlackApiError as error:
+            if "no_reaction" not in str(error):
+                raise
+    try:
+        _slack_call(
+            config,
+            "reactions.add",
+            {"channel": channel, "timestamp": ts, "name": reaction},
+        )
+    except SlackApiError as error:
+        if "already_reacted" not in str(error):
+            raise
 
 
 def add_reaction(
