@@ -78,6 +78,7 @@ alias nix-update='(cd ~/code/dotfiles/nix-darwin && nix flake update) && nix-reb
 alias nix-config='nvim /Users/mikaelweiss/code/dotfiles/nix-darwin/flake.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
 alias tm='tmux new-session -A -s main'
+alias stopheat='xcrun simctl shutdown all'
 
 # Wolf (Mac mini): attach this directory's session there (deps auto-install,
 # then a plain shell); pass a command to run instead, e.g. `wolf claude`.
