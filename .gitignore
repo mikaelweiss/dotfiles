@@ -5,7 +5,6 @@
 **/.claude/settings.local.json
 
 # Machine-local assistant/app configuration
-claude/.claude/CLAUDE.md
 claude/.claude/settings.json
 codex/.codex/config.toml
 terminal/.config/codexbar/config.json
