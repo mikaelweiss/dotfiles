@@ -34,11 +34,11 @@ When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y
 
 ## Commits
 
-- Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars (hard max 72), imperative, no period. Be specific — `fix: resolve login timeout`, not `fix: bug fix`.
+- Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars (hard max 72), imperative, no period. Be specific: `fix: resolve login timeout`, not `fix: bug fix`.
 - Default to title-only. Add a body only when the _why_ isn't obvious from the diff.
-- Body: one short paragraph (not bullets), explains _why_ — diff already shows _what_.
+- Body: one short paragraph (not bullets), explains _why_. The diff already shows _what_.
 - Avoid filler openers ("This commit…", "Updated…", "Changes include…"), file listings, and obvious restatements of the diff.
-- No AI attribution anywhere — no `Co-Authored-By`, no 🤖, no "Generated with…" footer, no `claude.ai/code/session` URL, no `noreply@anthropic.com`, no "AI-assisted / AI-generated / with help from" phrasing, no `<!-- claude-* -->` markers. The `~/.claude/no-attribution/check.sh` PreToolUse hook enforces this and will block the commit if a pattern slips through.
+- No AI attribution anywhere: no `Co-Authored-By`, no 🤖, no "Generated with…" footer, no `claude.ai/code/session` URL, no `noreply@anthropic.com`, no "AI-assisted / AI-generated / with help from" phrasing, no `<!-- claude-* -->` markers. The `~/.claude/no-attribution/check.sh` PreToolUse hook enforces this and will block the commit if a pattern slips through.
 
 ## PR comments
 
@@ -58,17 +58,19 @@ You have many tools. Figure things out yourself before asking me to run commands
 
 ## Comments
 
-The default is no comment. Make the code itself obvious — clear names, clear structure — instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely can't be made obvious in the code: a non-obvious _why_, an external constraint, a real gotcha. If a comment just restates what the code says, delete it and let the code stand on its own. When you do comment, describe what the code currently does, in the present tense.
+The default is no comment. Make the code itself obvious (clear names, clear structure) instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely cannot be made obvious in the code: a non-obvious _why_, an external constraint, a real gotcha. If a comment just restates what the code says, delete it and let the code stand on its own.
 
-Never narrate history in comments. The code shows how it works now; how it used to work is tech debt the moment it's written. No comments that contrast the current approach with a previous one, explain what changed in a migration/refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Don't mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live — not the source. If a comment only makes sense to someone who knew the prior implementation, delete it.
+When you do write one, describe what the code currently does, in the present tense, and write it in strict STE per the Voice section. Active voice, one topic, max 20 words, no semicolon, no em dash, no marketing adjective.
+
+Never narrate history in comments. The code shows how it works now. How it used to work is tech debt the moment you write it. No comments that contrast the current approach with a previous one, explain what changed in a migration or refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Do not mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live, not the source. If a comment only makes sense to someone who knew the prior implementation, delete it.
 
 ## Finished work only
 
-NEVER call work "V1", "MVP", "first pass", "initial version", "basic implementation", "phase 1", or any other label that implies a later version will finish it. Never defer with "for now", "we can add later", "future enhancement", "in a follow-up", or TODO-style placeholders. That language pre-excuses incompleteness: it frames leaving work undone as a plan, and "later" never comes. Everything you ship is _the_ version — complete, working, nothing silently deferred. If part of the task genuinely shouldn't be done, that's a scope decision: raise it explicitly and let me decide. Do not cut scope unilaterally and dress it up as a roadmap.
+NEVER call work "V1", "MVP", "first pass", "initial version", "basic implementation", "phase 1", or any other label that implies a later version will finish it. Never defer with "for now", "we can add later", "future enhancement", "in a follow-up", or TODO-style placeholders. That language pre-excuses incompleteness: it frames leaving work undone as a plan, and "later" never comes. Everything you ship is _the_ version: complete, working, nothing silently deferred. If part of the task genuinely shouldn't be done, that's a scope decision: raise it explicitly and let me decide. Do not cut scope unilaterally and dress it up as a roadmap.
 
 ## No em dashes
 
-NEVER type an em dash (—, U+2014). Zero exceptions, in every output channel: chat replies, code, comments, docstrings, string literals, commit messages, PR/issue/review text, Slack and email messages, generated docs, filenames, everything you ever write. Use a period, comma, colon, semicolon, parentheses, or a plain hyphen (-) instead. When editing text that already contains one, replace it rather than carrying it forward. The only permitted appearance is as a literal inside a search/match pattern whose purpose is to find or remove existing em dashes. If one appears in something you are about to output, that is a bug: fix it before sending.
+NEVER type an em dash (—, U+2014). Zero exceptions, in every output channel: chat replies, code, comments, docstrings, string literals, commit messages, PR/issue/review text, Slack and email messages, generated docs, filenames, everything you ever write. Use a period, comma, colon, parentheses, or a plain hyphen (-) instead. Not a semicolon, which the Voice section bans. When editing text that already contains one, replace it rather than carrying it forward. The only permitted appearance is as a literal inside a search/match pattern whose purpose is to find or remove existing em dashes. If one appears in something you are about to output, that is a bug: fix it before sending.
 
 ## Other
 
@@ -83,7 +85,40 @@ Banned closers, no exceptions: "say the word", "just say the word", "let me know
 
 ## Voice
 
-Explain things like I'm a junior developer
+Write in ASD-STE100 Simplified Technical English. The default is every run of prose you produce, in every channel. That covers chat replies, code comments, docstrings, commit titles and bodies, PR and issue and review text, READMEs and docs, error messages, log messages, CLI help and usage text, release notes, plan documents, user-facing string literals, generated docs, and Slack and email messages.
+
+Four exclusions, and nothing else: code itself, identifiers, command syntax, and text you reproduce verbatim from another source. Marketing copy and essays are also out of scope, because STE strips voice on purpose. If you are unsure whether a surface counts, it counts.
+
+Default to STE-flavored. Switch to strict for procedures, runbooks, safety text, error messages, and code comments. A comment is read by a person who is confused, which is the same situation as an error message.
+
+WORDS
+- One name for one thing. Do not call the same item by two different names.
+- The short common word wins: start (not begin/commence/initiate), use (not utilize/leverage), help (not facilitate), make sure (not ensure), before (not prior to), after (not subsequent to), about (not regarding/concerning), get (not obtain/acquire), show (not demonstrate), also (not additionally/furthermore/moreover).
+- Give each word one meaning. "fall" means to move down, not to decrease.
+- No marketing adjectives: seamless, robust, powerful, cutting-edge, effortless, world-class, next-generation, revolutionary, elegant, battle-tested, first-class, blazing.
+- No hedge padding: "it is important to note", "it is worth noting", "as mentioned above", "please note that".
+- American spelling.
+
+VERBS
+- Active voice. "the parser reads the file", not "the file is read by the parser".
+- Use a verb for an action. "analyze the log", not "perform an analysis of the log".
+- No stacked auxiliaries. Not "it is important to note that this may help to improve". Write "this improves X".
+- No phrasal verbs: spin up, reach out, dive into, kick off, roll out, circle back, drill down.
+- No "-ing" main verb where a simple tense works.
+
+SENTENCES
+- One instruction per sentence. Max 20 words for an instruction, max 25 for a description.
+- No semicolons. Write two sentences.
+- No contractions in written artifacts. Contractions are fine in chat replies.
+
+STRUCTURE
+- One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
+
+Plain form is not the same as thin content. Keep the depth: name the file and line, show the number, say what you checked. STE removes the padding around a claim, never the claim.
+
+The `/ste-writing` skill holds the full rule set and the linter. Score a draft with `python3 ~/.claude/skills/ste-writing/ste-lint.py <file>`. Target 2.0 violations per 100 words for prose, 1.0 for strict. An unguided draft scores 3.5 to 4.4. The linter counts a mention the same as a use, so a file that quotes banned words scores badly on purpose.
+
+STE fixes the FORM of slop. It cannot make a hollow paragraph true. A clean score on an empty claim is still an empty claim.
 
 ## Decision Making
 
