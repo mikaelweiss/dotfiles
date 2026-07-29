@@ -1,8 +1,7 @@
 onboarding = false
 # Keybindings mirror ~/.config/tmux/tmux.conf + tmux.reset.conf where herdr
-# has an equivalent action. Herdr defaults already match tmux for pane focus
-# (prefix+j/k; h/l are set below), zoom (prefix+z), and config reload
-# (prefix+shift+r).
+# has an equivalent action. Herdr defaults already match tmux for zoom
+# (prefix+z) and config reload (prefix+shift+r). Pane focus is set below.
 
 [theme]
 name = "catppuccin"
@@ -13,8 +12,10 @@ prefix = "ctrl+f"
 # tmux: bind n new-window
 new_tab = "prefix+n"
 # tmux: bind Left/Right previous-window/next-window
-previous_tab = "prefix+left"
-next_tab = "prefix+right"
+# the ctrl+shift variants are prefix-free targets for the mouse side buttons,
+# which macOS remaps to these chords while Ghostty is frontmost
+previous_tab = ["prefix+left", "ctrl+shift+left"]
+next_tab = ["prefix+right", "ctrl+shift+right"]
 # option+1..9 jumps straight to a tab without the prefix; requires the
 # alt+digit esc: keybinds in the ghostty config, since macOS option+digit
 # types special characters (¡™£…) instead of sending alt. Setting this
@@ -27,9 +28,11 @@ close_pane = "prefix+c"
 # tmux: bind s split -h (side by side), bind v split -v (stacked)
 split_vertical = "prefix+s"
 split_horizontal = "prefix+v"
-# setting these replaces the built-in prefix+h/l defaults, so they are
+# setting these replaces the built-in prefix+h/j/k/l defaults, so they are
 # restated alongside the ctrl-held variants
 focus_pane_left = ["prefix+h", "prefix+ctrl+h"]
+focus_pane_down = ["prefix+j", "prefix+ctrl+j"]
+focus_pane_up = ["prefix+k", "prefix+ctrl+k"]
 focus_pane_right = ["prefix+l", "prefix+ctrl+l"]
 # tmux: bind ^D detach
 detach = "prefix+ctrl+d"

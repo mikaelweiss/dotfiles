@@ -160,7 +160,7 @@ alias claudef='claude --model fable'
 # var, never exported — an exported ANTHROPIC_AUTH_TOKEN would hijack plain
 # `claude` too.
 [[ -f ~/.config/cliproxy/env ]] && source ~/.config/cliproxy/env
-: ${CLAUDEX_MODEL:=gpt-5.6-sol-fast}
+: ${CLAUDEX_MODEL:=gpt-5.6-sol}
 claudex() {
   if [[ -z "$CLIPROXY_TOKEN" ]]; then
     print -u2 "claudex: CLIPROXY_TOKEN unset — create ~/.config/cliproxy/env"

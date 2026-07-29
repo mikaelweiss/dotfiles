@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.80.10",
-  "defaultProvider": "moonshotai",
-  "defaultModel": "kimi-k3",
+  "lastChangelogVersion": "0.82.1",
+  "defaultProvider": "fireworks",
+  "defaultModel": "accounts/fireworks/models/kimi-k3",
   "defaultThinkingLevel": "high",
   "compaction": {
     "enabled": false
@@ -37,7 +37,7 @@
     "npm:pi-subagents",
     "npm:pi-mcp-adapter",
     "npm:pi-web-access",
-    "npm:bun-docx"
+    "npm:bun-docx",
     "npm:@upstash/context7-pi"
   ],
   "hideThinkingBlock": false,
