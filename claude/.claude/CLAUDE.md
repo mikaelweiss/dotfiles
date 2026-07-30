@@ -123,3 +123,6 @@ STE fixes the FORM of slop. It cannot make a hollow paragraph true. A clean scor
 ## Decision Making
 
 Do your best to use your available tools to figure things out on your own before asking the user.
+
+## Code Review
+Always load the `review` skill when doing code review. Never load the `code-review` skill. Always use the `review skill`
