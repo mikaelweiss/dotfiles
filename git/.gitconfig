@@ -13,7 +13,7 @@
 	br = branch
 	sw = switch
 	ch = checkout
-	branch-prune = "!git fetch -p && for b in $(git for-each-ref --format='%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)' refs/heads); do git branch -d $b; done"
+	branch-prune = "!f() { git fetch -p; base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); base=${base:-origin/main}; for b in $(git for-each-ref --format='%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)' refs/heads); do if git merge-base --is-ancestor $b $base 2>/dev/null; then git branch -d $b; continue; fi; mb=$(git merge-base $base $b 2>/dev/null) || continue; if git cherry $base $b 2>/dev/null | grep -q '^+'; then tree=$(git rev-parse $b^{tree}); vc=$(git commit-tree $tree -p $mb -m _ 2>/dev/null); res=$(git cherry $base $vc 2>/dev/null); case $res in -*) echo Pruning squash-merged: $b; git branch -D $b;; *) echo Keeping unmerged: $b;; esac; else echo Pruning rebase-merged: $b; git branch -D $b; fi; done; }; f"
 	bb = !better-git-branch
     # Checkpoints allow you to get a commit hash for a WIP.
   # It's intended for when you'd like to mark progress to return to later, but don't yet want a full commit.
