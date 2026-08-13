@@ -19,4 +19,5 @@ result
 
 **/.claude/settings.local.json
 
-**/.claude/settings.local.json
+# agent-friction traces (npx agent-friction init)
+**/.cursor/agent-friction/
