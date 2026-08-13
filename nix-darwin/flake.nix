@@ -142,6 +142,17 @@
       environment.systemPackages = with pkgs; [
       ];
 
+      programs.zsh = {
+        enable = true;
+        interactiveShellInit = ''
+          # Android SDK
+          export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
+          # Gradle needs a JDK; openjdk@21 is keg-only so brew leaves it off PATH.
+          export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$JAVA_HOME/bin:$PATH"
+        '';
+      };
+
       homebrew.brews = [
         "nx"
         "helix"
@@ -203,6 +214,9 @@
         # javaPackages.compiler.openjdk21 # Java
         nodejs
         ];
+
+      # Terminal font. Registers the family "MesloLGS Nerd Font Mono".
+      fonts.packages = [ pkgs.nerd-fonts.meslo-lg ];
 
       # Set nvim as default editor
       environment.variables = {
