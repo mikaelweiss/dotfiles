@@ -52,6 +52,10 @@ gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullReques
 
 Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for code search. Use Grep/Glob for plain-text search and filename patterns.
 
+## Large machine-generated files
+
+Do not read a log file, JSONL transcript, or build output whole into context. First measure the file with `wc -c`. If it is over 10k characters, extract what you need instead: write a script that prints counts or summaries, grep for the relevant lines, or read a bounded slice (offset/limit, `head -c`). Reading a small slice to learn the format is fine. This rule covers `~/.claude/projects`, scratchpad output, and any generated artifact. It does not cover source code.
+
 ## Obstacles
 
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
