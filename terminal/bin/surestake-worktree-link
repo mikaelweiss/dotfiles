@@ -1,0 +1,39 @@
+#!/bin/zsh
+# Links apps/api/vendor and apps/api/.env from the primary surestake checkout
+# into a worktree. Both paths are gitignored, so a fresh worktree has neither,
+# and intelephense reports every Laravel class as undefined while larastan and
+# artisan fail to boot. Host composer install is not an option (php 8.5).
+# Skips any target that already exists as a real file or a non-empty directory,
+# so a worktree with its own copy keeps it. Idempotent.
+# Usage: surestake-worktree-link <worktree_path> <primary_worktree_path>
+worktree=$1
+primary=$2
+
+[ -n "$worktree" ] && [ -n "$primary" ] || exit 0
+[ "$worktree" = "$primary" ] && exit 0
+[ -d "$worktree/apps/api" ] || exit 0
+
+for entry in vendor .env; do
+  source_path=$primary/apps/api/$entry
+  target=$worktree/apps/api/$entry
+
+  [ -e "$source_path" ] || continue
+
+  if [ -L "$target" ]; then
+    [ "$(readlink "$target")" = "$source_path" ] && continue
+    rm "$target"
+  elif [ -d "$target" ]; then
+    rmdir "$target" 2>/dev/null || continue
+  elif [ -e "$target" ]; then
+    continue
+  fi
+
+  ln -s "$source_path" "$target"
+done
+
+# The linked vendor tree belongs to the primary checkout, which dx spotlight
+# reinstalls whenever the mirrored composer.lock changes. A branch that bumps
+# the lock before spotlight runs gets a stale tree, so say so.
+if ! cmp -s "$worktree/apps/api/composer.lock" "$primary/apps/api/composer.lock"; then
+  echo "surestake-worktree-link: composer.lock differs from the primary checkout, linked vendor is stale" >&2
+fi
