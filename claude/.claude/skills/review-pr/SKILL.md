@@ -94,25 +94,13 @@ Read the PR description and comments to verify any findings are new
 
 Post to the PR with the following format
 
-### Baseline:
+### Blockers
 
-Give a very clear, simple, and organized summary of what was changed
+Give a clear and simple list of specific things that are blockers
 
-### High impact changes
+### Non-blockers
 
-Give a clear and simple explanation of areas of the code that were changed that are high impact and should be reviewed or tested carefully
-
-### Issues
-
-Give a clear and simple list of specific things that will cause problems
-
-### Correctness
-
-Give a clear and simple list of things related to correctness that you found in `Step 4`
-
-### Verification
-
-Give a clear and simple explanation of things that aren't necessarily issues, but require human review. For example, behavior changes and things like that.
+Give a clear and simple list of specific things that are non-blockers
 
 ## Cleanup
 
