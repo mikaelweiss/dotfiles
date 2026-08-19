@@ -189,3 +189,6 @@ xcode/Library/Developer/Xcode
 # Pi
 terminal/.pi/agent/mcp.json
 terminal/.pi/agent/mcp-cache.json
+terminal/.config/composer/*
+terminal/.config/opencode/*
+terminal/.config/psysh/*
