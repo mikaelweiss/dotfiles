@@ -385,3 +385,10 @@ cleanup = '''
 [projects."github.com/MikaelWeiss/ask-pip".post-start]
 deps = "npm i"
 env  = "cp {{ primary_worktree_path }}/.env.local {{ worktree_path }}/.env.local"
+
+# A fresh surestake worktree has no apps/api/vendor and no apps/api/.env (both
+# gitignored), so intelephense flags every Laravel class as undefined and
+# larastan and artisan refuse to boot. Link both from the primary checkout on
+# every switch. The script is idempotent and leaves real files alone.
+[projects."github.com/sawtooth-technologies/surestake".post-switch]
+php-links = "~/code/dotfiles/terminal/bin/surestake-worktree-link {{ worktree_path }} {{ primary_worktree_path }}"

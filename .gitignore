@@ -93,6 +93,16 @@ terminal/.config/herdr/*
 # CLIProxyAPI client credential
 terminal/.config/cliproxy/env
 
+# Composer global install (keep composer.json + lock, drop credentials and vendor)
+terminal/.config/composer/auth.json
+terminal/.config/composer/vendor/
+
+# PHP toolchain installed by herd-lite
+terminal/.config/herd-lite/
+
+# Intelephense index cache
+terminal/.config/intelephense/
+
 # Terminal app runtime/state (keep settings/config files)
 terminal/.config/cagent/.cagent_first_run
 terminal/.config/cagent/user-uuid
@@ -181,4 +191,5 @@ terminal/.pi/agent/mcp.json
 terminal/.pi/agent/mcp-cache.json
 terminal/.config/composer/*
 terminal/.config/herd-lite/*
+terminal/.config/opencode/*
 terminal/.config/psysh/*

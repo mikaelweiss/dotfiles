@@ -1,4 +1,7 @@
-# Global rules
+Hi there, my name is Mikael Weiss.
+I'm a developer and pilot and I'm excited to get to know you.
+I love simplicity and clarity.
+10 well put words are far more valuable than 100 slopy or verbose words that say the same thing.
 
 ## Sub-agents
 
@@ -26,12 +29,6 @@ Invented paths, line numbers, function names, and commit hashes still happen. Be
 
 When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y/`, no matches"). Partial searches don't prove universal absence. If two tool outputs disagree, surface both rather than picking the convenient one.
 
-## Git
-
-- Branches: `mikael/<feature-name>` (kebab-case).
-- For git commands, `cd` into the directory rather than `git -C`.
-- Never push, force-push, or revert someone else's changes without explicit permission.
-
 ## Commits
 
 - Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars (hard max 72), imperative, no period. Be specific: `fix: resolve login timeout`, not `fix: bug fix`.
@@ -40,17 +37,9 @@ When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y
 - Avoid filler openers ("This commit…", "Updated…", "Changes include…"), file listings, and obvious restatements of the diff.
 - No AI attribution anywhere: no `Co-Authored-By`, no 🤖, no "Generated with…" footer, no `claude.ai/code/session` URL, no `noreply@anthropic.com`, no "AI-assisted / AI-generated / with help from" phrasing, no `<!-- claude-* -->` markers. The `~/.claude/no-attribution/check.sh` PreToolUse hook enforces this and will block the commit if a pattern slips through.
 
-## PR comments
+## Large machine-generated files
 
-Fetch only unresolved threads via GraphQL (REST doesn't expose resolution status):
-
-```sh
-gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: N) { reviewThreads(first: 50) { nodes { isResolved comments(first: 10) { nodes { body path author { login } } } } } } } }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
-```
-
-## Code search
-
-Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for code search. Use Grep/Glob for plain-text search and filename patterns.
+Do not read a log file, JSONL transcript, or build output whole into context. First measure the file with `wc -c`. If it is over 10k characters, extract what you need instead: write a script that prints counts or summaries, grep for the relevant lines, or read a bounded slice (offset/limit, `head -c`). Reading a small slice to learn the format is fine. This rule covers `~/.claude/projects`, scratchpad output, and any generated artifact. It does not cover source code.
 
 ## Obstacles
 
@@ -96,3 +85,7 @@ Do your best to use your available tools to figure things out on your own before
 ## Code Review
 
 Always load the `review` skill when doing code review. Never load the `code-review` skill. Always use the `review skill`
+
+## Running Code
+
+It takes a long time to run lint, the code, and tests, so by default don't run anything. The only times we need to run that is before we push code for a pull request.
