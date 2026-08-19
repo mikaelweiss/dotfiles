@@ -20,7 +20,7 @@ next_tab = ["prefix+right", "ctrl+shift+right"]
 # alt+digit esc: keybinds in the ghostty config, since macOS option+digit
 # types special characters (¡™£…) instead of sending alt. Setting this
 # replaces the built-in prefix+1..9 default, so it is restated alongside.
-switch_tab = ["alt+1..9", "prefix+1..9"]
+switch_tab = ["cmd+1..9", "prefix+1..9"]
 # tmux: bind r rename-window
 rename_tab = "prefix+r"
 # tmux: bind c kill-pane
