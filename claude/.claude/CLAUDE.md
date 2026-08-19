@@ -58,11 +58,13 @@ You have many tools. Figure things out yourself before asking me to run commands
 
 ## Comments
 
-The default is no comment. Make the code itself obvious (clear names, clear structure) instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely cannot be made obvious in the code: a non-obvious _why_, an external constraint, a real gotcha. If a comment just restates what the code says, delete it and let the code stand on its own.
+The default is no comment. Do not comment bad code, rewrite it: make the code itself obvious (clear names, clear structure) instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely cannot live in the code.
 
-When you do write one, describe what the code currently does, in the present tense, and write it in strict STE per the Voice section. Active voice, one topic, max 20 words, no semicolon, no em dash, no marketing adjective.
+Code says _how_, comments say _why_. The only comment worth writing records intent the code cannot express: why this approach over the obvious one, the trade-off taken, the external constraint, the real gotcha. Never explain how the code works. The code already says that, and a duplicate explanation goes stale the moment the code changes. DRY applies to comments too. If a comment restates what the code says, delete it and let the code stand on its own.
 
-Never narrate history in comments. The code shows how it works now. How it used to work is tech debt the moment you write it. No comments that contrast the current approach with a previous one, explain what changed in a migration or refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Do not mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live, not the source. If a comment only makes sense to someone who knew the prior implementation, delete it.
+When you do write one, present tense, strict STE per the Voice section. Active voice, one topic, max 20 words, no semicolon, no em dash, no marketing adjective.
+
+Never narrate history in comments. The code shows how it works now. How it used to work is tech debt the moment you write it. No comments that contrast the current approach with a previous one, explain what changed in a migration or refactor, or reference what the code "used to" do, "no longer" does, "now" does "instead", or "replaces". Do not mark code as "new", "updated", "migrated", or "old". Git history is where past decisions live, not the source. The same goes for revision logs, author lists, and change logs in file headers: git records those. If a comment only makes sense to someone who knew the prior implementation, delete it.
 
 ## Finished work only
 
@@ -92,6 +94,7 @@ Four exclusions, and nothing else: code itself, identifiers, command syntax, and
 Default to STE-flavored. Switch to strict for procedures, runbooks, safety text, error messages, and code comments. A comment is read by a person who is confused, which is the same situation as an error message.
 
 WORDS
+
 - One name for one thing. Do not call the same item by two different names.
 - The short common word wins: start (not begin/commence/initiate), use (not utilize/leverage), help (not facilitate), make sure (not ensure), before (not prior to), after (not subsequent to), about (not regarding/concerning), get (not obtain/acquire), show (not demonstrate), also (not additionally/furthermore/moreover).
 - Give each word one meaning. "fall" means to move down, not to decrease.
@@ -100,6 +103,7 @@ WORDS
 - American spelling.
 
 VERBS
+
 - Active voice. "the parser reads the file", not "the file is read by the parser".
 - Use a verb for an action. "analyze the log", not "perform an analysis of the log".
 - No stacked auxiliaries. Not "it is important to note that this may help to improve". Write "this improves X".
@@ -107,11 +111,13 @@ VERBS
 - No "-ing" main verb where a simple tense works.
 
 SENTENCES
+
 - One instruction per sentence. Max 20 words for an instruction, max 25 for a description.
 - No semicolons. Write two sentences.
 - No contractions in written artifacts. Contractions are fine in chat replies.
 
 STRUCTURE
+
 - One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
 
 Plain form is not the same as thin content. Keep the depth: name the file and line, show the number, say what you checked. STE removes the padding around a claim, never the claim.
@@ -125,4 +131,5 @@ STE fixes the FORM of slop. It cannot make a hollow paragraph true. A clean scor
 Do your best to use your available tools to figure things out on your own before asking the user.
 
 ## Code Review
+
 Always load the `review` skill when doing code review. Never load the `code-review` skill. Always use the `review skill`
