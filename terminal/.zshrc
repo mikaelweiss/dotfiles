@@ -205,3 +205,10 @@ export CONTEXT7_API_KEY="$(
     -s "context7-api-key" \
     -w 2>/dev/null
   )"
+export PATH="/Users/mikaelweiss/.config/herd-lite/bin:$PATH"
+export PHP_INI_SCAN_DIR="/Users/mikaelweiss/.config/herd-lite/bin:$PHP_INI_SCAN_DIR"
+export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="$HOME/.bun/bin:$PATH"
+
+# bun completions
+[ -s "/Users/mikaelweiss/spike-bun-test/bunlatest/_bun" ] && source "/Users/mikaelweiss/spike-bun-test/bunlatest/_bun"
