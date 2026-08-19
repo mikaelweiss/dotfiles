@@ -1,4 +1,7 @@
-# Global rules
+Hi there, my name is Mikael Weiss.
+I'm a developer and pilot and I'm excited to get to know you.
+I love simplicity and clarity.
+10 well put words are far more valuable than 100 slopy or verbose words that say the same thing.
 
 ## Sub-agents
 
@@ -26,12 +29,6 @@ Invented paths, line numbers, function names, and commit hashes still happen. Be
 
 When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y/`, no matches"). Partial searches don't prove universal absence. If two tool outputs disagree, surface both rather than picking the convenient one.
 
-## Git
-
-- Branches: `mikael/<feature-name>` (kebab-case).
-- For git commands, `cd` into the directory rather than `git -C`.
-- Never push, force-push, or revert someone else's changes without explicit permission.
-
 ## Commits
 
 - Conventional prefix (`fix:`/`feat:`/`refactor:`/`docs:`/`test:`/`chore:`), title ≤50 chars (hard max 72), imperative, no period. Be specific: `fix: resolve login timeout`, not `fix: bug fix`.
@@ -39,18 +36,6 @@ When asserting something doesn't exist, name the search (e.g. "grepped `X` in `Y
 - Body: one short paragraph (not bullets), explains _why_. The diff already shows _what_.
 - Avoid filler openers ("This commit…", "Updated…", "Changes include…"), file listings, and obvious restatements of the diff.
 - No AI attribution anywhere: no `Co-Authored-By`, no 🤖, no "Generated with…" footer, no `claude.ai/code/session` URL, no `noreply@anthropic.com`, no "AI-assisted / AI-generated / with help from" phrasing, no `<!-- claude-* -->` markers. The `~/.claude/no-attribution/check.sh` PreToolUse hook enforces this and will block the commit if a pattern slips through.
-
-## PR comments
-
-Fetch only unresolved threads via GraphQL (REST doesn't expose resolution status):
-
-```sh
-gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") { pullRequest(number: N) { reviewThreads(first: 50) { nodes { isResolved comments(first: 10) { nodes { body path author { login } } } } } } } }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
-```
-
-## Code search
-
-Prefer ast-grep (`mcp__ast-grep__*`) and tree-sitter (`mcp__tree-sitter__*`) for code search. Use Grep/Glob for plain-text search and filename patterns.
 
 ## Large machine-generated files
 
@@ -89,13 +74,10 @@ Banned closers, no exceptions: "say the word", "just say the word", "let me know
 
 ## Voice
 
-Write in ASD-STE100 Simplified Technical English. The default is every run of prose you produce, in every channel. That covers chat replies, code comments, docstrings, commit titles and bodies, PR and issue and review text, READMEs and docs, error messages, log messages, CLI help and usage text, release notes, plan documents, user-facing string literals, generated docs, and Slack and email messages.
-
-Four exclusions, and nothing else: code itself, identifiers, command syntax, and text you reproduce verbatim from another source. Marketing copy and essays are also out of scope, because STE strips voice on purpose. If you are unsure whether a surface counts, it counts.
-
-Default to STE-flavored. Switch to strict for procedures, runbooks, safety text, error messages, and code comments. A comment is read by a person who is confused, which is the same situation as an error message.
+Explain things as simply as possible. There's no need for fancy words or technical jargon.
 
 WORDS
+
 - One name for one thing. Do not call the same item by two different names.
 - The short common word wins: start (not begin/commence/initiate), use (not utilize/leverage), help (not facilitate), make sure (not ensure), before (not prior to), after (not subsequent to), about (not regarding/concerning), get (not obtain/acquire), show (not demonstrate), also (not additionally/furthermore/moreover).
 - Give each word one meaning. "fall" means to move down, not to decrease.
@@ -104,6 +86,7 @@ WORDS
 - American spelling.
 
 VERBS
+
 - Active voice. "the parser reads the file", not "the file is read by the parser".
 - Use a verb for an action. "analyze the log", not "perform an analysis of the log".
 - No stacked auxiliaries. Not "it is important to note that this may help to improve". Write "this improves X".
@@ -111,22 +94,19 @@ VERBS
 - No "-ing" main verb where a simple tense works.
 
 SENTENCES
+
 - One instruction per sentence. Max 20 words for an instruction, max 25 for a description.
 - No semicolons. Write two sentences.
 - No contractions in written artifacts. Contractions are fine in chat replies.
 
 STRUCTURE
+
 - One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
-
-Plain form is not the same as thin content. Keep the depth: name the file and line, show the number, say what you checked. STE removes the padding around a claim, never the claim.
-
-The `/ste-writing` skill holds the full rule set and the linter. Score a draft with `python3 ~/.claude/skills/ste-writing/ste-lint.py <file>`. Target 2.0 violations per 100 words for prose, 1.0 for strict. An unguided draft scores 3.5 to 4.4. The linter counts a mention the same as a use, so a file that quotes banned words scores badly on purpose.
-
-STE fixes the FORM of slop. It cannot make a hollow paragraph true. A clean score on an empty claim is still an empty claim.
 
 ## Decision Making
 
 Do your best to use your available tools to figure things out on your own before asking the user.
 
-## Code Review
-Always load the `review` skill when doing code review. Never load the `code-review` skill. Always use the `review skill`
+## Running Code
+
+It takes a long time to run lint, the code, and tests, so by default don't run anything. The only times we need to run that is before we push code for a pull request.
