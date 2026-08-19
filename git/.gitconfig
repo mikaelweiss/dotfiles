@@ -53,3 +53,5 @@
 [maintenance]
 	repo = /Users/mikaelweiss/code/strive
 
+[pull]
+	rebase = true
