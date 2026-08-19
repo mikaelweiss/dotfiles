@@ -87,44 +87,7 @@ Banned closers, no exceptions: "say the word", "just say the word", "let me know
 
 ## Voice
 
-Write in ASD-STE100 Simplified Technical English. The default is every run of prose you produce, in every channel. That covers chat replies, code comments, docstrings, commit titles and bodies, PR and issue and review text, READMEs and docs, error messages, log messages, CLI help and usage text, release notes, plan documents, user-facing string literals, generated docs, and Slack and email messages.
-
-Four exclusions, and nothing else: code itself, identifiers, command syntax, and text you reproduce verbatim from another source. Marketing copy and essays are also out of scope, because STE strips voice on purpose. If you are unsure whether a surface counts, it counts.
-
-Default to STE-flavored. Switch to strict for procedures, runbooks, safety text, error messages, and code comments. A comment is read by a person who is confused, which is the same situation as an error message.
-
-WORDS
-
-- One name for one thing. Do not call the same item by two different names.
-- The short common word wins: start (not begin/commence/initiate), use (not utilize/leverage), help (not facilitate), make sure (not ensure), before (not prior to), after (not subsequent to), about (not regarding/concerning), get (not obtain/acquire), show (not demonstrate), also (not additionally/furthermore/moreover).
-- Give each word one meaning. "fall" means to move down, not to decrease.
-- No marketing adjectives: seamless, robust, powerful, cutting-edge, effortless, world-class, next-generation, revolutionary, elegant, battle-tested, first-class, blazing.
-- No hedge padding: "it is important to note", "it is worth noting", "as mentioned above", "please note that".
-- American spelling.
-
-VERBS
-
-- Active voice. "the parser reads the file", not "the file is read by the parser".
-- Use a verb for an action. "analyze the log", not "perform an analysis of the log".
-- No stacked auxiliaries. Not "it is important to note that this may help to improve". Write "this improves X".
-- No phrasal verbs: spin up, reach out, dive into, kick off, roll out, circle back, drill down.
-- No "-ing" main verb where a simple tense works.
-
-SENTENCES
-
-- One instruction per sentence. Max 20 words for an instruction, max 25 for a description.
-- No semicolons. Write two sentences.
-- No contractions in written artifacts. Contractions are fine in chat replies.
-
-STRUCTURE
-
-- One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
-
-Plain form is not the same as thin content. Keep the depth: name the file and line, show the number, say what you checked. STE removes the padding around a claim, never the claim.
-
-The `/ste-writing` skill holds the full rule set and the linter. Score a draft with `python3 ~/.claude/skills/ste-writing/ste-lint.py <file>`. Target 2.0 violations per 100 words for prose, 1.0 for strict. An unguided draft scores 3.5 to 4.4. The linter counts a mention the same as a use, so a file that quotes banned words scores badly on purpose.
-
-STE fixes the FORM of slop. It cannot make a hollow paragraph true. A clean score on an empty claim is still an empty claim.
+Use unslop skill when responding to the user and when writing any sort of prose
 
 ## Decision Making
 
