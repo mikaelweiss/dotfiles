@@ -12,7 +12,8 @@ source $ZSH/oh-my-zsh.sh
 export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 export CLAUDE_CODE_NO_FLICKER=1
-# export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-6[1m]'
+export ANTHROPIC_DEFAULT_OPUS_MODEL='claude-opus-4-8[1m]'
+export ANTHROPIC_DEFAULT_MODEL='claude-opus-4-8[1m]'
 export PI_LENS_STARTUP_MODE=quick
 
 # Alias'
