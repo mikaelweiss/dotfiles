@@ -9,8 +9,10 @@
     ../../modules/backups.nix
   ];
 
-  # Minecraft stays here until the sparrow cutover (port forwards + DNS).
+  minecraft.private = true;
   minecraft.dataRoot = "/mnt/nvme/minecraft";
+  # The public servers stay here until the sparrow cutover (port forwards + DNS).
+  minecraft.public = true;
   resticBackups.minecraftPath = "/mnt/nvme/minecraft";
   minecraft.rexburgPort = 61658;
   systemd.services.tailscale-keepalive-pip = {

@@ -3,6 +3,8 @@
 let
   cfg = config.minecraft;
   dataRoot = cfg.dataRoot;
+  names = lib.optional cfg.private "minecraft-server"
+    ++ lib.optionals cfg.public [ "rexburg-friends" "skyblock" ];
 in
 {
   options.minecraft = {
@@ -12,8 +14,10 @@ in
     };
     rexburgPort = lib.mkOption {
       type = lib.types.port;
-      default = 25571;
+      default = 25565;
     };
+    private = lib.mkEnableOption "the tailnet-only minecraft-server";
+    public = lib.mkEnableOption "the port-forwarded rexburg-friends and skyblock servers";
   };
 
   config = {
@@ -27,8 +31,10 @@ in
   virtualisation.oci-containers = {
     backend = "podman";
 
+    containers = lib.mkMerge [
+    (lib.mkIf cfg.private {
     # Tailnet-only. Not port-forwarded on purpose.
-    containers.minecraft-server = {
+    minecraft-server = {
       image = "docker.io/itzg/minecraft-server:java25";
       ports = [ "25565:25565" ];
       volumes = [ "${dataRoot}/minecraft-server/data:/data" ];
@@ -45,10 +51,10 @@ in
         REMOVE_OLD_MODS = "FALSE";
       };
     };
-
-    # Public. Host ports match what players already have saved from the old
-    # relay (25571 Java, 19132 Bedrock), so only the address changes.
-    containers.rexburg-friends = {
+    })
+    (lib.mkIf cfg.public {
+    # Public, on the default Java and Bedrock ports so players need no port.
+    rexburg-friends = {
       image = "docker.io/itzg/minecraft-server:java25";
       ports = [ "${toString cfg.rexburgPort}:25565" "19132:19132/udp" ];
       volumes = [ "${dataRoot}/rexburg-friends/data:/data" ];
@@ -69,7 +75,7 @@ in
       };
     };
 
-    containers.skyblock = {
+    skyblock = {
       image = "docker.io/itzg/minecraft-server:java25";
       ports = [ "25566:25565" "19133:19132/udp" ];
       volumes = [ "${dataRoot}/skyblock/data:/data" ];
@@ -92,17 +98,19 @@ in
         ALLOW_FLIGHT = "true";
       };
     };
+    })
+    ];
   };
 
   # Podman pulls the image on first start, which raced DNS at boot.
-  systemd.services = lib.genAttrs [ "podman-minecraft-server" "podman-rexburg-friends" "podman-skyblock" ] (_: {
+  systemd.services = lib.genAttrs (map (n: "podman-${n}") names) (_: {
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
   });
 
-  systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") [ "minecraft-server" "rexburg-friends" "skyblock" ];
+  systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") names;
 
-  networking.firewall.allowedTCPPorts = [ cfg.rexburgPort 25566 ];
-  networking.firewall.allowedUDPPorts = [ 19132 19133 ];
+  networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 ];
+  networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 ];
   };
 }

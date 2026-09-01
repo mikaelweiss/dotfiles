@@ -13,6 +13,9 @@
   ];
 
   resticBackups.sparrowState = true;
+  # Set at the port-forward cutover, alongside the minecraft.nix + ddns.nix imports.
+  # minecraft.public = true;
+  # resticBackups.minecraftPath = "/var/lib/minecraft";
 
   networking.hostName = "sparrow";
 
