@@ -78,6 +78,36 @@ let
       echo "Deployed $service"
     '';
   };
+  hookRule = ''
+    {
+      "and": [
+        { "match": { "type": "payload-hmac-sha256", "secret": "@SECRET@",
+                     "parameter": { "source": "header", "name": "X-Hub-Signature-256" } } },
+        { "match": { "type": "value", "value": "refs/heads/main",
+                     "parameter": { "source": "payload", "name": "ref" } } }
+      ]
+    }
+  '';
+  hook = id: command: args: {
+    inherit id;
+    execute-command = command;
+    command-working-directory = "/opt/deploy";
+    pass-arguments-to-command = map (a: { source = "string"; name = a; }) args;
+    trigger-rule = builtins.fromJSON hookRule;
+  };
+  phoenixHook = name: migrate:
+    hook name "${deployPhoenix}/bin/deploy-phoenix" [ name "/opt/${name}" name "/etc/${name}/env" migrate ];
+  nodeHook = name:
+    hook name "${deployNode}/bin/deploy-node" [ name "/opt/${name}" name ];
+  hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
+    (phoenixHook "portfolio" "false")
+    (phoenixHook "weisssolutions" "false")
+    (phoenixHook "lunchninja" "true")
+    (nodeHook "pmgforrms")
+    (nodeHook "rachelportfolio")
+    (nodeHook "vault")
+    (nodeHook "rubrix")
+  ]);
 in
 {
   users.users = lib.genAttrs siteUsers (name: {
@@ -119,10 +149,16 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       path = [ deployPhoenix deployNode pkgs.sudo ];
+      preStart = ''
+        secret=$(cat /etc/webhook/secret)
+        sed "s|@SECRET@|$secret|g" ${hooksTemplate} > /run/webhook/hooks.json
+      '';
       serviceConfig = {
         User = "mikaelweiss";
+        RuntimeDirectory = "webhook";
+        RuntimeDirectoryMode = "0700";
         WorkingDirectory = "/opt/deploy";
-        ExecStart = "${pkgs.webhook}/bin/webhook -hooks /opt/deploy/hooks.json -port 9000 -verbose";
+        ExecStart = "${pkgs.webhook}/bin/webhook -hooks /run/webhook/hooks.json -port 9000 -verbose";
         Restart = "on-failure";
       };
     };
