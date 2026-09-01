@@ -12,6 +12,8 @@
     # ../../modules/ddns.nix        # re-enable with the Cloudflare token (Phase 4)
   ];
 
+  resticBackups.sparrowState = true;
+
   networking.hostName = "sparrow";
 
   # Static address: the port forwards on the gateway point here, and the

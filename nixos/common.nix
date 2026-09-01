@@ -101,6 +101,12 @@
       tailscale = inputs.nixpkgs-unstable.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
     })
   ];
+  # Trust oak's host key so restic sftp backups verify non-interactively.
+  programs.ssh.knownHosts.oak = {
+    hostNames = [ "oak" "100.91.63.11" ];
+    publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIInXxQTbkaN/w43UcmNdZ6M4GoAONrfQBUKNP/6mXScW";
+  };
+
   services.tailscale.enable = true;
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
   networking.firewall.allowedUDPPorts = [ config.services.tailscale.port ];

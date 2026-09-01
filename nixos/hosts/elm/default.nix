@@ -6,10 +6,12 @@
     ./hardware.nix
     ../../modules/desktop.nix
     ../../modules/minecraft.nix
+    ../../modules/backups.nix
   ];
 
   # Minecraft stays here until the sparrow cutover (port forwards + DNS).
   minecraft.dataRoot = "/mnt/nvme/minecraft";
+  resticBackups.minecraftPath = "/mnt/nvme/minecraft";
   minecraft.rexburgPort = 61658;
   systemd.services.tailscale-keepalive-pip = {
     description = "Keepalive ping to the pip relay to hold the tailscale NAT hole open";
