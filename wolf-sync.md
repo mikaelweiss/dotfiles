@@ -8,7 +8,7 @@ to elm, created by `sync-setup`:
 | Machine | Sessions |
 |---|---|
 | MacBook Air, wolf | `code` (`~/code`), `worktrees` (`~/.worktrees`) |
-| MacBook Pro (work) | `surestake` (`~/code/surestake`), `surestake-worktrees` (`~/.worktrees/surestake`), `dotfiles` (`~/code/dotfiles`) |
+| MacBook Pro (work) | `surestake` (`~/code/surestake`), `surestake-worktrees` (`~/.worktrees/surestake`), `penguin` (`~/code/penguin`), `penguin-worktrees` (`~/.worktrees/penguin`), `dotfiles` (`~/code/dotfiles`) |
 
 Elm needs nothing but sshd; it never initiates. A machine's ssh key must be in
 `nixos/common.nix` (`openssh.authorizedKeys.keys`) before `sync-setup` works.
@@ -29,7 +29,7 @@ runnable on the laptop within a second or two, with no push/pull dance.
 Worktrunk hooks turn every worktree into a split tab: local shell on the
 left for testing, a persistent wolf session on the right for the agent.
 
-The MacBook Pro is the work computer and syncs only the surestake trees and dotfiles.
+The MacBook Pro is the work computer and syncs only the surestake and penguin trees and dotfiles.
 
 ## How it works
 

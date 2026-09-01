@@ -2,7 +2,7 @@
 # One-time (re)setup of the mutagen sessions between this Mac and elm, the
 # always-on hub. Ignore defaults come from ~/.mutagen.yml. Elm is alpha: on a
 # simultaneous-write conflict, elm's copy wins.
-# The work MacBook Pro syncs only the surestake trees and dotfiles.
+# The work MacBook Pro syncs only the surestake and penguin trees and dotfiles.
 set -e
 hub=elm
 
@@ -22,6 +22,8 @@ case "$(scutil --get LocalHostName 2>/dev/null)" in
   Mikaels-MacBook-Pro)
     create surestake "$HOME/code/surestake"
     create surestake-worktrees "$HOME/.worktrees/surestake"
+    create penguin "$HOME/code/penguin"
+    create penguin-worktrees "$HOME/.worktrees/penguin"
     create dotfiles "$HOME/code/dotfiles"
     ;;
   *)
