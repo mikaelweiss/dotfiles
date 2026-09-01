@@ -6,6 +6,7 @@ fi
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(git dotenv macos sudo rsync systemd xcode)
+source $ZSH/oh-my-zsh.sh
 
 # ENV vars
 export MAX_MCP_OUTPUT_TOKENS=250000
@@ -59,7 +60,7 @@ gwru() {
 }
 gwc() {
   git worktree add -b "mikael/$1" "~/.worktrees/ClipSpeak/$1" && \
-  cd "/home/mikaelweiss/.worktrees/ClipSpeak/$1"
+  cd "/Users/mikaelweiss/.worktrees/ClipSpeak/$1"
 }
 alias gcp='git checkpoint'
 alias gcpl='git listCheckpoints'
@@ -97,6 +98,11 @@ wolf() {
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Stuff for fly.io
+export FLYCTL_INSTALL="/Users/mikaelweiss/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
 # Cargo
 export PATH="$HOME/.cargo/bin:$PATH"
 # Ruby
@@ -107,7 +113,7 @@ export PATH="/opt/homebrew/opt/erlang@28/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 
 # pnpm
-export PNPM_HOME="/home/mikaelweiss/Library/pnpm"
+export PNPM_HOME="/Users/mikaelweiss/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
@@ -130,15 +136,22 @@ eval "$(zoxide init zsh)"
 # Enable shell history with iex
 export ERL_AFLAGS="-kernel shell_history enabled"
 
+# Direnv stuff
+eval "$(direnv hook zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
 
 # Set up term
 export TERM=xterm-256color
 
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
+# End of LM Studio CLI section
+
 # SwiftPM
 export PATH="$HOME/.swiftpm/bin:$PATH"
 
 # alias's
+alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
 alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
