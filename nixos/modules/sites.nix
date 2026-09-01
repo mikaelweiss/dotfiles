@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" ];
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
@@ -82,6 +82,21 @@ let
       echo "Deployed $service"
     '';
   };
+  deployStatic = pkgs.writeShellApplication {
+    name = "deploy-static";
+    runtimeInputs = buildTools;
+    text = ''
+      site_user=$1 dir=$2
+      echo "Deploying $dir..."
+      ${sudo} -u "$site_user" env PATH="$PATH" bash -c "
+        set -e
+        cd $dir
+        git fetch origin main
+        git reset --hard origin/main
+      "
+      echo "Deployed $dir"
+    '';
+  };
   hookRule = ''
     {
       "and": [
@@ -103,6 +118,8 @@ let
     hook name "${deployPhoenix}/bin/deploy-phoenix" [ name "/opt/${name}" name "/etc/${name}/env" migrate ];
   nodeHook = name:
     hook name "${deployNode}/bin/deploy-node" [ name "/opt/${name}" name ];
+  staticHook = name:
+    hook name "${deployStatic}/bin/deploy-static" [ name "/opt/${name}" ];
   hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
     (phoenixHook "portfolio" "false")
     (phoenixHook "weisssolutions" "false")
@@ -111,6 +128,7 @@ let
     (nodeHook "rachelportfolio")
     (nodeHook "vault")
     (nodeHook "rubrix")
+    (staticHook "mikaelmc")
   ]);
 in
 {
@@ -148,6 +166,10 @@ in
       serviceConfig.ExecStart = "${pkgs.python3}/bin/python3 -m http.server 4006 --directory /opt/vault/dist";
     };
 
+    mikaelmc = mkService "mikaelmc" {
+      serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4008 --root /opt/mikaelmc --ignore-hidden-files=true";
+    };
+
     webhook = {
       description = "GitHub webhook deploy receiver";
       after = [ "network.target" ];
@@ -170,5 +192,5 @@ in
 
   systemd.tmpfiles.rules = [ "d /opt/deploy 0755 mikaelweiss users -" ];
 
-  environment.systemPackages = [ deployPhoenix deployNode pkgs.elixir_1_19 pkgs.nodejs_22 ];
+  environment.systemPackages = [ deployPhoenix deployNode deployStatic pkgs.elixir_1_19 pkgs.nodejs_22 ];
 }

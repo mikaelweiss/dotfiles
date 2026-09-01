@@ -23,6 +23,7 @@ in
         "rubrixai.app" = "http://localhost:4007";
         "rubrixai.org" = "http://localhost:4007";
         "deploy.mikaelweiss.dev" = "http://localhost:9000";
+        "mikaelmc.com" = "http://localhost:4008";
       };
     };
   };
