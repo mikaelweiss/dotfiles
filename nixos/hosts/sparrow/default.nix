@@ -9,7 +9,6 @@
     ../../modules/cloudflared.nix
     ../../modules/minecraft.nix
     ../../modules/backups.nix
-    ../../modules/ddns.nix
   ];
 
   resticBackups.sparrowState = true;
