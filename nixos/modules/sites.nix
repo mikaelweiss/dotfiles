@@ -3,7 +3,7 @@
 let
   siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" ];
 
-  buildTools = with pkgs; [ git elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
+  buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
   sudo = "/run/wrappers/bin/sudo";
 
