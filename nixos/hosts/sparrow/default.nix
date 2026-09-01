@@ -7,15 +7,14 @@
     ./disko.nix
     ../../modules/sites.nix
     ../../modules/cloudflared.nix
-    # ../../modules/minecraft.nix  # re-enable at the port-forward cutover (Phase 4)
+    ../../modules/minecraft.nix
     ../../modules/backups.nix
-    # ../../modules/ddns.nix        # re-enable with the Cloudflare token (Phase 4)
+    ../../modules/ddns.nix
   ];
 
   resticBackups.sparrowState = true;
-  # Set at the port-forward cutover, alongside the minecraft.nix + ddns.nix imports.
-  # minecraft.public = true;
-  # resticBackups.minecraftPath = "/var/lib/minecraft";
+  minecraft.public = true;
+  resticBackups.minecraftPath = "/var/lib/minecraft";
 
   networking.hostName = "sparrow";
 
