@@ -1,9 +1,22 @@
 { config, pkgs, lib, ... }:
 
 let
-  dataRoot = "/var/lib/minecraft";
+  cfg = config.minecraft;
+  dataRoot = cfg.dataRoot;
 in
 {
+  options.minecraft = {
+    dataRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "/var/lib/minecraft";
+    };
+    rexburgPort = lib.mkOption {
+      type = lib.types.port;
+      default = 25571;
+    };
+  };
+
+  config = {
   boot.kernel.sysctl = {
     "net.ipv4.ip_forward" = 1;
     "net.ipv4.conf.all.forwarding" = 1;
@@ -37,7 +50,7 @@ in
     # relay (25571 Java, 19132 Bedrock), so only the address changes.
     containers.rexburg-friends = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "25571:25565" "19132:19132/udp" ];
+      ports = [ "${toString cfg.rexburgPort}:25565" "19132:19132/udp" ];
       volumes = [ "${dataRoot}/rexburg-friends/data:/data" ];
       autoStart = true;
       environment = {
@@ -89,6 +102,7 @@ in
 
   systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") [ "minecraft-server" "rexburg-friends" "skyblock" ];
 
-  networking.firewall.allowedTCPPorts = [ 25571 25566 ];
+  networking.firewall.allowedTCPPorts = [ cfg.rexburgPort 25566 ];
   networking.firewall.allowedUDPPorts = [ 19132 19133 ];
+  };
 }
