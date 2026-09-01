@@ -20,7 +20,7 @@ The MacBook Pro is the work computer and is **never** part of this.
                      over SSH via Tailscale
 ```
 
-- Two mutagen sessions (`code`, `worktrees`), created by `wolf-sync-setup`,
+- Two mutagen sessions (`code`, `worktrees`), created by `sync-setup`,
   running `--sync-mode=two-way-resolved --symlink-mode=posix-raw`.
 - **Wolf is alpha**: if both machines write the same file in the same instant,
   the agent's version wins, deterministically, with no conflict-file litter.
@@ -42,7 +42,7 @@ The MacBook Pro is the work computer and is **never** part of this.
 |---|---|---|
 | mutagen pkg + daemon | `nix-darwin/flake.nix` (`macbookAirConfig`) | Installs mutagen on the Air; launchd keeps the daemon alive. Logs: `/tmp/mutagen.log`, `/tmp/mutagen.err` |
 | ignore defaults | `terminal/.mutagen.yml` → `~/.mutagen.yml` | What never syncs (see below). **Locked into sessions at creation** |
-| `wolf-sync-setup` | `terminal/bin/` | Creates the two sessions. Idempotent. The reset-from-scratch command |
+| `sync-setup` | `terminal/bin/` | Creates the two sessions. Idempotent. The reset-from-scratch command |
 | `wolf-attach` | `terminal/bin/` | Runs **on the laptop**: wraps the ssh to wolf-agent in a reconnect loop. Connection drops (ssh exit 255, e.g. lid close) retry every 2s; a clean exit — tmux detach, session killed — ends the pane |
 | `wolf-agent` | `terminal/bin/` | Runs **on wolf** (over SSH): waits for a just-created worktree to sync over, then attaches-or-creates its tmux keeper session |
 | `wolf-bootstrap` | `terminal/bin/` | Installs node deps in the worktree when missing (lockfile-aware: pnpm/bun/yarn/npm), since node_modules doesn't sync |
@@ -138,7 +138,7 @@ wt hook post-remove              # manually re-fire cleanup for an orphaned tab/
 **After editing `~/.mutagen.yml`**: ignores are locked in at creation, so
 
 ```sh
-mutagen sync terminate code worktrees && wolf-sync-setup
+mutagen sync terminate code worktrees && sync-setup
 ```
 
 ## Gotchas (learned the hard way)
@@ -175,5 +175,5 @@ mutagen sync terminate code worktrees && wolf-sync-setup
 1. Clone dotfiles, `stow .`, rebuild nix (installs mutagen + daemon on the Air).
 2. Make sure the other machine's copy is the one to keep; empty this
    machine's `~/code`/`~/.worktrees` (or leave them absent).
-3. `wolf-sync-setup` from the laptop. Done — sessions resume from `~/.mutagen`
+3. `sync-setup` from the laptop. Done — sessions resume from `~/.mutagen`
    on their own after reboots; the launchd daemon keeps itself alive.

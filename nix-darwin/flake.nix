@@ -48,23 +48,7 @@
       environment.systemPackages = with pkgs; [
         javaPackages.compiler.openjdk25 # Java
         rubyPackages_4_0.cocoapods
-        mutagen # Syncs ~/code and ~/.worktrees with wolf (see terminal/bin/wolf-sync-setup)
       ];
-
-      # Mutagen only needs to run here: it deploys its agent to wolf over SSH.
-      launchd.user.agents.mutagen = {
-        serviceConfig = {
-          ProgramArguments = [
-            "${pkgs.mutagen}/bin/mutagen"
-            "daemon"
-            "run"
-          ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          StandardOutPath = "/tmp/mutagen.log";
-          StandardErrorPath = "/tmp/mutagen.err";
-        };
-      };
 
       programs.zsh = {
         enable = true;
@@ -175,6 +159,7 @@
       nixpkgs.config.allowUnfree = true;
       environment.systemPackages = with pkgs;
         [
+        mutagen
         # opencode
         # github-copilot-cli
         # bruno
@@ -258,6 +243,22 @@
 
       # Primary user for user-specific options like Homebrew
       system.primaryUser = "mikaelweiss";
+
+      # Every Mac runs its own mutagen daemon with sessions to elm, the
+      # always-on hub (see terminal/bin/sync-setup and wolf-sync.md).
+      launchd.user.agents.mutagen = {
+        serviceConfig = {
+          ProgramArguments = [
+            "${pkgs.mutagen}/bin/mutagen"
+            "daemon"
+            "run"
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          StandardOutPath = "/tmp/mutagen.log";
+          StandardErrorPath = "/tmp/mutagen.err";
+        };
+      };
 
       # Passwordless Sudo
       security.sudo.extraConfig = ''

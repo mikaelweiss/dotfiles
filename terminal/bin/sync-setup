@@ -1,0 +1,32 @@
+#!/bin/zsh
+# One-time (re)setup of the mutagen sessions between this Mac and elm, the
+# always-on hub. Ignore defaults come from ~/.mutagen.yml. Elm is alpha: on a
+# simultaneous-write conflict, elm's copy wins.
+# The work MacBook Pro syncs only the surestake trees and dotfiles.
+set -e
+hub=elm
+
+create() {
+  local name=$1 dir=$2
+  if mutagen sync list "$name" >/dev/null 2>&1; then
+    echo "session '$name' already exists"
+  else
+    mutagen sync create --name="$name" \
+      --sync-mode=two-way-resolved \
+      --symlink-mode=posix-raw \
+      "$hub:$dir" "$dir"
+  fi
+}
+
+case "$(scutil --get LocalHostName 2>/dev/null)" in
+  Mikaels-MacBook-Pro)
+    create surestake "$HOME/code/surestake"
+    create surestake-worktrees "$HOME/.worktrees/surestake"
+    create dotfiles "$HOME/code/dotfiles"
+    ;;
+  *)
+    create code "$HOME/code"
+    create worktrees "$HOME/.worktrees"
+    ;;
+esac
+mutagen sync list

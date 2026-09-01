@@ -1,5 +1,5 @@
 # Defaults for new mutagen sync sessions. Ignores are locked into a session
-# when it is created — recreate sessions (wolf-sync-setup) after changing them.
+# when it is created — recreate sessions (sync-setup) after changing them.
 # Artifact names come from the github/gitignore templates for each ecosystem.
 sync:
   defaults:
@@ -48,8 +48,8 @@ sync:
         - "/dotfiles/xcode/Library/Developer/Xcode/Archives"
         # Live per-machine Claude Code state that stow links into
         # dotfiles/claude (~/.claude points there); untracked by git.
-        # Shared config (settings, skills, agents, plugins, CLAUDE.md) syncs.
-        - "/dotfiles/claude/.claude/projects"
+        # Shared config (settings, skills, agents, plugins, CLAUDE.md) and
+        # session transcripts (projects/) sync, so `claude --resume` works anywhere.
         - "/dotfiles/claude/.claude/telemetry"
         - "/dotfiles/claude/.claude/file-history"
         - "/dotfiles/claude/.claude/shell-snapshots"
