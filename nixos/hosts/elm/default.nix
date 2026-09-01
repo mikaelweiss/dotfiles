@@ -11,26 +11,7 @@
 
   minecraft.private = true;
   minecraft.dataRoot = "/mnt/nvme/minecraft";
-  # The public servers stay here until the sparrow cutover (port forwards + DNS).
-  minecraft.public = true;
   resticBackups.minecraftPath = "/mnt/nvme/minecraft";
-  minecraft.rexburgPort = 61658;
-  systemd.services.tailscale-keepalive-pip = {
-    description = "Keepalive ping to the pip relay to hold the tailscale NAT hole open";
-    after = [ "tailscaled.service" ];
-    wants = [ "tailscaled.service" ];
-    serviceConfig.Type = "oneshot";
-    path = [ pkgs.tailscale ];
-    script = "tailscale ping --c 1 --timeout 3s 100.80.106.14 || true";
-  };
-  systemd.timers.tailscale-keepalive-pip = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "30s";
-      OnUnitActiveSec = "20s";
-      AccuracySec = "1s";
-    };
-  };
 
   networking.hostName = "elm";
   networking.networkmanager.enable = true;

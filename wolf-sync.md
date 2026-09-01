@@ -29,7 +29,7 @@ runnable on the laptop within a second or two, with no push/pull dance.
 Worktrunk hooks turn every worktree into a split tab: local shell on the
 left for testing, a persistent wolf session on the right for the agent.
 
-The MacBook Pro is the work computer and is **never** part of this.
+The MacBook Pro is the work computer and syncs only the surestake trees and dotfiles.
 
 ## How it works
 
