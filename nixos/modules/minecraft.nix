@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   dataRoot = "/var/lib/minecraft";
@@ -80,6 +80,14 @@ in
       };
     };
   };
+
+  # Podman pulls the image on first start, which raced DNS at boot.
+  systemd.services = lib.genAttrs [ "podman-minecraft-server" "podman-rexburg-friends" "podman-skyblock" ] (_: {
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+  });
+
+  systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") [ "minecraft-server" "rexburg-friends" "skyblock" ];
 
   networking.firewall.allowedTCPPorts = [ 25571 25566 ];
   networking.firewall.allowedUDPPorts = [ 19132 19133 ];

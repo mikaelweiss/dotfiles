@@ -102,7 +102,7 @@ let
   hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
     (phoenixHook "portfolio" "false")
     (phoenixHook "weisssolutions" "false")
-    (phoenixHook "lunchninja" "true")
+    (phoenixHook "lunchninja" "false")
     (nodeHook "pmgforrms")
     (nodeHook "rachelportfolio")
     (nodeHook "vault")
