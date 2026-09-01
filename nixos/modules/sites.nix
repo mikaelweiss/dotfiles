@@ -1,0 +1,134 @@
+{ config, pkgs, lib, ... }:
+
+let
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" ];
+
+  buildTools = with pkgs; [ git elixir_1_19 nodejs_22 coreutils bash gnused gawk gnutar gzip curl ];
+
+  mkService = name: attrs: lib.recursiveUpdate {
+    description = name;
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
+    path = buildTools;
+    serviceConfig = {
+      Type = "simple";
+      User = name;
+      Group = name;
+      WorkingDirectory = "/opt/${name}";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+  } attrs;
+
+  phoenix = name: release: mkService name {
+    serviceConfig = {
+      EnvironmentFile = "/etc/${name}/env";
+      ExecStart = "/opt/${name}/_build/prod/rel/${release}/bin/${release} start";
+    };
+  };
+
+  static = name: port: mkService name {
+    serviceConfig.ExecStart = "${pkgs.nodePackages.serve}/bin/serve dist -l ${toString port}";
+  };
+
+  deployPhoenix = pkgs.writeShellApplication {
+    name = "deploy-phoenix";
+    runtimeInputs = buildTools ++ [ pkgs.sudo pkgs.systemd ];
+    text = ''
+      site_user=$1 dir=$2 service=$3 env_file=$4 run_migrate=$5
+      echo "Deploying $service..."
+      sudo -u "$site_user" env PATH="$PATH" bash -c "
+        set -e
+        cd $dir
+        git pull origin main
+        set -a && source $env_file && set +a
+        MIX_ENV=prod mix deps.get
+        MIX_ENV=prod mix compile
+        MIX_ENV=prod mix assets.deploy
+        MIX_ENV=prod mix release --overwrite
+      "
+      if [ "$run_migrate" = "true" ]; then
+        sudo -u "$site_user" env PATH="$PATH" bash -c "
+          set -e
+          cd $dir
+          set -a && source $env_file && set +a
+          MIX_ENV=prod mix ecto.migrate
+        "
+      fi
+      sudo systemctl restart "$service"
+      echo "Deployed $service"
+    '';
+  };
+
+  deployNode = pkgs.writeShellApplication {
+    name = "deploy-node";
+    runtimeInputs = buildTools ++ [ pkgs.sudo pkgs.systemd ];
+    text = ''
+      site_user=$1 dir=$2 service=$3
+      echo "Deploying $service..."
+      sudo -u "$site_user" env PATH="$PATH" bash -c "
+        set -e
+        cd $dir
+        git fetch origin main
+        git reset --hard origin/main
+        npm ci
+        npm run build
+      "
+      sudo systemctl restart "$service"
+      echo "Deployed $service"
+    '';
+  };
+in
+{
+  users.users = lib.genAttrs siteUsers (name: {
+    isSystemUser = true;
+    group = name;
+    home = "/opt/${name}";
+    createHome = true;
+    shell = pkgs.bash;
+  });
+  users.groups = lib.genAttrs siteUsers (_: {});
+
+  services.postgresql = {
+    enable = true;
+    package = pkgs.postgresql_18;
+  };
+
+  systemd.services = {
+    portfolio = lib.recursiveUpdate (phoenix "portfolio" "portfolio_template") {
+      after = [ "network.target" "postgresql.service" ];
+      requires = [ "postgresql.service" ];
+    };
+    weisssolutions = phoenix "weisssolutions" "weisssolutions";
+    lunchninja = phoenix "lunchninja" "lunch_ninja";
+
+    pmgforrms = mkService "pmgforrms" {
+      environment = { NODE_ENV = "production"; PORT = "4003"; };
+      serviceConfig.ExecStart = "${pkgs.nodejs_22}/bin/node build/index.js";
+    };
+
+    rachelportfolio = static "rachelportfolio" 4004;
+    rubrix = static "rubrix" 4007;
+
+    vault = mkService "vault" {
+      serviceConfig.ExecStart = "${pkgs.python3}/bin/python3 -m http.server 4006 --directory /opt/vault/dist";
+    };
+
+    webhook = {
+      description = "GitHub webhook deploy receiver";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+      path = [ deployPhoenix deployNode pkgs.sudo ];
+      serviceConfig = {
+        User = "mikaelweiss";
+        WorkingDirectory = "/opt/deploy";
+        ExecStart = "${pkgs.webhook}/bin/webhook -hooks /opt/deploy/hooks.json -port 9000 -verbose";
+        Restart = "on-failure";
+      };
+    };
+  };
+
+  systemd.tmpfiles.rules = [ "d /opt/deploy 0755 mikaelweiss users -" ];
+
+  environment.systemPackages = [ deployPhoenix deployNode pkgs.elixir_1_19 pkgs.nodejs_22 ];
+}
