@@ -7,9 +7,9 @@
     ./disko.nix
     ../../modules/sites.nix
     ../../modules/cloudflared.nix
-    ../../modules/minecraft.nix
+    # ../../modules/minecraft.nix  # re-enable at the port-forward cutover (Phase 4)
     ../../modules/backups.nix
-    ../../modules/ddns.nix
+    # ../../modules/ddns.nix        # re-enable with the Cloudflare token (Phase 4)
   ];
 
   networking.hostName = "sparrow";
