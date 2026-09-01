@@ -3,7 +3,7 @@
 let
   siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" ];
 
-  buildTools = with pkgs; [ git elixir_1_19 nodejs_22 coreutils bash gnused gawk gnutar gzip curl ];
+  buildTools = with pkgs; [ git elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
 
   mkService = name: attrs: lib.recursiveUpdate {
     description = name;
@@ -71,8 +71,10 @@ let
         cd $dir
         git fetch origin main
         git reset --hard origin/main
-        npm ci
-        npm run build
+        if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile && pnpm run build
+        elif [ -f package-lock.json ]; then npm ci && npm run build
+        else npm install && npm run build
+        fi
       "
       sudo systemctl restart "$service"
       echo "Deployed $service"
