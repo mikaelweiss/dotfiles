@@ -1,0 +1,27 @@
+#!/bin/zsh
+# Mutagen freezes a session's ignore list at creation, so a .gitignore change
+# or a new build directory leaves the session syncing something it should not.
+# This reports that drift. Rebuild a drifted session with:
+#   mutagen sync terminate <name> && sync-setup
+set -e
+source "${0:A:h}/sync-lib.zsh"
+
+drift=0
+sessions | while read -r name root; do
+  if ! mutagen sync list "$name" >/dev/null 2>&1; then
+    printf '%-20s no session\n' "$name"
+    continue
+  fi
+  local -a want live missing
+  want=( ${(f)"$(gitignored "$root")"} ${(f)"$(extra_ignores "$name")"} )
+  live=( ${(f)"$(session_ignores "$name")"} )
+  missing=( ${want:|live} )
+  if (( ${#missing} )); then
+    printf '%-20s %d not ignored by the running session:\n' "$name" ${#missing}
+    printf '  %s\n' ${missing#--ignore=}
+    drift=1
+  else
+    printf '%-20s current\n' "$name"
+  fi
+done
+exit $drift

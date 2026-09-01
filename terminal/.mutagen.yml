@@ -1,6 +1,8 @@
 # Defaults for new mutagen sync sessions. Ignores are locked into a session
-# when it is created — recreate sessions (sync-setup) after changing them.
+# when it is created, so recreate sessions (sync-setup) after changing them.
 # Artifact names come from the github/gitignore templates for each ecosystem.
+# A pattern containing a slash anchors to the session root. The dotfiles paths
+# below assume a ~/code root. sync-setup re-anchors them for narrower roots.
 sync:
   defaults:
     ignore:
@@ -18,16 +20,22 @@ sync:
         - ".cache"
         - ".vite"
         - ".parcel-cache"
+        - ".nx"
+        - ".angular"
         # Xcode / Swift
         - "xcuserdata"
         - "DerivedData"
         - ".build"
         - ".swiftpm"
+        # Rust
+        - "target"
         # Elixir / Phoenix
         - "_build"
         - "deps"
         - ".elixir_ls"
         - "erl_crash.dump"
+        # Java / Android
+        - ".gradle"
         # Python
         - "__pycache__"
         - ".venv"
@@ -36,6 +44,8 @@ sync:
         - ".mypy_cache"
         # Transient git lock files
         - "index.lock"
+        # Agent caches
+        - "image-cache"
         # Machine-local Xcode state that stow links into dotfiles/xcode
         # (~/Library/Developer points there); untracked by git
         - "/dotfiles/xcode/Library/Developer/CoreSimulator"

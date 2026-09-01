@@ -1,34 +1,27 @@
 #!/bin/zsh
 # One-time (re)setup of the mutagen sessions between this Mac and elm, the
-# always-on hub. Ignore defaults come from ~/.mutagen.yml. Elm is alpha: on a
-# simultaneous-write conflict, elm's copy wins.
-# The work MacBook Pro syncs only the surestake and penguin trees and dotfiles.
+# always-on hub. Ignore defaults come from ~/.mutagen.yml, plus whatever git
+# reports as ignored in each synced repo. Idempotent: existing sessions are
+# left alone, so terminate a session first to rebuild its ignore list.
 set -e
-hub=elm
+source "${0:A:h}/sync-lib.zsh"
 
 create() {
-  local name=$1 dir=$2
+  local name=$1 root=$2
   if mutagen sync list "$name" >/dev/null 2>&1; then
     echo "session '$name' already exists"
   else
+    local -a ig
+    ig=( ${(f)"$(gitignored "$root")"} ${(f)"$(extra_ignores "$name")"} )
     mutagen sync create --name="$name" \
       --sync-mode=two-way-resolved \
       --symlink-mode=posix-raw \
-      "$hub:$dir" "$dir"
+      $ig \
+      "$hub:$root" "$root"
   fi
 }
 
-case "$(scutil --get LocalHostName 2>/dev/null)" in
-  Mikaels-MacBook-Pro)
-    create surestake "$HOME/code/surestake"
-    create surestake-worktrees "$HOME/.worktrees/surestake"
-    create penguin "$HOME/code/penguin"
-    create penguin-worktrees "$HOME/.worktrees/penguin"
-    create dotfiles "$HOME/code/dotfiles"
-    ;;
-  *)
-    create code "$HOME/code"
-    create worktrees "$HOME/.worktrees"
-    ;;
-esac
+sessions | while read -r name root; do
+  create "$name" "$root"
+done
 mutagen sync list

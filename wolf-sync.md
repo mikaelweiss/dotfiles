@@ -9,6 +9,13 @@ to elm, created by `sync-setup`:
 |---|---|
 | MacBook Air, wolf | `code` (`~/code`), `worktrees` (`~/.worktrees`) |
 | MacBook Pro (work) | `surestake` (`~/code/surestake`), `surestake-worktrees` (`~/.worktrees/surestake`), `penguin` (`~/code/penguin`), `penguin-worktrees` (`~/.worktrees/penguin`), `dotfiles` (`~/code/dotfiles`) |
+| every machine | `penguin-home` (`~/.penguin`), `penguin-state` (`~/.local/state/penguin`) |
+
+Penguin keeps its worktrees in `~/.penguin/worktrees/<repo>/<branch>` and its
+run history in `~/.local/state/penguin/runs`, both outside `~/code`, so they
+get their own sessions and a run started anywhere continues anywhere. The auth
+tokens under `~/.local/state/penguin/auth` sync with them, on the same footing
+as `.env` files.
 
 Elm needs nothing but sshd; it never initiates. A machine's ssh key must be in
 `nixos/common.nix` (`openssh.authorizedKeys.keys`) before `sync-setup` works.
@@ -62,8 +69,10 @@ The MacBook Pro is the work computer and syncs only the surestake and penguin tr
 | Piece | Where | What it does |
 |---|---|---|
 | mutagen pkg + daemon | `nix-darwin/flake.nix` (`macbookAirConfig`) | Installs mutagen on the Air; launchd keeps the daemon alive. Logs: `/tmp/mutagen.log`, `/tmp/mutagen.err` |
-| ignore defaults | `terminal/.mutagen.yml` → `~/.mutagen.yml` | What never syncs (see below). **Locked into sessions at creation** |
-| `sync-setup` | `terminal/bin/` | Creates the two sessions. Idempotent. The reset-from-scratch command |
+| ignore defaults | `terminal/.mutagen.yml` → `~/.mutagen.yml` | Bare artifact names that match at any depth (see below). **Locked into sessions at creation** |
+| `sync-lib.zsh` | `terminal/bin/` | Shared by the two below: the session list, the ignore derivation, and the keep-list |
+| `sync-setup` | `terminal/bin/` | Creates the sessions. Derives per-repo ignores from `git status --ignored` and re-anchors the `.mutagen.yml` dotfiles paths. Idempotent. The reset-from-scratch command |
+| `sync-check` | `terminal/bin/` | Lists sessions whose frozen ignore list no longer matches what git ignores today. Exits non-zero on drift |
 | `wolf-attach` | `terminal/bin/` | Runs **on the laptop**: wraps the ssh to wolf-agent in a reconnect loop. Connection drops (ssh exit 255, e.g. lid close) retry every 2s; a clean exit — tmux detach, session killed — ends the pane |
 | `wolf-agent` | `terminal/bin/` | Runs **on wolf** (over SSH): waits for a just-created worktree to sync over, then attaches-or-creates its tmux keeper session |
 | `wolf-bootstrap` | `terminal/bin/` | Installs node deps in the worktree when missing (lockfile-aware: pnpm/bun/yarn/npm), since node_modules doesn't sync |
@@ -118,11 +127,20 @@ They deliberately do **not** auto-start claude (start it yourself, or
 - **Over network mounts / remote editing**: FSEvents don't propagate over
   SMB (dev-server watchers silently break), Xcode over a mount is painful,
   and Chrome/Xcode need real local files anyway.
-- **Artifacts don't sync** (`node_modules`, `dist`, `build`, `_build`,
-  `deps`, `.build`, DerivedData…): huge churn for regenerable files.
-  `wolf-bootstrap` reinstalls node deps on wolf when needed. The list came
-  from github/gitignore templates; mutagen cannot read `.gitignore` files
-  (long-open feature request), hence the curated list in `.mutagen.yml`.
+- **Only git-included files sync.** Mutagen cannot read `.gitignore` (a
+  long-open feature request), so ignores come in two layers. `sync-setup`
+  runs `git status --ignored` in every repo under a session root and passes
+  each answer as an anchored `--ignore`, which matches that repo's
+  `.gitignore` exactly. `.mutagen.yml` then adds bare names
+  (`node_modules`, `target`, `.nx`, DerivedData…) taken from the
+  github/gitignore templates. The derived layer is accurate but freezes at
+  session creation; the bare names keep matching directories made later, at
+  any depth, without a rebuild. `wolf-bootstrap` reinstalls node deps on
+  wolf when needed.
+- **`.git/wt/trash` doesn't sync.** `wt remove` moves the whole worktree
+  there instead of deleting it. Git never reports paths inside `.git`, so
+  `sync-setup` adds it by hand. It is a local undo buffer and no other
+  machine reads it.
 - **Live app state doesn't sync**: stow links `~/.claude`, `~/.codex`, and
   `~/Library/Developer` into this repo, so agent session transcripts, Codex's
   SQLite/WAL files (sync would corrupt them), simulators, and DerivedData all
@@ -145,6 +163,8 @@ mutagen sync pause code worktrees   # before filesystem-violent ops (filter-repo
 mutagen sync resume code worktrees
 mutagen sync reset code          # full rescan if a session looks wedged
 
+sync-check                       # which sessions drifted from what git ignores now
+
 wolf                             # this dir's session on wolf (plain shell)
 wolf claude                      # same, running claude
 wolf-split                       # same, but in a new split next to this pane
@@ -156,14 +176,34 @@ wt hook show                     # every hook and when it fires
 wt hook post-remove              # manually re-fire cleanup for an orphaned tab/session
 ```
 
-**After editing `~/.mutagen.yml`**: ignores are locked in at creation, so
+**After editing `~/.mutagen.yml` or any synced repo's `.gitignore`**: ignores
+are locked in at creation, so
 
 ```sh
 mutagen sync terminate code worktrees && sync-setup
 ```
 
+Exceptions that sync despite being git-ignored live in `sync-setup`'s `keep`
+pattern: Claude transcripts and the Claude and Codex plugin dirs, so
+`claude --resume` and `ccusage` see every machine.
+
 ## Gotchas (learned the hard way)
 
+- **Any ignore pattern containing a slash anchors to the session root**, with
+  or without a leading `/`. Only single-segment names like `node_modules`
+  match at every depth. So `~/.mutagen.yml`'s `/dotfiles/xcode/...` paths,
+  written for the `~/code` root the Air and wolf sync, match nothing in the
+  Pro's `dotfiles` session, whose root is `~/code/dotfiles` itself.
+  `sync-setup` re-anchors them with `--ignore` flags, which append to the
+  yml defaults rather than replacing them. Symptom when this is wrong: the
+  session sits in "Staging files on alpha" for hours and no edit propagates,
+  with `mutagen sync list` showing beta many times larger than alpha.
+- **A stale herdr server silently kills the post-switch tab.** The CLI
+  refuses to talk to an older server (`protocol_mismatch`), writes that JSON
+  to stderr, and still exits 0, so `wt switch` opened no tab and said
+  nothing. Restart herdr after it updates:
+  `HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock herdr server stop`, then
+  start it again with the same override. Stopping exits pane processes.
 - **Never `ln -sf` toward a stowed path.** Stow dir-symlinks
   (`~/.config/worktrunk` on wolf → this repo) mean "live" paths and repo
   paths are the same file; careless `ln` created self-loop symlinks twice,
@@ -180,6 +220,31 @@ mutagen sync terminate code worktrees && sync-setup
 - **First sync of two populated dirs union-merges them** (newest file wins,
   per file) — Frankenstein working trees. When connecting a machine, empty
   one side first and let sync repopulate it.
+- **A first sync can delete branches that exist only on the beta side.**
+  `.git` syncs like any other directory, so alpha's `refs/heads` and
+  `packed-refs` win the initial reconciliation wholesale. Resetting elm's
+  copy to a different commit before creating the session cost 23 branches in
+  penguin and 10 in surestake, showing up as `00000000` in
+  `git worktree list`. The commits survive: pause the session, then rebuild
+  each ref from its reflog, whose files are untouched.
+
+  ```sh
+  find .git/logs/refs/heads -type f | while read -r f; do
+    b=${f#.git/logs/refs/heads/}
+    git rev-parse --verify -q "refs/heads/$b" >/dev/null && continue
+    sha=$(awk 'END{print $2}' "$f")
+    git cat-file -e "$sha" 2>/dev/null && git update-ref "refs/heads/$b" "$sha"
+  done
+  ```
+
+  Only the first sync is dangerous. Once a common ancestor exists, a ref
+  created on either side propagates instead of losing to alpha.
+- **Edits made inside a tree before its session exists can be reverted** by
+  that first reconciliation, because elm is alpha and wins. Commit them, or
+  make them after the session reaches "Watching for changes". Editing
+  `.mutagen.yml` or `sync-setup` while rebuilding a session is the easy way
+  to hit this: the fix undoes itself and the sessions keep the ignores they
+  were created with, so nothing looks broken.
 - Ignored files never get deleted by sync — that's why `worktree-cleanup`
   rm's the wolf-side worktree dir (its node_modules would otherwise anchor a
   husk forever).
@@ -191,10 +256,22 @@ mutagen sync terminate code worktrees && sync-setup
   letterboxed at its size), and the loop switches off stray mouse-reporting
   modes so clicks don't land as garbage while disconnected.
 
-## Resetting a machine
+## Connecting a machine
 
-1. Clone dotfiles, `stow .`, rebuild nix (installs mutagen + daemon on the Air).
-2. Make sure the other machine's copy is the one to keep; empty this
-   machine's `~/code`/`~/.worktrees` (or leave them absent).
-3. `sync-setup` from the laptop. Done — sessions resume from `~/.mutagen`
-   on their own after reboots; the launchd daemon keeps itself alive.
+The first sync has no common ancestor, so elm wins every disagreement,
+`.git/refs` included. Decide which side is authoritative **per tree** before
+creating any session, and never reset elm's copy to a different commit first.
+
+1. Clone dotfiles, `stow .`, rebuild nix (installs mutagen and the daemon).
+2. Pick the authoritative side for each tree:
+   - **Elm's copy wins**: empty this machine's tree, or leave it absent.
+   - **This machine wins**: empty elm's copy instead, so nothing collides.
+   - **Neither can be emptied**: `git push --all` every repo on this machine
+     first, so a ref lost to alpha is recoverable from the remote as well as
+     from the reflog.
+3. `sync-setup`. Sessions resume from `~/.mutagen` after reboots, and the
+   launchd daemon keeps itself alive.
+4. `sync-check` to confirm each session's frozen ignore list matches what git
+   ignores today.
+5. `git worktree list` in every synced repo. Any `00000000` means the first
+   sync ate refs, recoverable from the reflogs (see Gotchas).
