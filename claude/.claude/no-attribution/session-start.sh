@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # no-attribution/session-start: SessionStart hook.
 # Injects a factual policy reminder into the session at start so Claude
 # doesn't try to add AI attribution to commits/PRs in the first place.

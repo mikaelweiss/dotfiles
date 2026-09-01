@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # no-attribution/check: PreToolUse hook for git/gh write commands.
 # Blocks any commit/PR/issue/release whose command string contains AI
 # attribution (Co-Authored-By, "Generated with Claude Code", session

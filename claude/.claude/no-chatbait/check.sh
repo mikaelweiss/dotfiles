@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # no-chatbait/check: Stop hook that blocks engagement-padding ("chatbait")
 # at the end of the assistant's final message.
 #

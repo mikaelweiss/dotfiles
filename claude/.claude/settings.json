@@ -3,6 +3,10 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CONTEXT7_API_KEY": "ctx7sk-676a75cb-db5c-4f8d-91ff-c5a0a2476723"
   },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Edit",
@@ -62,9 +66,7 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__resolve-library-id:*",
       "mcp__plugin_context7_context7__query-docs",
-      "mcp__plugin_context7_context7__query-docs:*",
       "mcp__plugin_linear_linear__get_project",
       "Bash(gcloud functions list:*)",
       "Bash(gcloud logging read:*)",
@@ -103,11 +105,7 @@
       "Read(./secrets/**)"
     ]
   },
-  "model": "claude-opus-4-8[1m]",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
+  "model": "claude-opus-5[1m]",
   "hooks": {
     "SessionStart": [
       {
@@ -121,72 +119,52 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/read-once/hook.sh"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git commit *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(git commit *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh pr create *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh pr create *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh pr edit *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh pr edit *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh pr comment *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh pr comment *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh pr review *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh pr review *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh issue create *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh issue create *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh issue comment *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh issue comment *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh issue edit *)",
-            "command": "~/.claude/no-attribution/check.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh issue edit *)"
           },
           {
             "type": "command",
-            "if": "Bash(gh release create *)",
-            "command": "~/.claude/no-attribution/check.sh"
-          }
-        ]
-      }
-    ],
-    "PostCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/read-once/compact.sh"
+            "command": "~/.claude/no-attribution/check.sh",
+            "if": "Bash(gh release create *)"
           }
         ]
       }
@@ -204,6 +182,12 @@
   },
   "worktree": {
     "baseRef": "fresh"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "npx -y ccstatusline@latest",
+    "padding": 0,
+    "refreshInterval": 10
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
@@ -238,10 +222,5 @@
   "lsp": {
     "enabled": true
   },
-  "statusLine": {
-    "type": "command",
-    "command": "npx -y ccstatusline@latest",
-    "padding": 0,
-    "refreshInterval": 10
-  }
+  "inputNeededNotifEnabled": true
 }

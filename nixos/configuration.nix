@@ -394,7 +394,7 @@
         # MidnightControls, FullBrightnessToggle) were dropped: they do nothing on a
         # dedicated server. fabric-api = base lib; fallingtree = server-required;
         # journeymap/appleskin kept for their optional server-side features.
-        MODRINTH_PROJECTS = "fabric-api,fallingtree,journeymap,appleskin";
+        MODRINTH_PROJECTS = "fabric-api,fallingtree,journeymap,appleskin,x-to-xray";
         # JourneyMap only ships a beta build for 26.1.2; beta also accepts release mods.
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         UID = "1000";
@@ -429,7 +429,7 @@
         # the normal minecraft-server so both worlds run the same server-side mod set.
         # All three are server-side-compatible and do NOT force Java clients to install
         # them, so vanilla (non-Fabric) and Bedrock players can still connect.
-        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin";
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray";
         # Geyser publishes its Fabric builds on the beta channel, so allow beta. This
         # setting still accepts release-channel mods (Floodgate, fabric-api) too.
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
