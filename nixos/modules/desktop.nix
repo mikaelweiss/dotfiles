@@ -1,20 +1,21 @@
 { config, pkgs, noctalia, ... }:
 
+let
+  noctalia-shell = noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
+in
 {
-  imports = [ noctalia.nixosModules.default ];
+  # Noctalia's flake pins its own nixpkgs; its cachix serves those builds.
+  nix.settings = {
+    extra-substituters = [ "https://noctalia.cachix.org" ];
+    extra-trusted-public-keys = [ "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=" ];
+  };
 
   programs.niri.enable = true;
-
-  programs.noctalia = {
-    enable = true;
-    systemd.enable = true;
-    recommendedServices.enable = true;
-  };
 
   services.greetd = {
     enable = true;
     settings.default_session = {
-      command = "${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember --cmd niri-session";
+      command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --asterisks --cmd niri-session";
       user = "greeter";
     };
   };
@@ -37,11 +38,17 @@
   ];
 
   environment.systemPackages = with pkgs; [
+    noctalia-shell
+    xwayland-satellite
     ghostty
     firefox
     signal-desktop
-    xwayland-satellite
-    wl-clipboard
     nautilus
+    wl-clipboard
+    brightnessctl
+    pavucontrol
+    libnotify
   ];
+
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
 }
