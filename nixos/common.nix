@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   boot.loader.systemd-boot.enable = true;
@@ -95,6 +95,12 @@
     };
   };
 
+  # Tailscale tracks upstream faster than the stable channel; pull it from unstable.
+  nixpkgs.overlays = [
+    (final: prev: {
+      tailscale = inputs.nixpkgs-unstable.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
+    })
+  ];
   services.tailscale.enable = true;
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
   networking.firewall.allowedUDPPorts = [ config.services.tailscale.port ];
