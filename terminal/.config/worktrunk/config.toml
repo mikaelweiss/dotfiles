@@ -330,6 +330,8 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 # worktree's agent session on wolf via wolf-attach, which reconnects on its
 # own when the link drops (lid close); mutagen keeps the two copies
 # identical. Every other machine stops at the tab.
+# The herdr CLI reports failures as JSON on stderr and still exits 0, so both
+# steps read stderr and abort loudly instead of quietly opening nothing.
 [[post-switch]]
 tmux-tab = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
@@ -338,7 +340,10 @@ tmux new-window -n {{ branch }} -c {{ worktree_path }}
 '''
 herdr-tab = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
-tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
+tabs=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" 2>&1)
+err=$(printf '%s' "$tabs" | jq -r '.error.message // empty')
+[ -n "$err" ] && { printf 'herdr tab list failed: %s\n' "$err" >&2; exit 1; }
+tab_id=$(printf '%s' "$tabs" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] && herdr tab focus "$tab_id" && exit 0
 herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{ worktree_path }} --focus
 '''
@@ -356,7 +361,10 @@ wolf-pane-herdr = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
 [ "$(hostname -s)" = "Mikaels-MacBook-Air" ] || exit 0
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
-tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
+tabs=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" 2>&1)
+err=$(printf '%s' "$tabs" | jq -r '.error.message // empty')
+[ -n "$err" ] && { printf 'herdr tab list failed: %s\n' "$err" >&2; exit 1; }
+tab_id=$(printf '%s' "$tabs" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] || exit 0
 panes=$(herdr pane list --workspace "$HERDR_WORKSPACE_ID")
 echo "$panes" | jq -e --arg t "$tab_id" '.result.panes[] | select(.tab_id == $t and .label == "wolf")' >/dev/null && exit 0
