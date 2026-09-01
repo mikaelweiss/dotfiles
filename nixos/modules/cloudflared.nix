@@ -4,6 +4,8 @@ let
   tunnelId = "a799dbbd-a209-44f5-a997-e4b90226ece9";
 in
 {
+  environment.systemPackages = [ pkgs.cloudflared ];
+
   services.cloudflared = {
     enable = true;
     tunnels.${tunnelId} = {
