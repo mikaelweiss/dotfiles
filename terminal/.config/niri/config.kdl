@@ -1,7 +1,7 @@
 // Niri config. Noctalia provides the bar, launcher, notifications,
 // lock screen, and session menu.
 
-spawn-at-startup "noctalia-shell"
+spawn-at-startup "noctalia"
 
 input {
     keyboard {
@@ -49,21 +49,21 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     Mod+T hotkey-overlay-title="Terminal" { spawn "ghostty"; }
-    Mod+Space hotkey-overlay-title="Launcher" { spawn "noctalia-shell" "msg" "panel-toggle" "launcher"; }
+    Mod+Space hotkey-overlay-title="Launcher" { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
     Mod+B hotkey-overlay-title="Browser" { spawn "firefox"; }
     Mod+E hotkey-overlay-title="Files" { spawn "nautilus"; }
-    Mod+Shift+E hotkey-overlay-title="Session menu" { spawn "noctalia-shell" "msg" "panel-toggle" "session"; }
-    Mod+Escape hotkey-overlay-title="Lock" { spawn "noctalia-shell" "msg" "lock" "lock"; }
+    Mod+Shift+E hotkey-overlay-title="Session menu" { spawn "noctalia" "msg" "panel-toggle" "session"; }
+    Mod+Escape hotkey-overlay-title="Lock" { spawn "noctalia" "msg" "lock" "lock"; }
 
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "noctalia-shell" "msg" "volume-up"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "noctalia-shell" "msg" "volume-down"; }
-    XF86AudioMute allow-when-locked=true { spawn "noctalia-shell" "msg" "volume-mute"; }
-    XF86AudioMicMute allow-when-locked=true { spawn "noctalia-shell" "msg" "mic-mute"; }
-    XF86AudioPlay allow-when-locked=true { spawn "noctalia-shell" "msg" "media" "toggle"; }
-    XF86AudioNext allow-when-locked=true { spawn "noctalia-shell" "msg" "media" "next"; }
-    XF86AudioPrev allow-when-locked=true { spawn "noctalia-shell" "msg" "media" "previous"; }
-    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia-shell" "msg" "brightness-up"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia-shell" "msg" "brightness-down"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "noctalia" "msg" "volume-down"; }
+    XF86AudioMute allow-when-locked=true { spawn "noctalia" "msg" "volume-mute"; }
+    XF86AudioMicMute allow-when-locked=true { spawn "noctalia" "msg" "mic-mute"; }
+    XF86AudioPlay allow-when-locked=true { spawn "noctalia" "msg" "media" "toggle"; }
+    XF86AudioNext allow-when-locked=true { spawn "noctalia" "msg" "media" "next"; }
+    XF86AudioPrev allow-when-locked=true { spawn "noctalia" "msg" "media" "previous"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia" "msg" "brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia" "msg" "brightness-down"; }
 
     Mod+Q { close-window; }
     Mod+O repeat=false { toggle-overview; }
