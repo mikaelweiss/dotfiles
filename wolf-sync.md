@@ -1,4 +1,25 @@
-# Wolf sync — one workspace on two machines
+# Workspace sync
+
+Topology since 2026-08-31: **elm** (NixOS, always on, home at
+`/Users/mikaelweiss`) is the hub and the alpha side of every session. Each Mac
+runs its own mutagen daemon (declared in `nix-darwin/flake.nix`) with sessions
+to elm, created by `sync-setup`:
+
+| Machine | Sessions |
+|---|---|
+| MacBook Air, wolf | `code` (`~/code`), `worktrees` (`~/.worktrees`) |
+| MacBook Pro (work) | `surestake` (`~/code/surestake`), `surestake-worktrees` (`~/.worktrees/surestake`), `dotfiles` (`~/code/dotfiles`) |
+
+Elm needs nothing but sshd; it never initiates. A machine's ssh key must be in
+`nixos/common.nix` (`openssh.authorizedKeys.keys`) before `sync-setup` works.
+Claude Code transcripts (`~/.claude/projects`, stow-linked into
+`dotfiles/claude/.claude`) sync too, so `claude --resume` and `ccusage` see
+every machine. One session file is written by one machine at a time; if two
+machines resume the same session at once, elm's copy wins.
+
+The sections below predate the move and describe the wolf agent workflow,
+which still applies with wolf as a spoke.
+
 
 Wolf (the Mac mini) runs coding agents; the MacBook Air is where things get
 tested (npm dev servers, Xcode, Chrome extensions via Load Unpacked). Mutagen
