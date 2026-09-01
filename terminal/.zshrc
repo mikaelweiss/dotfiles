@@ -3,10 +3,10 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-export ZSH="$HOME/.oh-my-zsh"
+export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(git dotenv macos sudo rsync systemd xcode)
-source $ZSH/oh-my-zsh.sh
+(( $+functions[omz] )) || source "$ZSH/oh-my-zsh.sh"
 
 # ENV vars
 export MAX_MCP_OUTPUT_TOKENS=250000
