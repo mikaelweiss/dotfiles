@@ -4,6 +4,8 @@ let
   siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" ];
 
   buildTools = with pkgs; [ git elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
+  # The nix-store sudo is not setuid; only the wrapper works.
+  sudo = "/run/wrappers/bin/sudo";
 
   mkService = name: attrs: lib.recursiveUpdate {
     description = name;
@@ -33,11 +35,11 @@ let
 
   deployPhoenix = pkgs.writeShellApplication {
     name = "deploy-phoenix";
-    runtimeInputs = buildTools ++ [ pkgs.sudo pkgs.systemd ];
+    runtimeInputs = buildTools ++ [ pkgs.systemd ];
     text = ''
       site_user=$1 dir=$2 service=$3 env_file=$4 run_migrate=$5
       echo "Deploying $service..."
-      sudo -u "$site_user" env PATH="$PATH" bash -c "
+      ${sudo} -u "$site_user" env PATH="$PATH" bash -c "
         set -e
         cd $dir
         git pull origin main
@@ -48,25 +50,25 @@ let
         MIX_ENV=prod mix release --overwrite
       "
       if [ "$run_migrate" = "true" ]; then
-        sudo -u "$site_user" env PATH="$PATH" bash -c "
+        ${sudo} -u "$site_user" env PATH="$PATH" bash -c "
           set -e
           cd $dir
           set -a && source $env_file && set +a
           MIX_ENV=prod mix ecto.migrate
         "
       fi
-      sudo systemctl restart "$service"
+      ${sudo} systemctl restart "$service"
       echo "Deployed $service"
     '';
   };
 
   deployNode = pkgs.writeShellApplication {
     name = "deploy-node";
-    runtimeInputs = buildTools ++ [ pkgs.sudo pkgs.systemd ];
+    runtimeInputs = buildTools ++ [ pkgs.systemd ];
     text = ''
       site_user=$1 dir=$2 service=$3
       echo "Deploying $service..."
-      sudo -u "$site_user" env PATH="$PATH" bash -c "
+      ${sudo} -u "$site_user" env PATH="$PATH" bash -c "
         set -e
         cd $dir
         git fetch origin main
@@ -76,7 +78,7 @@ let
         else npm install && npm run build
         fi
       "
-      sudo systemctl restart "$service"
+      ${sudo} systemctl restart "$service"
       echo "Deployed $service"
     '';
   };
@@ -150,7 +152,7 @@ in
       description = "GitHub webhook deploy receiver";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ deployPhoenix deployNode pkgs.sudo ];
+      path = [ deployPhoenix deployNode ];
       preStart = ''
         secret=$(cat /etc/webhook/secret)
         sed "s|@SECRET@|$secret|g" ${hooksTemplate} > /run/webhook/hooks.json
