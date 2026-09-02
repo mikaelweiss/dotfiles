@@ -90,9 +90,6 @@ codex/.codex/tmp/
 terminal/.config/herdr/*
 !terminal/.config/herdr/config.toml
 
-# CLIProxyAPI client credential
-terminal/.config/cliproxy/env
-
 # Composer global install (keep composer.json + lock, drop credentials and vendor)
 terminal/.config/composer/auth.json
 terminal/.config/composer/vendor/
