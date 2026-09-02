@@ -66,7 +66,7 @@ For each piece of state the diff introduces or touches (component state, refs, e
 
 ## Step 4 - Correctness
 
-Review the code for correctness. Things like code base conventions and things like that. Make sure that good architectural patterns are followed, good UI patterns, good code quality, et cetera. It's especially important to follow the code base architecture and patterns.
+Review the code for correctness. Things like code base conventions and things like that. Make sure that good architectural patterns are followed, good UI patterns, good code quality, et cetera. It's especially important to follow the code base architecture and patterns. You're specifically looking for issues where the new code deviates from well established patters.
 
 ## Step 5 - Verify
 
@@ -104,7 +104,7 @@ Give a clear and simple list of specific things that will cause problems
 
 ### Correctness
 
-Give a clear and simple list of things related to correctness that you found in `Step 4`
+Give a clear and simple list of things related to correctness that you found in `Step 4`. Only list specific actionable items where the code does not follow established codebase patterns.
 
 ### Verification
 
