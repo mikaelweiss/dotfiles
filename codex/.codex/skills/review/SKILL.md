@@ -1,173 +1,111 @@
 ---
 name: review
 description: >
-  Review the current branch's code changes for bugs and issues.
-  Optionally accepts a spec file path to cross-check requirements.
-  Usage: /review or /review .specs/001-add-data-model.md
+  Review a set of code for issues
 user_invocable: true
 ---
 
-You are acting as a reviewer who takes full personal responsibility for the correctness of this code. If you approve this code, you are staking your reputation that it is correct. If you miss a bug that a second reviewer would catch, that is a failure. Approach every change as if you will be paged at 2am when it breaks.
+# Review a set of code
 
-Do not use sub-agents. Do all the work yourself.
+The user will either ask you to review a branch, a PR, or a certain diff like the uncommited code
 
-## Spec-aware review
+## Step 1 - Organize
 
-If a spec file path is provided as an argument (e.g., `/review .specs/001-add-data-model.md`), read the spec before reviewing the code. After completing the normal review, add a **Spec Compliance** section that checks:
+First, look at what files have changed
 
-1. **Missing requirements** — Go through every numbered requirement in the spec. Is it implemented? If not, flag it.
-2. **Boundary violations** — Does the implementation touch things the spec's "Boundaries" section says not to touch?
-3. **Untested scenarios** — Does the spec's "Test expectations" list scenarios that have no corresponding test?
-4. **Scope creep** — Does the implementation include changes not called for by the spec?
+Assign each file one of three tiers. State the assignments in one compact grouped list before reading further, so the allocation is visible and deliberate
 
-Each spec compliance issue follows the same format as bug findings — cite the spec requirement and the code (or absence of code) that violates it.
+1. Ignore/tool-verify - these are files that don't really matter to review and were most likely set up right, or things that a command checks better than reading.
+2. Skim - these are files that don't have high impact if incorrect in some way, but it'd be good to look at just in case
+3. Deep - These are files that are high impact and should be carefully reviewed
 
-If no spec path is provided, skip this section entirely.
+Run basic repo commands to verify that the code is in a good state, or if it isn't, you now have the baseline for as you review
 
-## What to look for
+## Step 2 - Skim
 
-Focus on issues that matter: data loss, security vulnerabilities, crashes, logic errors, race conditions, broken user flows, missing error handling that silently corrupts state. These are the things that ship bugs to users.
+Skim the type 2 files found in `Step 1` for anything that might cause issues
 
-Do not flag:
-- Design tradeoffs where two reasonable approaches exist and the code picks one.
-- Speculative race conditions or failure modes you cannot trace to a concrete code path.
-- Style preferences or nitpicks unless they obscure meaning or violate documented standards.
-- Pre-existing issues not introduced by these changes.
-- Things a linter, type checker, or compiler would catch.
+## Step 3 - Deep
 
-## Reading the code
+Follow these steps for each of the high impact files:
 
-### Step 1: Get the list of changed files
+### Read related code to answer named questions
 
-Determine the review scope. For uncommitted work, compare against the branch point. For a branch, compare against the base.
+Bugs live in the connections, so follow the connections of what changed, not the neighborhood around it:
 
-```bash
-TARGET=$(git rev-parse --verify origin/main 2>/dev/null && echo "main" || echo "master")
-MERGE_BASE=$(git merge-base origin/$TARGET HEAD)
+- Callers of every new or changed exported symbol. Find them with grep or ast-grep, then read the enclosing function at each call site.
+- Functions the changed code calls, when their behavior matters to the change.
+- Types, schemas, and contracts the changed code implements or consumes.
+- Configuration that alters the changed code's behavior.
+- The counterpart implementation, when the change claims parity with existing code.
 
-# Changed files: committed since branch point + uncommitted
-git diff --name-only $MERGE_BASE HEAD
-git diff --name-only HEAD
-git diff --name-only --cached HEAD
-```
+### Trace the end-to-end flow
 
-### Step 2: Read every changed file in full
+Trace the execution path of every significant change:
 
-Use the Read tool to read each changed file in its entirety. Do not read diffs first. Do not read partial files. Do not skip any file. If a file is too large for one read, read it in sequential chunks covering the whole file.
+1. **Entry point**: where does execution enter this code? (API handler, UI event, cron job, etc.)
+2. **Data flow**: what data comes in? How is it transformed? Where does it go?
+3. **Exit points**: what are all the ways this code can complete? (success, error, early return, exception)
+4. **Side effects**: what state does this code modify? (database writes, file system, cache, global state, UI state)
+5. **Failure modes**: what happens when dependencies fail? (network errors, null values, invalid input, concurrent modification)
 
-For deleted files, read the old version from the diff to understand what was removed.
+State your premises explicitly. Do not say "this function probably does X". Read the function and confirm what it actually does. If you find yourself guessing what a function does based on its name, stop and read it.
 
-### Step 3: Read the diff
+### Enumerate scenarios for stateful mechanisms
 
-```bash
-MERGE_BASE=$(git merge-base origin/$TARGET HEAD)
-git diff $MERGE_BASE HEAD
-git diff HEAD
-git diff --cached HEAD
-```
+Most missed bugs are an untraced scenario, not an unread file.
 
-Use the diff to understand what specifically changed. But base your analysis on the full file contents you already read.
+For each piece of state the diff introduces or touches (component state, refs, effect dependency arrays, caches, pending flags, persisted rows), list every writer and every reader. Then check the mechanism against each of these scenarios:
 
-### Step 4: Read related files
+1. Initial mount or first load.
+2. The state changes while its target is rendered or visible.
+3. The state changes while its target is not rendered (virtualized away, unmounted, detached).
+4. An external actor mutates the surroundings: scroll, resize, navigation, refetch, a second writer.
+5. The data is empty, or becomes empty after it was populated.
+6. The flow is interrupted halfway.
 
-This is the step most reviewers skip, and it is the step that causes the most missed bugs.
+## Step 4 - Correctness
 
-For each changed file, identify files that are directly related:
-- Files that import or are imported by the changed file
-- Files that call functions defined in the changed file, or that the changed file calls
-- Data models, types, or interfaces that the changed file depends on
-- Configuration files that affect the changed file's behavior
-- Test files for the changed code (if not already in the changed set)
+Review the code for correctness. Things like code base conventions and things like that. Make sure that good architectural patterns are followed, good UI patterns, good code quality, et cetera. It's especially important to follow the code base architecture and patterns. You're specifically looking for issues where the new code deviates from well established patters.
 
-Read these files in full. You need to understand how the changed code fits into the larger system. A change to a function signature is only safe if every caller handles it correctly. A new database field is only safe if every read path accounts for it. You cannot know this from the diff alone.
-
-Use grep or ast-grep to find callers, importers, and references when the dependency graph is not obvious:
-
-```bash
-# Find files that reference a changed function or type
-grep -rl "functionName" --include="*.ts" src/
-```
-
-Be pragmatic — you do not need to read the entire codebase. But you must read enough to verify that every assumption you make about how the changed code interacts with the rest of the system is grounded in actual code you have read, not inferred from names or conventions.
-
-### Step 5: Trace the end-to-end flow
-
-Before writing any findings, trace the execution path of every significant change:
-
-For each changed function or code path:
-1. **Entry point**: Where does execution enter this code? (API handler, UI event, cron job, etc.)
-2. **Data flow**: What data comes in? How is it transformed? Where does it go?
-3. **Exit points**: What are all the ways this code can complete? (success, error, early return, exception)
-4. **Side effects**: What state does this code modify? (database writes, file system, cache, global state, UI state)
-5. **Failure modes**: What happens when dependencies fail? (network errors, null values, invalid input, concurrent modification)
-
-State your premises explicitly. Do not say "this function probably does X" — read the function and confirm what it actually does. If you find yourself guessing what a function does based on its name, stop and read it.
-
-### Step 6: Verify each finding before reporting it
+## Step 5 - Verify
 
 For every issue you are about to report, challenge it:
 
-1. **Is it real?** Read the actual code path that triggers the bug. Can you name the specific input or state that causes it? If not, drop it.
+1. **Is it real?** Read the actual code path that triggers the bug. Can you name the specific input or state that causes it?
 2. **Is it new?** Check if this issue existed before the change. If it did, do not flag it.
-3. **Is it provable?** Can you cite the specific file and line where the problem occurs, and the specific file and line of the code that interacts with it badly? If you cannot cite both sides, drop it.
-4. **Would you bet on it?** If the author pushed back and said "that's not a bug," could you prove them wrong by pointing to concrete code? If not, drop it.
-5. **Is it the right severity?** Do not say "this will crash" when you mean "this could return an unexpected value in an edge case." Calibrate your language to the actual impact.
+3. **Is it provable?** Can you cite the specific file and line where the problem occurs, and the specific file and line of the code that interacts with it badly?
+4. **Would you bet on it?** If the author pushed back and said "that's not a bug", could you prove them wrong by pointing to concrete code?
+5. **Is it fix-ready?** Sketch the fix. Name every file the fix would touch and confirm you have read each one. If the sketch needs a file you have not read, read it now, then re-test the finding against what you learned. Many candidate issues die here, when the fix attempt reveals code that already handles the case. Report only findings whose fix you could start immediately.
+6. **Is it the right severity?** Do not say "this will crash" when you mean "this could return an unexpected value in an edge case". Calibrate your language to the actual impact.
 
-Only report findings that survive all five checks.
+## Step 6 - Verify with code
 
-## When asked to fix issues
+IF (it would be helpful to write a snippet or scratch pad or script or something temp to prove the finding)
+Write it, run it, and verify the issue
+ELSE
+Skip this step
 
-If the user asks you to fix issues you found:
+## Step 7 - Output
 
-1. **Trace the impact of your fix.** Before writing the fix, identify every caller, every test, and every dependent code path. Your fix must not break any of them.
-2. **Make minimal changes.** Fix the bug. Do not refactor surrounding code. Do not "improve" adjacent logic. Do not add abstractions. Every line you touch is a line that could introduce a new bug.
-3. **If you are not confident in a fix, say so.** It is better to say "I'm not sure the right fix here — here are two options and the tradeoffs" than to write a fix that introduces a new bug.
+Respond to the user in the following format:
 
-You are equally responsible for the correctness of your fixes as you are for your findings. A fix that introduces a new bug is worse than no fix at all.
+### Baseline:
 
-## Bug guidelines
+Give a very clear, simple, and organized summary of what was changed
 
-These are general guidelines for determining whether something is a bug. More specific guidelines elsewhere (CLAUDE.md, user messages) override these.
+### High impact changes
 
-1. It meaningfully impacts the accuracy, performance, security, or maintainability of the code.
-2. The bug is discrete and actionable.
-3. Fixing it does not demand a level of rigor not present in the rest of the codebase.
-4. The bug was introduced in the changes being reviewed, not pre-existing.
-5. The author would likely fix the issue if they were made aware of it.
-6. The bug does not rely on unstated assumptions about the codebase or author's intent.
-7. It is not enough to speculate that a change may disrupt another part of the codebase — you must identify the other parts of the code that are provably affected by reading them.
-8. The bug is clearly not just an intentional change by the original author.
+Give a clear and simple explanation of areas of the code that were changed that are high impact and should be reviewed or tested carefully
 
-## Comment guidelines
+### Issues
 
-1. Be clear about why the issue is a bug.
-2. Communicate severity accurately. Do not overstate.
-3. Be brief. At most 1 paragraph per issue. No line breaks within natural language unless necessary for code.
-4. No code chunks longer than 3 lines. Wrap code in inline tags or code blocks.
-5. Clearly state the scenarios, environments, or inputs that trigger the bug. Indicate when severity depends on these factors.
-6. Matter-of-fact tone. Not accusatory, not effusive.
-7. Written so the author can immediately grasp the idea without close reading.
-8. No flattery. No "Great job..." or "Thanks for...".
-9. Use ```suggestion blocks only for concrete replacement code. Preserve exact leading whitespace.
+Give a clear and simple list of specific things that will cause problems
 
-## Output
+### Correctness
 
-Output all findings that the author would fix if they knew about them. If there are no such findings, say so — do not manufacture issues to appear thorough.
+Give a clear and simple list of things related to correctness that you found in `Step 4`. Only list specific actionable items where the code does not follow established codebase patterns.
 
-Do not stop at the first finding. Continue until you have listed every qualifying finding.
+### Verification
 
-One comment per distinct issue. Keep line ranges short (under 5-10 lines) — choose the subrange that pinpoints the problem.
-
-For each issue:
-
-<example>
-### **#1 Empty input causes crash**
-
-If the input field is empty when page loads, the app will crash because `parseInput` on line 42 calls `.trim()` on `undefined` — `getInitialValue()` in `src/core/State.ts:18` returns `undefined` when the store is empty.
-
-File: src/ui/Input.tsx:42
-</example>
-
-Note: every finding must cite the specific code that causes the issue and, when the bug involves interaction between files, cite both sides.
-
-After listing all findings (or confirming there are none), provide a brief summary of what you reviewed and the scope of your confidence. Be honest about what you did and did not verify. For example: "I read all 7 changed files, their 4 direct dependencies, and traced the data flow through the API handler → service → repository chain. I did not verify the behavior of the third-party `stripe` SDK calls."
+Give a clear and simple explanation of things that aren't necessarily issues, but require human review. For example, behavior changes and things like that.
