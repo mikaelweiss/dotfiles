@@ -49,6 +49,8 @@ You have many tools. Figure things out yourself before asking me to run commands
 
 The default is no comment. Do not comment bad code, rewrite it: make the code itself obvious (clear names, clear structure) instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely cannot live in the code.
 
+The same rule covers READMEs, docs, tables of constants, and test names: prose that restates code is split brain. Delete it rather than update it.
+
 Code says _how_, comments say _why_. The only comment worth writing records intent the code cannot express: why this approach over the obvious one, the trade-off taken, the external constraint, the real gotcha. Never explain how the code works. The code already says that, and a duplicate explanation goes stale the moment the code changes. DRY applies to comments too. If a comment restates what the code says, delete it and let the code stand on its own.
 
 When you do write one, present tense, strict STE per the Voice section. Active voice, one topic, max 20 words, no semicolon, no em dash, no marketing adjective.
@@ -89,3 +91,9 @@ Always load the `review` skill when doing code review. Never load the `code-revi
 ## Running Code
 
 It takes a long time to run lint, the code, and tests, so by default don't run anything. The only times we need to run that is before we push code for a pull request.
+
+## Shell paths
+
+Never `cd` inside a Bash command. Pass absolute paths to every argument.
+A `cd` leaves the search directory unresolvable, and the `Read()` deny rules in
+settings.json turn that into a permission prompt even under bypass mode.
