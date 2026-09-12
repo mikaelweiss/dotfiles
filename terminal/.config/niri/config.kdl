@@ -19,6 +19,16 @@ input {
     touchpad {
         tap
         natural-scroll
+        dwt
+        dwtp
+        click-method "clickfinger"
+        tap-button-map "left-right-middle"
+        accel-speed 0.2
+    }
+    mouse {
+        accel-profile "adaptive"
+        accel-speed -0.2
+        scroll-factor 0.6
     }
     focus-follows-mouse max-scroll-amount="0%"
 }
