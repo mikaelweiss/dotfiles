@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" ];
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
@@ -124,6 +124,7 @@ let
     (phoenixHook "portfolio" "false")
     (phoenixHook "weisssolutions" "false")
     (phoenixHook "lunchninja" "false")
+    (phoenixHook "asher" "true")
     (nodeHook "pmgforrms")
     (nodeHook "rachelportfolio")
     (nodeHook "vault")
@@ -153,6 +154,10 @@ in
     };
     weisssolutions = phoenix "weisssolutions" "weisssolutions";
     lunchninja = phoenix "lunchninja" "lunch_ninja";
+    asher = lib.recursiveUpdate (phoenix "asher" "asher") {
+      after = [ "network.target" "postgresql.service" ];
+      requires = [ "postgresql.service" ];
+    };
 
     pmgforrms = mkService "pmgforrms" {
       environment = { NODE_ENV = "production"; PORT = "4003"; };
