@@ -1,7 +1,10 @@
 # Work machine.
-{ ... }:
+{ pkgs, ... }:
 
 {
+  # surestake CI runs node 22, and the Analog vitest pool aborts under nix node 24.
+  node.package = pkgs.nodejs_22;
+
   programs.zsh.interactiveShellInit = ''
     # Android SDK
     export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"

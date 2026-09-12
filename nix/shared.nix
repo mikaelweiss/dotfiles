@@ -3,7 +3,7 @@
 { pkgs, ... }:
 
 {
-  imports = [ ./modules/npm-globals.nix ];
+  imports = [ ./modules/node.nix ./modules/npm-globals.nix ];
 
   nixpkgs.config.allowUnfree = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -11,7 +11,6 @@
   nix.gc.options = "--delete-older-than 30d";
 
   environment.systemPackages = with pkgs; [
-    nodejs_24
     neovim
     vim
     wget
