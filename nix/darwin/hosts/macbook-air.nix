@@ -19,6 +19,7 @@
   ];
 
   homebrew.casks = [
+    "grok-bot"
     "modrinth"
     "obsidian"
     "shottr"
