@@ -49,7 +49,7 @@ let
     rm -rf ${stateDir}
     install -d -m 700 -o mikaelweiss ${stateDir} ${stateDir}/etc
     ${pkgs.util-linux}/bin/runuser -u postgres -- ${config.services.postgresql.package}/bin/pg_dumpall > ${stateDir}/pg_dumpall.sql
-    for d in portfolio weisssolutions lunchninja cloudflared cloudflare restic webhook; do
+    for d in portfolio weisssolutions lunchninja asher cloudflared cloudflare restic webhook; do
       [ -d /etc/$d ] && cp -a /etc/$d ${stateDir}/etc/
     done
     chown -R mikaelweiss ${stateDir}
@@ -82,7 +82,7 @@ in
         sparrow-state-backup = baseService {
           description = "Restic backup of Postgres dump and site secrets";
           preStart = stageState;
-          scriptBody = resticTo { repo = "sparrow-state"; path = stateDir; };
+          scriptBody = resticTo { repo = "sparrow-state"; path = "${stateDir} /var/lib/asher/uploads"; };
         };
       })
     ];
