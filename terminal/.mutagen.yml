@@ -83,3 +83,4 @@ sync:
         - "/dotfiles/codex/.codex/models_cache.json"
         - "/dotfiles/codex/.codex/history.jsonl"
         - "/dotfiles/codex/.codex/auth.json"
+        - "/dotfiles/codex/.codex/ipc"
