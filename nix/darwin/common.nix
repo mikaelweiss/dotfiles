@@ -11,7 +11,6 @@
     # bruno
     # bruno-cli
     llvm
-    ast-grep # for searching code
     sqlite
     bun
     gh # GitHub CLI

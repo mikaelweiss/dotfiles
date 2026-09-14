@@ -15,6 +15,7 @@
     vim
     wget
     ripgrep
+    ast-grep
     fzf
     zoxide
     atuin
