@@ -138,3 +138,97 @@ vim.keymap.set("v", "<D-/>", "gc", { desc = "Toggle comment selection", remap = 
 -- Buffer navigation
 vim.keymap.set("n", "[[", ":bprevious<CR>", { desc = "Previous buffer" })
 vim.keymap.set("n", "]]", ":bnext<CR>", { desc = "Next buffer" })
+
+-- Review against main: neo-tree lists the branch's files, gitsigns marks its lines.
+-- Diffing against the merge base rather than main keeps main's newer commits out.
+local function git_in(dir)
+  return function(...)
+    local result = vim.system({ "git", "-C", dir, ... }, { text = true }):wait()
+    return result.code == 0 and vim.trim(result.stdout) or nil
+  end
+end
+
+-- The cwd is often outside any repo, so locate one from an open file instead.
+local function repo_root()
+  local buffers = { 0 }
+  vim.list_extend(buffers, vim.api.nvim_list_bufs())
+  for _, buf in ipairs(buffers) do
+    local name = vim.api.nvim_buf_get_name(buf)
+    local stat = name ~= "" and vim.uv.fs_stat(name)
+    if stat and stat.type == "file" then
+      local root = git_in(vim.fs.dirname(name))("rev-parse", "--show-toplevel")
+      if root then
+        return root
+      end
+    end
+  end
+  local tree = require("neo-tree.sources.manager").get_state("filesystem")
+  for _, dir in ipairs({ tree and tree.path, vim.uv.cwd() }) do
+    local root = dir and git_in(dir)("rev-parse", "--show-toplevel")
+    if root then
+      return root
+    end
+  end
+end
+
+local reviewing_vs_trunk = false
+local base_diff_restored = false
+
+-- neo-tree returns no base diff whenever its git status cache hits, so recompute it.
+local function restore_base_diff()
+  if base_diff_restored then
+    return
+  end
+  base_diff_restored = true
+  local git = require("neo-tree.git")
+  local status = git.status
+  git.status = function(path, base_lookup, skip_bubbling, opts)
+    local git_status, root, over_base = status(path, base_lookup, skip_bubbling, opts)
+    local base = root and base_lookup and base_lookup[root]
+    if base and base ~= "HEAD" and not over_base then
+      over_base = require("neo-tree.git.diff").diff_name_status(root, base, skip_bubbling)
+    end
+    return git_status, root, over_base
+  end
+end
+
+vim.keymap.set("n", "<leader>gm", function()
+  local root = repo_root()
+  if not root then
+    vim.notify("No git repo found for any open file", vim.log.levels.WARN)
+    return
+  end
+
+  local gitsigns = require("gitsigns")
+
+  -- Setting the base on the state skips the Neotree command parser, which
+  -- verifies refs against the cwd instead of the repo.
+  local function show_git_status(base)
+    restore_base_diff()
+    local state = require("neo-tree.sources.manager").get_state("git_status")
+    state.git_base_by_worktree = state.git_base_by_worktree or {}
+    state.git_base_by_worktree[root] = base
+    state.dirty = true
+    require("neo-tree.command").execute({ action = "focus", source = "git_status", dir = root })
+  end
+
+  if reviewing_vs_trunk then
+    reviewing_vs_trunk = false
+    gitsigns.change_base("HEAD", true)
+    show_git_status("HEAD")
+    vim.notify("Diffing against HEAD")
+    return
+  end
+
+  local git = git_in(root)
+  local trunk = git("rev-parse", "--verify", "--quiet", "main") and "main" or "master"
+  local base = git("merge-base", trunk, "HEAD")
+  if not base then
+    vim.notify("No merge base with " .. trunk, vim.log.levels.WARN)
+    return
+  end
+  reviewing_vs_trunk = true
+  gitsigns.change_base(base, true)
+  show_git_status(base)
+  vim.notify("Diffing against " .. trunk .. " (" .. base:sub(1, 8) .. ")")
+end, { desc = "Toggle review vs main" })
