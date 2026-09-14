@@ -102,7 +102,8 @@
       "Read(.env)",
       "Read(.env.*)",
       "Read(.env.local)",
-      "Read(./secrets/**)"
+      "Read(./secrets/**)",
+      "Bash(git grep:*)"
     ]
   },
   "hooks": {
@@ -156,6 +157,15 @@
             "if": "Bash(gh release create *)"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.agents/hooks/search-guard.py"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -174,6 +184,17 @@
             "type": "command",
             "command": "bash '/Users/mikaelweiss/.claude/hooks/herdr-agent-state.sh' session",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.agents/hooks/search-guard.py"
           }
         ]
       }

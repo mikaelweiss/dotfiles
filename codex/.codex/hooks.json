@@ -37,6 +37,15 @@
             "command": "npx agent-friction hook trace-post-tool"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.agents/hooks/search-guard.py\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -45,6 +54,17 @@
           {
             "type": "command",
             "command": "npx agent-friction hook run-on-session-end"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.agents/hooks/search-guard.py\"",
+            "timeout": 10
           }
         ]
       }
