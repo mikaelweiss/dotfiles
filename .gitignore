@@ -189,6 +189,9 @@ terminal/.pi/agent/mcp-cache.json
 terminal/.config/composer/*
 terminal/.config/herd-lite/*
 terminal/.config/opencode/*
+!terminal/.config/opencode/AGENTS.md
+!terminal/.config/opencode/opencode.jsonc
+!terminal/.config/opencode/plugins/
 terminal/.config/psysh/*
 
 # Claude Code remote daemon state
