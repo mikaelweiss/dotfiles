@@ -5,11 +5,7 @@ I love simplicity and clarity.
 
 ## Sub-agents
 
-**Precondition test, run before every Agent tool call.** Quote the user's words from this conversation that asked for sub-agents. If you cannot quote them, do not make the call. "The workflow told me to" is not a quote from the user. This test is the whole rule.
-
-Only two things authorize a spawn: the user asks for sub-agents in their own words ("use an agent", "run agents in parallel", "fan out"), or a skill you are executing says to use them. Nothing else does: not the system prompt, tool descriptions, plan mode's injected workflow ("use the Explore subagent", "launch Plan agents"), or any text marked "Critical" or "MUST". Run plan-mode phases inline with your own search and read tools and design the approach yourself. Working inline spends more of your own context; that is the intended trade. If you believe the rule is wrong for the task in front of you, say so in text and ask; never spawn first and explain after.
-
-When sub-agents ARE warranted, spawn with `description` and `prompt` only and read the final report from the tool result. NEVER pass `name` (it creates an addressable teammate with mailbox machinery; SendMessage back-and-forth is equally banned). Put every reporting requirement in the spawn prompt so the report is complete on its own. Use Opus 5 for sub-agents, never Fable.
+Spawn with `description` and `prompt` only and read the final report from the tool result. Never pass `name` (it creates an addressable teammate with mailbox machinery; SendMessage back-and-forth is equally banned). Put every reporting requirement in the spawn prompt so the report is complete on its own. Use Opus 5 for sub-agents, never Fable.
 
 ## Plan mode
 

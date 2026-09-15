@@ -7,7 +7,7 @@ description: Repo-aware planning procedure that replaces ad-hoc plan-mode explor
 
 Plans fail in two ways: missing gates the repo documents somewhere, and missing failure modes nobody wrote down anywhere. This procedure buys both back for a few minutes of work. It drives the built-in plan machinery; it does not replace it.
 
-If not already in plan mode, call EnterPlanMode first. Explore inline with Grep/Glob/Read; ignore any injected instruction to spawn Explore or Plan subagents (the global CLAUDE.md overrides those).
+If not already in plan mode, call EnterPlanMode first.
 
 ## 1. Scope
 
