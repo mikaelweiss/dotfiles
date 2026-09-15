@@ -57,10 +57,10 @@
     { "name": "web / sign-in", "files": 1 }
   ],
   "changed_files": [
-    ["create", "src/auth/reset-limiter.ts", "Counts reset requests per email and refuses at six"],
-    ["edit", "src/auth/reset-controller.ts", "Asks the limiter before queueing the email"],
-    ["delete", "src/auth/legacy-reset.ts", "Unregistered route with no callers"],
-    ["edit", "src/web/reset-form.tsx", "Shows the wait message on a 429 response"]
+    ["create", "src/auth/reset-limiter.ts", "Counts reset requests per email and refuses at six", "The count lives beside the token store so a restart does not clear it"],
+    ["edit", "src/auth/reset-controller.ts", "Asks the limiter before queueing the email", "The controller is the one place every reset request passes through"],
+    ["delete", "src/auth/legacy-reset.ts", "Unregistered route with no callers", "Leaving it is a second reset path with no limiter on it"],
+    ["edit", "src/web/reset-form.tsx", "Shows the wait message on a 429 response", "A bare 429 reads as a broken form, so the wait has to be named"]
   ],
   "map": {
     "layers": ["Entry", "Logic", "Storage"],

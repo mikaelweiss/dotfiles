@@ -19,7 +19,7 @@ const validate = (b) => {
   const errs = [];
   const need = (ok, msg) => { if (!ok) errs.push(msg); };
   const str = (v) => typeof v === 'string' && v.trim().length > 0;
-  const isFile = (f) => Array.isArray(f) && KINDS.includes(f[0]) && str(f[1]);
+  const isFile = (f) => Array.isArray(f) && KINDS.includes(f[0]) && str(f[1]) && (f[3] === undefined || str(f[3]));
   const behaviorCount = Array.isArray(b.behaviors) ? b.behaviors.length : 0;
   const isItem = (x) => Number.isInteger(x) && x >= 1 && x <= behaviorCount;
   need(str(b.title), 'title: missing');
@@ -36,7 +36,7 @@ const validate = (b) => {
   });
   (b.changed_files || []).forEach((f, i) => {
     const at = `changed_files[${i}]`;
-    need(isFile(f), `${at}: [kind, path, note] with kind create, edit, or delete`);
+    need(isFile(f), `${at}: [kind, path, note] or [kind, path, note, why] with kind create, edit, or delete`);
     if (isReview && isFile(f)) need(str(f[2]), `${at} ${f[1]}: needs a note saying what changed and why`);
   });
   (b.flows || []).forEach((f, i) => {
@@ -112,6 +112,7 @@ const prioIcon = (r) => `<svg class="prio" width="16" height="16" viewBox="0 0 1
 const chip = (inner, cls = '') => `<span class="chip ${cls}">${inner}</span>`;
 const jump = (target, inner, cls = '') => `<a class="chip ${cls}" href="#${target}" data-jump="${target}">${inner}</a>`;
 const chevron = '<button class="more" type="button" aria-label="Details"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+const caret = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const behaviors = brief.behaviors;
@@ -136,7 +137,7 @@ const fileSpan = ([kind, path]) => `<span class="file"><span class="fk fk-${kind
 const fileLine = (files) => files.length ? `<div class="files">${files.map(fileSpan).join('')}</div>` : '';
 const testChip = (t) => {
   if (t === null || t === undefined) return chip('<i class="dot-yellow"></i>No test');
-  if (typeof t === 'string') return chip(`<i class="dot-green"></i>${esc(t)}`);
+  if (typeof t === 'string') return chip(`<i class="dot-green"></i>${esc(t)}`, t.length > 72 ? 'chip-long' : '');
   if (t.gap) return chip('<i class="dot-red"></i>No test', 'chip-bad');
   return '';
 };
@@ -154,8 +155,8 @@ const behaviorRows = behaviors.map((b) => {
   const others = linked.filter((f) => !f.blocker);
   const chips = [
     chip(`${prioIcon(b.risk)}${riskName[b.risk]} risk`),
-    isReview ? (b.verified ? chip('<i class="dot-green"></i>Proven') : chip('<i class="dot-yellow"></i>Needs a human', 'chip-warn')) : testChip(b.test),
     chip(plural((b.files || []).length, 'file')),
+    isReview ? (b.verified ? chip('<i class="dot-green"></i>Proven') : chip('<i class="dot-yellow"></i>Needs a human', 'chip-warn')) : testChip(b.test),
     blockers.length ? jump('finding-' + blockers[0].id, `<i class="dot-red"></i>${plural(blockers.length, 'blocker')}`, 'chip-bad') : '',
     others.length ? jump('finding-' + others[0].id, `<i class="dot-yellow"></i>${plural(others.length, 'non-blocker')}`, 'chip-warn') : '',
   ].join('');
@@ -224,7 +225,7 @@ const ledgerRows = unexplained.map((f) => {
 
 const group = (title, count, body, closed, action = '') => `
   <section class="group${closed ? ' closed' : ''}" data-group="${title.replace(/\W+/g, '-').toLowerCase()}">
-    <header tabindex="0"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="gtitle">${title}</span><span class="gcount">${count}</span>${action}</header>
+    <header tabindex="0">${caret}<span class="gtitle">${title}</span><span class="gcount">${count}</span>${action}</header>
     <div class="gbody">${body.trim().startsWith('<li') ? `<ul>${body}</ul>` : body}</div>
   </section>`;
 
@@ -247,22 +248,32 @@ const flowRows = (brief.flows || []).map((f, i) => {
 }).join('');
 const touchedRows = (brief.touched || []).map((t) => `<li class="prop"><svg class="ico" viewBox="0 0 16 16"><path d="M2 4a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="prop-v">${esc(t.name)}</span><span class="prop-n">${plural(t.files, 'file')}</span></li>`).join('');
 
-const fileTree = () => {
-  if (!changedFiles.length) return '';
+const fileGroups = () => {
+  const groups = behaviors.map((b, i) => ({ num: i + 1, name: b.after, files: [] }));
+  const loose = { num: 0, name: 'No behavior change names these', files: [] };
+  changedFiles.forEach(([kind, path, note, why], i) => {
+    const owner = behaviorsFor(path)[0];
+    (owner ? groups[owner - 1] : loose).files.push({ kind, path, note, why, i });
+  });
+  return [...groups, loose].filter((g) => g.files.length);
+};
+
+const fileTree = (files) => {
   const root = { dirs: new Map(), files: [] };
-  changedFiles.forEach((f, i) => {
-    const parts = f[1].split('/');
+  files.forEach((f) => {
+    const parts = f.path.split('/');
     let node = root;
     parts.slice(0, -1).forEach((p) => {
       if (!node.dirs.has(p)) node.dirs.set(p, { dirs: new Map(), files: [] });
       node = node.dirs.get(p);
     });
-    node.files.push({ kind: f[0], path: f[1], note: f[2], i, name: parts[parts.length - 1] });
+    node.files.push({ ...f, name: parts[parts.length - 1] });
   });
   const count = (node) => node.files.length + [...node.dirs.values()].reduce((a, d) => a + count(d), 0);
   const fileRow = (f) => {
     const id = 'file-' + f.i;
     const nums = behaviorsFor(f.path).map((x) => jump('row-' + x, String(x))).join('');
+    const why = f.why ? `<p class="fwhy"><span class="plabel">Why</span>${esc(f.why)}</p>` : '';
     return `
     <li class="row frow" data-row="${id}" id="${id}" data-section="Files" data-label="${esc(f.path)}">
       <div class="head"><div class="line">
@@ -270,7 +281,7 @@ const fileTree = () => {
         <div class="main"><span class="fname">${esc(f.name)}</span>${f.note ? `<span class="fnote">${esc(f.note)}</span>` : ''}</div>
         <div class="props">${nums}${chevron}</div>
       </div></div>
-      ${detail(id, `<p class="fpath">${esc(f.path)}</p>`, isReview ? 'What should change in this file' : `Note on ${f.path}`)}
+      ${detail(id, `<p class="fpath">${esc(f.path)}</p>${why}`, isReview ? 'What should change in this file' : `Note on ${f.path}`)}
     </li>`;
   };
   const dirRows = (node, prefix) => [...node.dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([name, d]) => {
@@ -281,70 +292,124 @@ const fileTree = () => {
       cur = v;
     }
     const path = prefix + label;
-    const total = count(cur);
     return `
     <li class="dir ${cur.files.length > 10 ? 'closed' : ''}" data-dir="${esc(path)}">
-      <div class="dline" tabindex="0"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="dname">${esc(label)}</span><span class="gcount">${total}</span></div>
+      <div class="dline" tabindex="0">${caret}<span class="dname">${esc(label)}</span><span class="gcount">${count(cur)}</span></div>
       <ul>${dirRows(cur, path + '/')}${cur.files.map(fileRow).join('')}</ul>
     </li>`;
   }).join('');
-  return `<ul class="tree">${dirRows(root, '')}${root.files.map(fileRow).join('')}</ul>`;
+  return dirRows(root, '') + root.files.map(fileRow).join('');
 };
+
+const filesByBehavior = () => `<ul class="tree">${fileGroups().map((g) => `
+  <li class="dir bdir" data-dir="behavior-${g.num}">
+    <div class="dline bline" tabindex="0">${caret}<span class="bnum">${g.num || ''}</span><span class="bname">${esc(g.name)}</span><span class="gcount">${plural(g.files.length, 'file')}</span></div>
+    <ul>${fileTree(g.files)}</ul>
+  </li>`).join('')}</ul>`;
+
+let mapWidth = 0;
 
 const mapSvg = (m) => {
   if (!m || !mapNodes.length) return '';
   const layers = m.layers;
-  const W = 212, GAP = 64, PAD = 12, LINE = 17, HEAD = 34, VGAP = 18, TOP = 28;
+  const GAP = 76, PAD = 12, LINE = 17, HEAD = 34, VGAP = 20, TOP = 28;
+  const MIN_W = 212, MAX_W = 330;
+  const NAME_CH = 6.9, FILE_CH = 6.3, BADGE_CH = 5.6, LABEL_CH = 5.2;
+  const badgeName = { create: 'new', edit: 'edited', delete: 'deleted' };
+  const badgeW = (x) => (x.changed ? badgeName[x.changed].length * BADGE_CH + 16 : 0);
+  const inCol = (l) => mapNodes.filter((x) => x.layer === l);
+  const ell = (s, chars) => (s.length <= chars ? s : s.slice(0, Math.max(1, chars - 1)).trimEnd() + '…');
+  const tail = (s, chars) => {
+    if (s.length <= chars) return s;
+    const t = s.slice(s.length - chars + 1);
+    const cut = t.indexOf('/');
+    return '…' + (cut > 0 && cut <= 16 ? t.slice(cut) : t);
+  };
+
+  const colW = layers.map((l) => Math.round(Math.min(MAX_W, Math.max(MIN_W, PAD * 2 + Math.max(0,
+    ...inCol(l).map((x) => Math.max(x.name.length * NAME_CH + badgeW(x), ...x.files.map((f) => f.length * FILE_CH))))))));
+  const colX = layers.map(() => 0);
+  layers.forEach((l, i) => { if (i) colX[i] = colX[i - 1] + colW[i - 1] + GAP; });
+
   const pos = new Map();
-  let maxH = 0;
   layers.forEach((l, ci) => {
     let y = TOP;
-    mapNodes.filter((x) => x.layer === l).forEach((x) => {
+    inCol(l).forEach((x, i) => {
       const h = HEAD + (x.files.length ? x.files.length * LINE + PAD : 0);
-      pos.set(x.id, { x: ci * (W + GAP), y, w: W, h, node: x });
+      pos.set(x.id, { x: colX[ci], y, w: colW[ci], h, col: ci, idx: i, node: x });
       y += h + VGAP;
     });
-    maxH = Math.max(maxH, y);
   });
-  const colOf = (id) => layers.indexOf(pos.get(id).node.layer);
-  const colBottom = layers.map((l) => Math.max(TOP, ...mapNodes.filter((x) => x.layer === l).map((x) => pos.get(x.id).y + pos.get(x.id).h)));
+  const colBottom = layers.map((l) => Math.max(TOP, ...inCol(l).map((x) => pos.get(x.id).y + pos.get(x.id).h)));
   const edges = (m.edges || []).filter((e) => pos.has(e.from) && pos.has(e.to));
   const outs = new Map(), ins = new Map();
   edges.forEach((e) => { outs.set(e.from, [...(outs.get(e.from) || []), e]); ins.set(e.to, [...(ins.get(e.to) || []), e]); });
   const slot = (list, e, box) => box.y + box.h * (list.indexOf(e) + 1) / (list.length + 1);
-  const longEdges = edges.filter((e) => colOf(e.to) - colOf(e.from) > 1);
-  const busOf = (e) => Math.max(...colBottom.slice(colOf(e.from) + 1, colOf(e.to))) + 24 + longEdges.indexOf(e) * 14;
-  const edgeSvg = edges.map((e) => {
+  const longEdges = edges.filter((e) => pos.get(e.to).col - pos.get(e.from).col > 1);
+  const busOf = (e) => Math.max(...colBottom.slice(pos.get(e.from).col + 1, pos.get(e.to).col)) + 24 + longEdges.indexOf(e) * 14;
+
+  let minX = 0;
+  const placed = [];
+  const label = (e, x, y, anchor) => {
+    if (!e.label) return '';
+    const w = e.label.length * LABEL_CH;
+    const cx = anchor === 'start' ? x + w / 2 : x;
+    let ly = y;
+    for (let i = 1; i <= 6 && placed.some((p) => Math.abs(p.y - ly) < 12 && Math.abs(p.x - cx) < (p.w + w) / 2 + 8); i++) {
+      ly = y + (i % 2 ? 1 : -1) * 13 * Math.ceil(i / 2);
+    }
+    placed.push({ x: cx, y: ly, w });
+    minX = Math.min(minX, cx - w / 2 - 6);
+    return `<text class="elabel elabel-${e.kind}" x="${x}" y="${ly}" text-anchor="${anchor}">${esc(e.label)}</text>`;
+  };
+
+  const path = (e, d) => `<path class="edge edge-${e.kind}" d="${d}" marker-end="url(#arrow-${e.kind})"/>`;
+  const paths = [], labels = [];
+  const sideUse = new Map();
+  edges.forEach((e) => {
     const a = pos.get(e.from), b = pos.get(e.to);
     const y1 = slot(outs.get(e.from), e, a), y2 = slot(ins.get(e.to), e, b);
-    const x1 = a.x + a.w, x2 = b.x;
-    const ca = colOf(e.from), cb = colOf(e.to);
-    let d;
-    if (cb - ca === 1) {
-      const c = (x2 - x1) / 2;
-      d = `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}`;
-    } else if (cb > ca) {
-      const bus = busOf(e), xm1 = x1 + GAP / 2, xm2 = x2 - GAP / 2;
-      d = `M${x1},${y1} C${xm1},${y1} ${xm1},${bus} ${xm1 + 24},${bus} L${xm2 - 24},${bus} C${xm2},${bus} ${xm2},${y2} ${x2},${y2}`;
-    } else {
+    if (b.col - a.col === 1) {
+      const x1 = a.x + a.w, x2 = b.x, c = (x2 - x1) / 2;
+      paths.push(path(e, `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}`));
+      labels.push(label(e, (x1 + x2) / 2, (y1 + y2) / 2 - 7, 'middle'));
+    } else if (b.col > a.col) {
+      const x1 = a.x + a.w, x2 = b.x, bus = busOf(e), xm1 = x1 + GAP / 2, xm2 = x2 - GAP / 2;
+      paths.push(path(e, `M${x1},${y1} C${xm1},${y1} ${xm1},${bus} ${xm1 + 24},${bus} L${xm2 - 24},${bus} C${xm2},${bus} ${xm2},${y2} ${x2},${y2}`));
+      labels.push(label(e, (xm1 + xm2) / 2, bus - 8, 'middle'));
+    } else if (a.col === b.col && b.idx === a.idx + 1) {
       const sx = a.x + a.w / 2, sy = a.y + a.h, tx = b.x + b.w / 2, ty = b.y;
-      d = `M${sx},${sy} C${sx},${sy + 30} ${tx},${ty - 30} ${tx},${ty}`;
+      paths.push(path(e, `M${sx},${sy} C${sx},${sy + 10} ${tx},${ty - 10} ${tx},${ty}`));
+      labels.push(label(e, sx + 10, (sy + ty) / 2 + 3.5, 'start'));
+    } else {
+      const k = sideUse.get(a.col) || 0;
+      sideUse.set(a.col, k + 1);
+      const off = 34 + k * 16;
+      paths.push(path(e, `M${a.x},${y1} C${a.x - off},${y1} ${b.x - off},${y2} ${b.x},${y2}`));
+      labels.push(label(e, a.x - off * 0.7, (y1 + y2) / 2 - 6, 'middle'));
+      minX = Math.min(minX, a.x - off - 4);
     }
-    const label = e.label ? `<text class="elabel elabel-${e.kind}" x="${x1 + 8}" y="${y1 - 5}">${esc(e.label)}</text>` : '';
-    return `<path class="edge edge-${e.kind}" d="${d}" marker-end="url(#arrow-${e.kind})"/>${label}`;
-  }).join('');
-  maxH = Math.max(maxH, ...longEdges.map((e) => busOf(e) + 8));
-  const badgeName = { create: 'new', edit: 'edited', delete: 'deleted' };
+  });
+
   const nodeSvg = [...pos.values()].map(({ x, y, w, h, node }) => {
     const cls = node.changed ? `node changed-${node.changed}` : 'node';
-    const files = node.files.map((f, i) => `<text class="file" x="${x + PAD}" y="${y + HEAD + i * LINE + 4}">${esc(f)}</text>`).join('');
+    const inner = w - PAD * 2;
+    const files = node.files.map((f, i) => {
+      const shown = tail(f, Math.floor(inner / FILE_CH));
+      return `<text class="file" x="${x + PAD}" y="${y + HEAD + i * LINE + 4}">${esc(shown)}${shown === f ? '' : `<title>${esc(f)}</title>`}</text>`;
+    }).join('');
     const badge = node.changed ? `<text class="badge badge-${node.changed}" x="${x + w - PAD}" y="${y + 21}" text-anchor="end">${badgeName[node.changed]}</text>` : '';
-    return `<g class="${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><text class="name" x="${x + PAD}" y="${y + 21}">${esc(node.name)}</text>${badge}${files}</g>`;
+    const name = ell(node.name, Math.floor((inner - badgeW(node)) / NAME_CH));
+    return `<g class="${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><text class="name" x="${x + PAD}" y="${y + 21}">${esc(name)}${name === node.name ? '' : `<title>${esc(node.name)}</title>`}</text>${badge}${files}</g>`;
   }).join('');
-  const width = layers.length * W + (layers.length - 1) * GAP;
-  const layerSvg = layers.map((l, i) => `<text class="layer" x="${i * (W + GAP)}" y="14">${esc(l)}</text>`).join('');
+
+  const height = Math.max(...colBottom, ...longEdges.map((e) => busOf(e) + 10)) + 6;
+  const right = colX[layers.length - 1] + colW[layers.length - 1];
+  const x0 = minX - 2, width = right - x0 + 4;
+  mapWidth = Math.ceil(width);
+  const layerSvg = layers.map((l, i) => `<text class="layer" x="${colX[i]}" y="14">${esc(l)}</text>`).join('');
   const marker = (k, c) => `<marker id="arrow-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`;
-  return `<div class="map"><svg viewBox="-2 0 ${width + 4} ${maxH}" width="100%" style="max-width:${width + 4}px;height:auto"><defs>${marker('new', '#27a644')}${marker('existing', '#62666d')}${marker('removed', '#eb5757')}</defs>${layerSvg}${edgeSvg}${nodeSvg}</svg></div>`;
+  return `<div class="map"><svg viewBox="${x0} 0 ${width} ${height}" width="${Math.ceil(width)}" height="${Math.ceil(height)}"><defs>${marker('new', '#27a644')}${marker('existing', '#62666d')}${marker('removed', '#eb5757')}</defs>${layerSvg}${paths.join('')}${nodeSvg}${labels.join('')}</svg></div>`;
 };
 
 const findingRow = (f) => {
@@ -454,7 +519,9 @@ h1{font:590 24px/1.35 var(--font);letter-spacing:-.012em;margin:0 0 14px}
 .where{font:12px/1.5 var(--mono);color:var(--text-3);margin-top:2px}
 .props{display:flex;align-items:center;gap:6px;flex:none;min-height:24px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 10px 8px var(--indent)}
-.chip{display:inline-flex;align-items:center;gap:7px;height:24px;padding:0 9px;border:1px solid var(--chip-border);border-radius:9999px;background:transparent;font:500 12px/1 var(--font);color:var(--text-2);white-space:nowrap;text-decoration:none}
+.chip{display:inline-flex;align-items:center;gap:7px;height:24px;padding:0 9px;border:1px solid var(--chip-border);border-radius:9999px;background:transparent;font:500 12px/1 var(--font);color:var(--text-2);white-space:nowrap;text-decoration:none;max-width:100%;min-width:0}
+.chip-long{white-space:normal;height:auto;min-height:24px;padding:4px 10px;line-height:1.5;align-items:flex-start;border-radius:12px;max-width:720px;overflow-wrap:anywhere}
+.chip-long i{margin-top:5px}
 a.chip:hover{border-color:var(--text-4);color:var(--text)}
 .chip i{width:8px;height:8px;border-radius:50%;flex:none}
 .chip-bad{color:var(--red)}.chip-warn{color:var(--yellow)}
@@ -464,8 +531,8 @@ a.chip:hover{border-color:var(--text-4);color:var(--text)}
 .more:hover{background:var(--raised);color:var(--text)}
 .more svg{transition:transform .12s}
 .row.open .more svg{transform:rotate(90deg)}
-.files{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px/1.6 var(--mono);color:var(--text-3)}
-.file{white-space:nowrap}
+.files{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px/1.6 var(--mono);color:var(--text-3);max-width:760px}
+.file{min-width:0;overflow-wrap:anywhere}
 .fk{display:inline-block;width:12px;color:var(--text-4);font-family:var(--mono)}
 .fk-create{color:var(--green)}.fk-delete{color:var(--red)}
 .detail{padding:10px 12px 12px var(--indent);display:flex;flex-direction:column;gap:10px;color:var(--text-2);font-size:14px}
@@ -502,7 +569,13 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 .dir.closed > .dline svg{transform:rotate(-90deg)}
 .dir.closed > ul{display:none}
 .dname{color:var(--text);font-family:var(--mono);font-size:12.5px}
-.frow .line{min-height:32px;padding:4px 10px 4px 6px;align-items:center}
+.bdir > .bline{height:38px;gap:10px}
+.bdir + .bdir{margin-top:4px}
+.bnum{color:var(--text-4);font-size:13px;min-width:14px;font-variant-numeric:tabular-nums}
+.bname{color:var(--text);font-size:14px;font-weight:500}
+.fwhy{color:var(--text-2)}
+.frow .line{min-height:32px;padding:4px 10px 4px 6px;align-items:flex-start}
+.frow .fk,.frow .fname{line-height:22px}
 .frow .fk{width:14px;text-align:center;flex:none}
 .frow .main{display:flex;gap:12px;align-items:baseline;min-width:0;flex-wrap:wrap}
 .fname{font-family:var(--mono);font-size:12.5px;color:var(--text)}
@@ -518,7 +591,7 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 .prop .prio{flex:none}
 .prop-v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prop-n{color:var(--text-4);font-size:13px;font-variant-numeric:tabular-nums}
-.map{padding:8px 0 4px 6px}
+.map{padding:8px 0 6px 6px;overflow-x:auto;overscroll-behavior-x:contain}
 .map svg{font-family:var(--font);display:block}
 .map .layer{fill:var(--text-4);font-size:11px;font-weight:510;letter-spacing:.02em}
 .map .node rect{fill:var(--card);stroke:var(--chip-border);stroke-width:1}
@@ -531,7 +604,7 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 .map .file{fill:var(--text-3);font-family:var(--mono);font-size:10.5px}
 .map .edge{fill:none;stroke-width:1.3}
 .map .edge-new{stroke:#27a644}.map .edge-existing{stroke:#62666d}.map .edge-removed{stroke:#eb5757;stroke-dasharray:4 3}
-.map .elabel{font-size:10px;fill:var(--text-3)}.map .elabel-new{fill:#4fbf6f}
+.map .elabel{font-size:10px;fill:var(--text-3);stroke:var(--pane);stroke-width:3.5px;stroke-linejoin:round;paint-order:stroke fill}.map .elabel-new{fill:#4fbf6f}
 @media (max-width:900px){.body{flex-direction:column;padding:32px 20px}.rail{width:auto}.line{padding:8px 6px}.chips,.detail,.opts,.qnote,.qdetail{padding-left:12px}}
 </style></head><body class="${isReview ? 'review' : 'proposal'}"><div class="pane">
 <div class="top">
@@ -545,7 +618,7 @@ ${group('Behavior changes', behaviors.length, behaviorRows)}
 ${findingsBlock}
 ${(brief.flows || []).length ? group('Flows to test', brief.flows.length, flowRows) : ''}
 ${fixesBlock}
-${changedFiles.length ? group('Changed files', changedFiles.length, fileTree(), true) : ''}
+${changedFiles.length ? group('Changed files', changedFiles.length, filesByBehavior(), true) : ''}
 ${brief.map ? group('How it fits together', mapNodes.filter((x) => x.changed).length + ' changed', mapSvg(brief.map)) : ''}
 ${questions.length ? group('Decide', questions.length, questionRows) : ''}
 ${unexplained.length ? group('Files no line explains', unexplained.length, ledgerRows) : ''}
@@ -714,7 +787,12 @@ const md = [
   '',
   ...(isReview ? ['### Blockers', '', ...(findings.blockers.length ? findings.blockers.map(mdFinding) : ['none']), '', '### Non-blockers', '', ...(findings.nonBlockers.length ? findings.nonBlockers.map(mdFinding) : ['none']), ''] : []),
   ...((brief.flows || []).length ? ['### Flows to test', '', ...brief.flows.flatMap((f) => [`**${f.name}** (${(f.items || []).join(', ')})`, ...(f.steps || []).map((st, i) => `${i + 1}. ${st}`), ...(f.effect ? [f.effect] : []), '']), ] : []),
-  ...(changedFiles.length ? ['### Changed files', '', ...changedFiles.map(([k, p, note]) => `- ${fileMark[k]} \`${p}\`${note ? ': ' + note : ''}`), ''] : []),
+  ...(changedFiles.length ? ['### Changed files', '', ...fileGroups().flatMap((g) => [
+    `**${g.num ? g.num + '. ' : ''}${g.name}** (${plural(g.files.length, 'file')})`,
+    '',
+    ...g.files.map((f) => `- ${fileMark[f.kind]} \`${f.path}\`${f.note ? ': ' + f.note : ''}${f.why ? ' Why: ' + f.why : ''}`),
+    '',
+  ])] : []),
   ...((brief.touched || []).length ? ['### Touched', '', ...brief.touched.map((t) => `- ${t.name} (${plural(t.files, 'file')})`), ''] : []),
   ...(unexplained.length ? ['### Files no line explains', '', ...unexplained.map(([k, p]) => `- ${fileMark[k]} \`${p}\``), ''] : []),
   ...((brief.delta || []).length ? ['### Changed since the proposal', '', ...brief.delta.map((d) => `- **${d.kind}** ${d.text}`), ''] : []),
@@ -740,8 +818,10 @@ if (pw) {
   try {
     const { chromium } = await import(pathToFileURL(pw).href);
     const browser = await chromium.launch();
-    const page = await browser.newPage({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 });
+    const shotWidth = Math.min(2400, Math.max(1400, mapWidth + 540));
+    const page = await browser.newPage({ viewport: { width: shotWidth, height: 900 }, deviceScaleFactor: 2 });
     await page.goto(pathToFileURL(htmlPath).href);
+    await page.addStyleTag({ content: '.main-col{max-width:none}.after,.before,.where{max-width:820px}.map{overflow-x:visible}' });
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: pngPath, fullPage: true });
     await browser.close();

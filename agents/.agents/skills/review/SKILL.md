@@ -103,7 +103,7 @@ Proof is out of reach only when it needs something you cannot have: production d
 
 The review is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff, one note per file saying what changed in it and why.
+1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff, each entry `[kind, path, note, why]`: the note says what changed in that file, the why says what forced it.
 2. Write `~/.claude/briefs/<repo>/<branch>/review.json` with `mode: review`. One behavior line per behavior change the diff makes, with the files behind it and the proof from Step 6 as `verified`. `findings.blockers` holds what will cause problems; `findings.nonBlockers` holds the correctness items from Step 4 and anything that needs a human eye. Each finding names its `where` and the behavior numbers it puts at risk.
 3. When `~/.claude/briefs/<repo>/<branch>/proposal.json` exists, compare its behavior lines to yours and fill `delta`: lines the code added, dropped, or changed against what was approved. When it does not exist, leave `delta` out.
 4. Render and open:

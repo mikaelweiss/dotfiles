@@ -31,7 +31,7 @@ Copy `example.json` (proposal) or `example-review.json` (review) in this folder 
 | `behaviors` | One entry per behavior change, in reading order. See below |
 | `flows` | One entry per user flow touched. `name`, `items` (behavior numbers), and either `steps` (how to reach it in the UI, one action per step) or `effect` (what the user gains or loses when there is nothing to click) |
 | `touched` | One entry per area of the codebase changed: `name` as `<project> / <area>`, `files` count |
-| `changed_files` | Every file the change creates, edits, or deletes: `[kind, path, note]`. `kind` is `create`, `edit`, or `delete`. `note` is one line on what changed in that file and why; required in a review. In a review this list is `git diff --name-status` (A is create, M is edit, D is delete). The page shows it as a file tree, each file linked to the behavior that lists it |
+| `changed_files` | Every file the change creates, edits, or deletes: `[kind, path, note, why]`. `kind` is `create`, `edit`, or `delete`. `note` is one line on what changes in that file; required in a review. `why` is one line on why that file has to change, shown when the row opens; optional. In a review this list is `git diff --name-status` (A is create, M is edit, D is delete). The page groups the files under the behavior change that names them, first one wins, and each file carries the numbers of every behavior that lists it |
 | `map` | `layers`: column titles left to right, for example `["Entry", "Logic", "Storage"]`. `nodes`: `id`, `name`, `layer` (one of the titles, verbatim), `changed` (`create`, `edit`, `delete`, or `null`), `files` (a list of paths, for example `["src/auth/reset-limiter.ts"]`). `edges`: `from` and `to` are node ids, `kind` is `new`, `existing`, or `removed`, `label` is one to three words |
 | `questions` | Proposal only. Each: `q`, `options` (short, two to four), `recommend` (one of the options, verbatim), `detail` |
 | `findings` | Review only: `blockers` and `nonBlockers`. See below |
@@ -66,6 +66,7 @@ A blocker is what will cause problems if merged. A non-blocker is a correctness 
 - The list is as long as the number of behavior changes. Never cap it, never merge lines to shorten it.
 - `before` and `after` are the whole row. Put everything else in `detail`.
 - A file no line explains is a finding, not a footnote. Explain it or list it under a behavior.
+- `note` says what changes, `why` says why it has to. Neither restates the path.
 - Risk is about the blast radius if the line is wrong, not about how hard it was to write.
 - Every number on the page is the reply key. Do not renumber between renders of the same brief.
 

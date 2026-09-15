@@ -45,7 +45,7 @@ Genuine product or scope choices become `questions` in the brief: two to four sh
 
 The plan is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-1. Write `~/.claude/briefs/<repo>/<branch>/proposal.json`. One behavior line per behavior change, with the files it creates or edits. Gates from step 3 become the `test` on the line they pin. Invariants from step 4 go in that line's `detail`. Every file the plan will touch appears in `changed_files` and on a behavior line or a map node.
+1. Write `~/.claude/briefs/<repo>/<branch>/proposal.json`. One behavior line per behavior change, with the files it creates or edits. Gates from step 3 become the `test` on the line they pin. Invariants from step 4 go in that line's `detail`. Every file the plan will touch appears in `changed_files` as `[kind, path, note, why]` and on a behavior line or a map node, which is what groups it on the page.
 2. Render it and open it:
 
    ```bash
