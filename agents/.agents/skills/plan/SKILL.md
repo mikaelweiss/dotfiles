@@ -7,8 +7,6 @@ description: Repo-aware planning procedure that replaces ad-hoc plan-mode explor
 
 Plans fail in two ways: missing gates the repo documents somewhere, and missing failure modes nobody wrote down anywhere. This procedure buys both back for a few minutes of work. It drives the built-in plan machinery; it does not replace it.
 
-If not already in plan mode, call EnterPlanMode first.
-
 ## 1. Scope
 
 Name the surfaces the task will touch: the apps/libs, the concrete files where known, the API boundaries crossed, and any state that persists beyond one request (database rows, stored blobs, caches, localStorage, feature flags).
@@ -41,17 +39,21 @@ Write the chosen invariant for each as one sentence in the plan (for example: "a
 
 ## 5. Decisions
 
-Genuine product or scope choices go to the user as a numbered list of questions in chat, before the plan is finalized. Do not bury decisions inside the plan as assumptions.
+Genuine product or scope choices become `questions` in the brief: two to four short options, one recommended. Do not bury decisions inside the plan as assumptions, and do not ask them in chat.
 
-## 6. The artifact
+## 6. The artifact: a brief
 
-Use the repo's plan format if one exists (surestake: `docs/team/task-plans.md`). Otherwise:
+The plan is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-- **Goal**: one sentence, what changes for a user or caller.
-- **Acceptance criteria**: numbered, provable by a command, test, or manual step; includes every gate from step 3.
-- **Invariants**: the one-sentence outcomes of step 4.
-- **Out of scope**: including any deliberately skipped gate.
-- **Verification**: the exact commands and checklist references.
-- **Open questions**: anything from step 5 still unresolved.
+1. Write `~/.claude/briefs/<repo>/<branch>/proposal.json`. One behavior line per behavior change, with the files it creates or edits. Gates from step 3 become the `test` on the line they pin. Invariants from step 4 go in that line's `detail`. Every file the plan will touch appears in `changed_files` and on a behavior line or a map node.
+2. Render it and open it:
 
-Keep it lean: decisions and invariants, not prose. Each invariant should be implementable in a few lines and pinned by a test; prefer one decision plus one test over defensive sprawl. Then call ExitPlanMode.
+   ```bash
+   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/proposal.json
+   open ~/.claude/briefs/<repo>/<branch>/proposal.html
+   ```
+
+3. In chat, say only: the page is open, and the numbers of any lines that need a decision. Then stop.
+4. The reply is the copied notes from the page. Anything not listed is approved. Apply the listed changes to the JSON, render again, and start on the work when nothing remains open.
+
+If plan mode is on, the brief is the plan: call ExitPlanMode with the path and the open decisions, nothing more.

@@ -1,0 +1,291 @@
+{
+  "title": "Change brief system",
+  "mode": "proposal",
+  "branch": "dotfiles / main",
+  "user": "Before code and at review you get one page: every behavior change with its files, risk, and test, plus the flows it touches. You approve per line. Silence is approval.",
+  "behaviors": [
+    {
+      "before": "/plan ends in prose",
+      "after": "/plan ends in a brief and waits for notes",
+      "risk": "low",
+      "files": [
+        [
+          "create",
+          "~/code/dotfiles/agents/.agents/skills/brief/SKILL.md"
+        ],
+        [
+          "edit",
+          "~/code/dotfiles/agents/.agents/skills/plan/SKILL.md"
+        ]
+      ],
+      "test": null,
+      "detail": "Saves brief.json, brief.html, and brief.png under ~/.claude/briefs/<repo>/<branch>/. Nothing lands in git. Your reply is a numbered list; anything you do not mention is approved."
+    },
+    {
+      "before": "/review ends in prose",
+      "after": "/review ends in a brief, from any diff",
+      "risk": "med",
+      "files": [
+        [
+          "edit",
+          "~/code/dotfiles/agents/.agents/skills/review/SKILL.md"
+        ]
+      ],
+      "test": null,
+      "detail": "Uncommitted changes, a branch against main, or a PR: the brief is built from the diff alone and needs no plan. When a saved proposal exists for the branch, the page adds a 'changed since the proposal' list. Otherwise that list is absent."
+    },
+    {
+      "before": "/review-pr reviews in one session",
+      "after": "/review-pr gathers, judges, posts once, approves",
+      "risk": "med",
+      "files": [
+        [
+          "edit",
+          "~/code/dotfiles/agents/.agents/skills/review-pr/SKILL.md"
+        ]
+      ],
+      "test": null,
+      "detail": "Same flow as penguin: a reader subagent writes the dossier, the judge works from diff plus dossier and may send questions back twice. Blockers ask you before posting. The comment carries the brief as markdown plus Blockers and Non-blockers. The PNG path is printed for you to drag in."
+    },
+    {
+      "before": "No renderer",
+      "after": "JSON in, page and PNG out, about a second",
+      "risk": "low",
+      "files": [
+        [
+          "create",
+          "~/code/dotfiles/agents/.agents/skills/brief/render.mjs"
+        ],
+        [
+          "create",
+          "~/code/dotfiles/agents/.agents/skills/brief/example.json"
+        ],
+        [
+          "create",
+          "~/code/dotfiles/agents/.agents/skills/brief/package.json"
+        ]
+      ],
+      "test": {
+        "gap": "No test. Rendering example.json is the smoke check."
+      },
+      "detail": "Linear dark theme. Uses the surestake node_modules playwright-core and the Chromium already cached on this machine. Falls back to opening the HTML when Chromium is missing."
+    }
+  ],
+  "flows": [
+    {
+      "name": "Planning a task",
+      "items": [
+        1
+      ],
+      "steps": [
+        "In any repo, run /plan with a task",
+        "The brief opens in your browser",
+        "Tick, pick, or note each numbered line, then Copy notes at the bottom",
+        "Paste into chat. The skill starts on everything you did not object to"
+      ]
+    },
+    {
+      "name": "Reviewing your own branch",
+      "items": [
+        2
+      ],
+      "steps": [
+        "Run /review on uncommitted changes, a branch, or a PR number",
+        "The review brief opens with a verified-by chip on each line",
+        "When a proposal was saved for this branch, a 'changed since the proposal' section lists the drift"
+      ]
+    },
+    {
+      "name": "Reviewing someone's PR",
+      "items": [
+        3
+      ],
+      "steps": [
+        "Run /review-pr <number>",
+        "A reader subagent gathers the dossier, the judge writes the brief",
+        "With blockers, you are asked before anything posts",
+        "Without blockers, the comment posts and the PR is approved. The PNG path is printed to drag in"
+      ]
+    },
+    {
+      "name": "Rendering",
+      "items": [
+        4
+      ],
+      "effect": "Not visible in a UI. Every run above gets its page in about a second instead of a chat wall."
+    }
+  ],
+  "untouched": [
+    "surestake repo",
+    "team docs",
+    "CI",
+    "penguin"
+  ],
+  "questions": [],
+  "map": {
+    "layers": [
+      "Skills",
+      "Shared",
+      "Output",
+      "Outside"
+    ],
+    "nodes": [
+      {
+        "id": "plan",
+        "name": "/plan",
+        "layer": "Skills",
+        "changed": "edit",
+        "files": [
+          "plan/SKILL.md"
+        ]
+      },
+      {
+        "id": "review",
+        "name": "/review",
+        "layer": "Skills",
+        "changed": "edit",
+        "files": [
+          "review/SKILL.md"
+        ]
+      },
+      {
+        "id": "review-pr",
+        "name": "/review-pr",
+        "layer": "Skills",
+        "changed": "edit",
+        "files": [
+          "review-pr/SKILL.md"
+        ]
+      },
+      {
+        "id": "brief",
+        "name": "brief skill",
+        "layer": "Shared",
+        "changed": "create",
+        "files": [
+          "brief/SKILL.md",
+          "brief/render.mjs",
+          "brief/example.json",
+          "brief/package.json"
+        ]
+      },
+      {
+        "id": "briefs",
+        "name": "~/.claude/briefs",
+        "layer": "Output",
+        "changed": "create",
+        "files": [
+          "<repo>/<branch>/brief.json",
+          "brief.html",
+          "brief.png"
+        ]
+      },
+      {
+        "id": "chromium",
+        "name": "Playwright Chromium",
+        "layer": "Outside",
+        "changed": null,
+        "files": []
+      },
+      {
+        "id": "github",
+        "name": "GitHub PR",
+        "layer": "Outside",
+        "changed": null,
+        "files": []
+      }
+    ],
+    "edges": [
+      {
+        "from": "plan",
+        "to": "brief",
+        "kind": "new",
+        "label": "proposal"
+      },
+      {
+        "from": "review",
+        "to": "brief",
+        "kind": "new",
+        "label": "review"
+      },
+      {
+        "from": "review-pr",
+        "to": "brief",
+        "kind": "new",
+        "label": "review"
+      },
+      {
+        "from": "brief",
+        "to": "briefs",
+        "kind": "new",
+        "label": "json, html, png"
+      },
+      {
+        "from": "review",
+        "to": "briefs",
+        "kind": "new",
+        "label": "reads proposal"
+      },
+      {
+        "from": "brief",
+        "to": "chromium",
+        "kind": "new",
+        "label": "screenshot"
+      },
+      {
+        "from": "review-pr",
+        "to": "github",
+        "kind": "existing",
+        "label": "comment, approve"
+      }
+    ]
+  },
+  "changed_files": [
+    [
+      "create",
+      "~/code/dotfiles/agents/.agents/skills/brief/SKILL.md"
+    ],
+    [
+      "create",
+      "~/code/dotfiles/agents/.agents/skills/brief/render.mjs"
+    ],
+    [
+      "create",
+      "~/code/dotfiles/agents/.agents/skills/brief/example.json"
+    ],
+    [
+      "create",
+      "~/code/dotfiles/agents/.agents/skills/brief/package.json"
+    ],
+    [
+      "edit",
+      "~/code/dotfiles/agents/.agents/skills/plan/SKILL.md"
+    ],
+    [
+      "edit",
+      "~/code/dotfiles/agents/.agents/skills/review/SKILL.md"
+    ],
+    [
+      "edit",
+      "~/code/dotfiles/agents/.agents/skills/review-pr/SKILL.md"
+    ]
+  ],
+  "touched": [
+    {
+      "name": "dotfiles / skills / brief",
+      "files": 4
+    },
+    {
+      "name": "dotfiles / skills / plan",
+      "files": 1
+    },
+    {
+      "name": "dotfiles / skills / review",
+      "files": 1
+    },
+    {
+      "name": "dotfiles / skills / review-pr",
+      "files": 1
+    }
+  ]
+}

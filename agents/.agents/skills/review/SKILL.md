@@ -86,26 +86,18 @@ Write it, run it, and verify the issue
 ELSE
 Skip this step
 
-## Step 7 - Output
+## Step 7 - Output: a brief
 
-Respond to the user in the following format:
+The review is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-### Baseline:
+1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff.
+2. Write `~/.claude/briefs/<repo>/<branch>/review.json` with `mode: review`. One behavior line per behavior change the diff makes, with the files behind it. Each line's `verified` names the test, walkthrough step, or command that proves it, or is absent. `findings.blockers` holds what will cause problems; `findings.nonBlockers` holds the correctness items from Step 4 and anything that needs a human eye.
+3. When `~/.claude/briefs/<repo>/<branch>/proposal.json` exists, compare its behavior lines to yours and fill `delta`: lines the code added, dropped, or changed against what was approved. When it does not exist, leave `delta` out.
+4. Render and open:
 
-Give a very clear, simple, and organized summary of what was changed
+   ```bash
+   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json
+   open ~/.claude/briefs/<repo>/<branch>/review.html
+   ```
 
-### High impact changes
-
-Give a clear and simple explanation of areas of the code that were changed that are high impact and should be reviewed or tested carefully
-
-### Issues
-
-Give a clear and simple list of specific things that will cause problems
-
-### Correctness
-
-Give a clear and simple list of things related to correctness that you found in `Step 4`. Only list specific actionable items where the code does not follow established codebase patterns.
-
-### Verification
-
-Give a clear and simple explanation of things that aren't necessarily issues, but require human review. For example, behavior changes and things like that.
+5. In chat: the page path, the blocker count, and nothing else.

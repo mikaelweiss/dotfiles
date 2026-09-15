@@ -1,107 +1,52 @@
 ---
 name: review-pr
 description: >
-  Review a PR for issues
+  Review a pull request: a reader gathers the facts, the judge rules from the diff and the dossier, the result posts once as a brief with blockers and non-blockers, and the PR is approved when nothing blocks.
 user-invocable: true
 ---
 
-# Review a set of code
+# Review a pull request
 
-The user will either ask you to review a PR
+The user names a PR by number or URL. Read it with `gh pr view` and `gh pr diff`. Never comment, review, or approve until the last step, and never more than once per round.
 
-## Step 1 - Organize
+## Step 1 - Gather
 
-First, look at what files have changed
+Spawn one sub-agent (`description` and `prompt` only, Opus 5) with the PR title, description, comments, base branch, changed files, and the diff. Its job is the `review-gather` procedure, and its report is the dossier:
 
-Assign each file one of three tiers. State the assignments in one compact grouped list before reading further, so the allocation is visible and deliberate
+- Every changed file with a tier (`ignore`, `skim`, `deep`), what the diff does to it, and what it read about it: callers of every new or changed exported symbol, functions the changed code calls, contracts it implements, config that alters it, the counterpart when parity is claimed. Each entry is one line with `file:line`.
+- Every significant flow: entry, steps, exits, effects, each with `file:line`.
+- Every piece of state the diff touches, with every writer and every reader, each with `file:line`.
+- Facts a reader of the diff alone would have to guess: repo conventions, what a called function really does, how the code behaved before.
+- The repo's own gate commands run on the PR head, with their output.
 
-1. Ignore/tool-verify - these are files that don't really matter to review and were most likely set up right, or things that a command checks better than reading.
-2. Skim - these are files that don't have high impact if incorrect in some way, but it'd be good to look at just in case
-3. Deep - These are files that are high impact and should be carefully reviewed
+Facts only, no verdicts. Tell it not to write to GitHub.
 
-Run basic repo commands to verify that the code is in a good state, or if it isn't, you now have the baseline for as you review
+## Step 2 - Judge
 
-## Step 2 - Skim
+Judge from the diff and the dossier alone. Do not open the tree yourself. Walk each state mechanism through: first load, change while visible, change while not rendered, an external actor mutating the surroundings, empty data, interruption halfway.
 
-Skim the type 2 files found in `Step 1` for anything that might cause issues
+Challenge every finding before it stands: is it real, is it new, is it provable with `file:line` from the diff or dossier, would you bet on it, is the fix ready, is the severity right. A finding you cannot prove from what you hold is a question. Collect the questions and spawn one more gather sub-agent with them, at most twice. Then rule on what you have and drop what is still unproven.
 
-## Step 3 - Deep
+Read the PR description and comments last. Drop any finding the conversation already covers.
 
-Follow these steps for each of the high impact files:
+## Step 3 - The brief
 
-### Read related code to answer named questions
+Load the `brief` skill. Write `~/.claude/briefs/<repo>/pr-<number>/review.json` with `mode: review`: one behavior line per behavior change the diff makes, built from the code and never from the PR description, each with its files and its `verified` proof. `findings.blockers` and `findings.nonBlockers` hold the surviving findings, one specific actionable line each. `changed_files` is the PR's file list. Render it:
 
-Bugs live in the connections, so follow the connections of what changed, not the neighborhood around it:
+```bash
+node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/pr-<number>/review.json
+```
 
-- Callers of every new or changed exported symbol. Find them with grep or ast-grep, then read the enclosing function at each call site.
-- Functions the changed code calls, when their behavior matters to the change.
-- Types, schemas, and contracts the changed code implements or consumes.
-- Configuration that alters the changed code's behavior.
-- The counterpart implementation, when the change claims parity with existing code.
+## Step 4 - Post
 
-### Trace the end-to-end flow
+With blockers: show the page path and the blockers in chat and ask before anything posts. The user says post, or answers the findings. An answer re-enters Step 2 with the user's words; adjust where they are right, keep what you can still prove, and ask again.
 
-Trace the execution path of every significant change:
+Without blockers, or when the user says post:
 
-1. **Entry point**: where does execution enter this code? (API handler, UI event, cron job, etc.)
-2. **Data flow**: what data comes in? How is it transformed? Where does it go?
-3. **Exit points**: what are all the ways this code can complete? (success, error, early return, exception)
-4. **Side effects**: what state does this code modify? (database writes, file system, cache, global state, UI state)
-5. **Failure modes**: what happens when dependencies fail? (network errors, null values, invalid input, concurrent modification)
+```bash
+gh pr comment <number> --body-file ~/.claude/briefs/<repo>/pr-<number>/review.md
+```
 
-State your premises explicitly. Do not say "this function probably does X". Read the function and confirm what it actually does. If you find yourself guessing what a function does based on its name, stop and read it.
+When nothing blocks and the user is a requested reviewer, `gh pr review <number> --approve`. Your own PR refuses an approve; say so and move on.
 
-### Enumerate scenarios for stateful mechanisms
-
-Most missed bugs are an untraced scenario, not an unread file.
-
-For each piece of state the diff introduces or touches (component state, refs, effect dependency arrays, caches, pending flags, persisted rows), list every writer and every reader. Then check the mechanism against each of these scenarios:
-
-1. Initial mount or first load.
-2. The state changes while its target is rendered or visible.
-3. The state changes while its target is not rendered (virtualized away, unmounted, detached).
-4. An external actor mutates the surroundings: scroll, resize, navigation, refetch, a second writer.
-5. The data is empty, or becomes empty after it was populated.
-6. The flow is interrupted halfway.
-
-## Step 4 - Correctness
-
-Review the code for correctness. Things like code base conventions and things like that. Make sure that good architectural patterns are followed, good UI patterns, good code quality, et cetera. It's especially important to follow the code base architecture and patterns.
-
-## Step 5 - Verify
-
-For every issue you are about to report, challenge it:
-
-1. **Is it real?** Read the actual code path that triggers the bug. Can you name the specific input or state that causes it?
-2. **Is it new?** Check if this issue existed before the change. If it did, do not flag it.
-3. **Is it provable?** Can you cite the specific file and line where the problem occurs, and the specific file and line of the code that interacts with it badly?
-4. **Would you bet on it?** If the author pushed back and said "that's not a bug", could you prove them wrong by pointing to concrete code?
-5. **Is it fix-ready?** Sketch the fix. Name every file the fix would touch and confirm you have read each one. If the sketch needs a file you have not read, read it now, then re-test the finding against what you learned. Many candidate issues die here, when the fix attempt reveals code that already handles the case. Report only findings whose fix you could start immediately.
-6. **Is it the right severity?** Do not say "this will crash" when you mean "this could return an unexpected value in an edge case". Calibrate your language to the actual impact.
-
-## Step 6 - Verify with code
-
-IF (it would be helpful to write a snippet or scratch pad or script or something temp to prove the finding)
-Write it, run it, and verify the issue
-ELSE
-Skip this step
-
-## Step 7 - Read PR description and comments
-
-Read the PR description and comments to verify any findings are new
-
-## Step 7 - Output
-
-Post to the PR with the following format
-
-### Blockers
-
-Give a clear and simple list of specific things that are blockers
-
-### Non-blockers
-
-Give a clear and simple list of specific things that are non-blockers
-
-## Cleanup
-
-If mikaelweiss is a requested reviewer of the PR and if there are no blockers, mark the PR as approved
+End with the PNG path. The user drags it into the comment.

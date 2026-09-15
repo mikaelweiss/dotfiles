@@ -209,7 +209,8 @@
     "context7@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": false,
     "worktrunk@worktrunk": true,
-    "atlassian@claude-plugins-official": false
+    "atlassian@claude-plugins-official": false,
+    "sentry@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
