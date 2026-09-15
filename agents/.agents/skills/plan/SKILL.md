@@ -16,7 +16,7 @@ Name the surfaces the task will touch: the apps/libs, the concrete files where k
 The goal is the documents that govern this change, found by lookup rather than archaeology. In order:
 
 1. Run `python3 ~/.claude/hooks/rule-bridge.py --check <candidate paths>` from the repo root. Read every matched rule file in full.
-2. If the repo has an instruction map (surestake: `docs/development/agent-instructions.md`) or the root CLAUDE.md links binding standards docs for the touched surfaces, read the ones that apply.
+2. If the repo has an instruction map or the root CLAUDE.md links binding standards docs for the touched surfaces, read the ones that apply.
 3. Read the entry-point files that will change and their immediate callers.
 4. Live-verify boundary facts instead of assuming them: what an endpoint actually returns (read the server code or call it), what a resource actually emits, what an existing helper actually does. A plan built on a wrong assumption fails at the cheapest possible point here and the most expensive point later.
 

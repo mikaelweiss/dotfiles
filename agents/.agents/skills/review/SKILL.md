@@ -79,19 +79,18 @@ For every issue you are about to report, challenge it:
 5. **Is it fix-ready?** Sketch the fix. Name every file the fix would touch and confirm you have read each one. If the sketch needs a file you have not read, read it now, then re-test the finding against what you learned. Many candidate issues die here, when the fix attempt reveals code that already handles the case. Report only findings whose fix you could start immediately.
 6. **Is it the right severity?** Do not say "this will crash" when you mean "this could return an unexpected value in an edge case". Calibrate your language to the actual impact.
 
-## Step 6 - Verify with code
+## Step 6 - Prove every behavior
 
-IF (it would be helpful to write a snippet or scratch pad or script or something temp to prove the finding)
-Write it, run it, and verify the issue
-ELSE
-Skip this step
+Every behavior change the diff makes gets a proof before it goes on the page: a command you ran, a test you ran, or a scratch reproduction you built, each with its result. A finding needs the same. If proving it takes a scratch commit, a fake hook payload, or a throwaway repo, build it. Reading the code and finding it plausible is not proof.
+
+Proof is out of reach only when it needs something you cannot have: production data, a paid external service, a physical device. Then the line carries `why` instead, one sentence naming what you needed, and the page lists it as a human check.
 
 ## Step 7 - Output: a brief
 
 The review is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff.
-2. Write `~/.claude/briefs/<repo>/<branch>/review.json` with `mode: review`. One behavior line per behavior change the diff makes, with the files behind it. Each line's `verified` names the test, walkthrough step, or command that proves it, or is absent. `findings.blockers` holds what will cause problems; `findings.nonBlockers` holds the correctness items from Step 4 and anything that needs a human eye.
+1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff, one note per file saying what changed in it and why.
+2. Write `~/.claude/briefs/<repo>/<branch>/review.json` with `mode: review`. One behavior line per behavior change the diff makes, with the files behind it and the proof from Step 6 as `verified`. `findings.blockers` holds what will cause problems; `findings.nonBlockers` holds the correctness items from Step 4 and anything that needs a human eye. Each finding names its `where` and the behavior numbers it puts at risk.
 3. When `~/.claude/briefs/<repo>/<branch>/proposal.json` exists, compare its behavior lines to yours and fill `delta`: lines the code added, dropped, or changed against what was approved. When it does not exist, leave `delta` out.
 4. Render and open:
 
@@ -99,5 +98,7 @@ The review is a brief, rendered as a page. Load the `brief` skill and follow its
    node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json
    open ~/.claude/briefs/<repo>/<branch>/review.html
    ```
+
+   The renderer refuses a brief with a missing field and prints one line per problem. Fix each one and render again.
 
 5. In chat: the page path, the blocker count, and nothing else.

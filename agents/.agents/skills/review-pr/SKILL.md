@@ -31,7 +31,7 @@ Read the PR description and comments last. Drop any finding the conversation alr
 
 ## Step 3 - The brief
 
-Load the `brief` skill. Write `~/.claude/briefs/<repo>/pr-<number>/review.json` with `mode: review`: one behavior line per behavior change the diff makes, built from the code and never from the PR description, each with its files and its `verified` proof. `findings.blockers` and `findings.nonBlockers` hold the surviving findings, one specific actionable line each. `changed_files` is the PR's file list. Render it:
+Load the `brief` skill. Write `~/.claude/briefs/<repo>/pr-<number>/review.json` with `mode: review`: one behavior line per behavior change the diff makes, built from the code and never from the PR description, each with its files and its `verified` proof. `findings.blockers` and `findings.nonBlockers` hold the surviving findings, each with a title, its `where`, the behavior numbers it puts at risk, and the evidence and fix as `detail`. `changed_files` is the PR's file list with one note per file. Render it, and fix every problem the renderer names before going on:
 
 ```bash
 node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/pr-<number>/review.json
