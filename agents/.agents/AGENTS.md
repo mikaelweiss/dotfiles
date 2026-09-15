@@ -5,7 +5,7 @@ I love simplicity and clarity.
 
 ## Sub-agents
 
-Spawn with `description` and `prompt` only and read the final report from the tool result. Never pass `name` (it creates an addressable teammate with mailbox machinery; SendMessage back-and-forth is equally banned). Put every reporting requirement in the spawn prompt so the report is complete on its own. Use Opus 5 for sub-agents, never Fable.
+Spawn with `description` and `prompt` only and read the final report from the tool result. Never pass `name` (it creates an addressable teammate with mailbox machinery; SendMessage back-and-forth is equally banned). Put every reporting requirement in the spawn prompt so the report is complete on its own. Use Opus/Sonnet for sub-agents, never Fable.
 
 ## Plan mode
 
