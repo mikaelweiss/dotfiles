@@ -77,8 +77,8 @@ A proposal page copies approvals and notes by number:
 ```
 ---
 ## Notes from "<title>"
-3. a
-5. use the existing helper instead
+- 3. a
+- 5. use the existing helper instead
 Other: ...
 ---
 ```

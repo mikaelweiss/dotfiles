@@ -713,7 +713,7 @@ ${notesBlock}
       const pick = r.querySelector('input[type=radio]:checked'); if (pick) parts.push(pick.value);
       const ok = r.querySelector('input[type=checkbox]'); if (ok && ok.checked) parts.push('ok');
       const note = noteOf(id); if (note) parts.push(note);
-      if (parts.length) lines.push(id + '. ' + parts.join(', '));
+      if (parts.length) lines.push('- ' + id + '. ' + parts.join(', '));
     });
     const extra = (notes?.value || '').trim();
     const out = ['---', '## Notes from ' + JSON.stringify(${JSON.stringify(brief.title)})];
