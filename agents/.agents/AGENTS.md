@@ -45,7 +45,7 @@ Structural questions (calls of a given shape, functions missing a guard) go to `
 
 ## Stacked branches
 
-Before any push, run `gh stack view`. If the branch is in a stack, push with `gh stack push`, never `git push`. After a lower PR merges, run `gh stack sync` so the branches above rebase and retarget. Never push to a stacked branch from a worktree that does not hold the stack.
+A stack is a chain of branches, each off the one below instead of the trunk, so one big change reviews as ordered PRs. The `gh stack` extension owns the chain: `push` sends every branch, `submit` opens every PR, `sync` rebases the ones above a merge. Plain `git push` moves one link and strands the rest. `gh stack view --json` says whether a branch is in one. Most are not.
 
 ## Large machine-generated files
 
