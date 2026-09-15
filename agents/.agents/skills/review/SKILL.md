@@ -9,6 +9,15 @@ user-invocable: true
 
 The user will either ask you to review a branch, a PR, or a certain diff like the uncommited code
 
+## Safety guarantee
+
+This review is read-only and non-destructive:
+- Never commit code under any circumstance, not even temporarily for verification
+- Never modify files in the working tree
+- Always restore the working state exactly as it was when review started
+- Any temporary verification (scratch scripts, test outputs, etc.) runs in the scratchpad directory only
+- Clean up all temporary files before the review ends
+
 ## Step 1 - Organize
 
 First, look at what files have changed
@@ -81,7 +90,12 @@ For every issue you are about to report, challenge it:
 
 ## Step 6 - Prove every behavior
 
-Every behavior change the diff makes gets a proof before it goes on the page: a command you ran, a test you ran, or a scratch reproduction you built, each with its result. A finding needs the same. If proving it takes a scratch commit, a fake hook payload, or a throwaway repo, build it. Reading the code and finding it plausible is not proof.
+Every behavior change the diff makes gets a proof before it goes on the page: a command you ran, a test you ran, or a scratch reproduction you built, each with its result. A finding needs the same.
+
+Do NOT modify the working tree. Use the scratchpad directory only:
+- Run tests with `npm test` or similar (against committed/staged code as-is, no temp commits)
+- Extract reproduction scripts to the scratchpad and run them there
+- Use `git diff` or `git show` to analyze the actual code paths without modifying anything
 
 Proof is out of reach only when it needs something you cannot have: production data, a paid external service, a physical device. Then the line carries `why` instead, one sentence naming what you needed, and the page lists it as a human check.
 
@@ -102,3 +116,10 @@ The review is a brief, rendered as a page. Load the `brief` skill and follow its
    The renderer refuses a brief with a missing field and prints one line per problem. Fix each one and render again.
 
 5. In chat: the page path, the blocker count, and nothing else.
+
+## Step 8 - Cleanup
+
+Before finishing:
+- Verify the working tree is exactly as it was at the start with `git status`
+- Delete any temporary files created in the scratchpad during verification
+- Confirm no uncommitted changes were introduced to the repo
