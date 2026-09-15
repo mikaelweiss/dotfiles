@@ -99,4 +99,6 @@ A number with `ok` or nothing is approved. A number with a letter is the option 
 
 Put the whole reply into `notes` verbatim, make the changes, and render with `--open`. The next version shows the reply and what it changed. Replace `notes` with each new reply; never append.
 
+The proposal page also copies a prompt, from Copy as prompt beside Copy notes. It is the implement command with the path of the proposal, then the same notes block. Paste it into a fresh session: the implement skill reads the proposal from the path, applies the notes, builds each line, and ends by comparing what it built to each line.
+
 A review page copies a prompt for a fresh session. It carries the branch, then each finding the user ticked or annotated with its full text, each behavior or file the user annotated, and the closing notes. It is complete on its own: the agent that receives it does not need the page.

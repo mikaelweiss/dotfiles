@@ -1,30 +1,51 @@
 ---
 name: implement
 description: >
-  Implement a single spec file from the plan skill. One spec per session.
-  Takes a spec file path as an argument.
+  Implement one spec file from .specs/ or one brief proposal from the plan skill. One per session.
+  Takes the path as an argument: a spec file or a proposal.json under ~/.claude/briefs/.
   Triggers: "implement", "implement this spec", "implement <path>".
 user-invocable: true
 ---
 
 # Implement
 
-Implement exactly one spec. One spec, one session, one small reviewable change.
+Implement exactly one spec or one proposal. One per session, one small reviewable change.
 
 ## Usage
 
-The user invokes this skill with a path to a spec file:
+The user invokes this skill with a path to a spec file or a proposal:
 ```
 /implement .specs/001-add-data-model.md
+/implement ~/.claude/briefs/<repo>/<branch>/proposal.json
 ```
 
 If no path is provided, look for a `.specs/` directory and list available specs. Help the user pick the next one based on numbering and dependency order.
+
+A proposal path may be followed by the notes block copied from the proposal page:
+```
+---
+## Notes from "<title>" v2
+- 3. a
+- 5. use the existing helper instead
+Other: ...
+---
+```
+
+## A proposal
+
+The proposal is the brief skill's JSON, and it reads as a spec:
+
+- Each behavior line is a requirement. `before` and `after` say what changes, `detail` carries the reasoning and the constraints, and `test` names the test that pins it. Write that test.
+- `changed_files` is the closed Files list. `flows` say how a user reaches each change; walk them when you verify.
+- The notes block settles what the page left open. A number with a letter picks that option of a question. A number with text is a change to make to that line before building. `Other` applies to the whole proposal. A question still in the JSON with no letter in the notes is unanswered: stop and ask before building.
+
+Everything below applies to a proposal as it does to a spec, and the report closes with the line-by-line comparison.
 
 ## Process
 
 ### Step 1: Read the spec
 
-Read the spec file completely. This is your single source of truth for what to build.
+Read the spec or proposal completely. This is your single source of truth for what to build.
 
 ### Step 2: Read the context
 
@@ -57,11 +78,12 @@ When done, print a short summary:
 - Files created or modified (list)
 - Tests added or updated (list)
 - Any concerns or deviations from the spec
+- For a proposal, every behavior line by number: built as written, built differently, or not built. A line built differently or not built says what forced it
 - Remind the user: "This spec is complete. Start a new session for the next spec."
 
 ## Rules
 
-- **One spec per session.** Never read the next spec. Never start the next task. When this spec is done, stop.
+- **One spec or proposal per session.** Never read the next spec. Never start the next task. When this spec is done, stop.
 - **Don't commit or branch.** The user manages git workflow themselves.
 - **Don't create PRs.** The user handles that.
 - **Spec is authoritative.** If the spec says to do X, do X. If you think the spec is wrong, flag it to the user — don't silently deviate.

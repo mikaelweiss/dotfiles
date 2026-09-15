@@ -554,7 +554,7 @@ const topRight = `${ctx.readOnly ? chip('Read only') : ''}${verMenu}`;
 
 const notesBlock = isReview
   ? `<div class="notes"><h2>Notes</h2><textarea id="notes" rows="4" placeholder="Anything else the next agent should do. Included when you copy."></textarea><div class="notes-actions"><button id="copy" class="pill" type="button">Copy as prompt ↑</button><span class="hint">Paste into a fresh session. Only ticked and noted items are included.</span></div></div>`
-  : `<div class="notes"><h2>Notes</h2><textarea id="notes" rows="4" placeholder="Anything else. Included when you copy notes."></textarea><div class="notes-actions"><button id="copy" class="pill" type="button">Copy notes ↑</button><span class="hint">Paste into chat. Anything not listed counts as approved.</span></div></div>`;
+  : `<div class="notes"><h2>Notes</h2><textarea id="notes" rows="4" placeholder="Anything else. Included when you copy notes."></textarea><div class="notes-actions"><button id="copy" class="pill" type="button">Copy notes ↑</button><button id="copy-prompt" class="pill" type="button">Copy as prompt ↑</button><span class="hint">Notes go back into chat. The prompt starts a fresh session on this proposal. Anything not listed counts as approved.</span></div></div>`;
 
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -858,20 +858,19 @@ ${notesBlock}
     return out.join('\\n');
   };
   const fixPrompt = ${JSON.stringify(fixPrompt).replace(/</g, '\\u003c')};
-  const copyFixes = document.getElementById('copy-fixes');
-  if (copyFixes) copyFixes.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const label = copyFixes.textContent;
-    try { await navigator.clipboard.writeText(fixPrompt); copyFixes.textContent = 'Copied \u2713'; } catch { copyFixes.textContent = 'Copy failed'; }
-    setTimeout(() => { copyFixes.textContent = label; }, 1800);
-  });
-  const copy = document.getElementById('copy');
-  if (copy) copy.addEventListener('click', async () => {
-    const text = isReview ? reviewText() : proposalText();
-    const label = copy.textContent;
-    try { await navigator.clipboard.writeText(text); copy.textContent = 'Copied ✓'; } catch { copy.textContent = 'Copy failed'; }
-    setTimeout(() => { copy.textContent = label; }, 1800);
-  });
+  const implementPrompt = () => '/implement ' + ${JSON.stringify(ctx.jsonPath)} + '\\n\\n' + proposalText();
+  const copyOn = (id, text) => {
+    const button = document.getElementById(id); if (!button) return;
+    button.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const label = button.textContent;
+      try { await navigator.clipboard.writeText(text()); button.textContent = 'Copied ✓'; } catch { button.textContent = 'Copy failed'; }
+      setTimeout(() => { button.textContent = label; }, 1800);
+    });
+  };
+  copyOn('copy-fixes', () => fixPrompt);
+  copyOn('copy', () => isReview ? reviewText() : proposalText());
+  copyOn('copy-prompt', implementPrompt);
 })();
 </script></body></html>`;
 
@@ -918,6 +917,7 @@ versions.forEach((s) => {
     hrefFor: (v) => relative(dirname(page), pageFor(v)),
     history: historyAll.filter((h) => h.v <= s.v).reverse(),
     stateKey: `brief:${realDir}/${stem}:v${s.v}`,
+    jsonPath: join(realDir, stem + '.json'),
   });
   writeFileSync(page, built.html);
   if (s.v === current.v) { writeFileSync(mdPath, built.md); mapWidth = built.mapWidth; }
