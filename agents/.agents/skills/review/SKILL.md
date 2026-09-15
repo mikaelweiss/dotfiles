@@ -109,8 +109,7 @@ The review is a brief, rendered as a page. Load the `brief` skill and follow its
 4. Render and open:
 
    ```bash
-   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json
-   open ~/.claude/briefs/<repo>/<branch>/review.html
+   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json --open
    ```
 
    The renderer refuses a brief with a missing field and prints one line per problem. Fix each one and render again.

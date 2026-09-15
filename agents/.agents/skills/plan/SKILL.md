@@ -35,7 +35,7 @@ For every piece of persisted state, shared resource, or concurrent actor in the 
 - What happens when permissions, tenant, or selection context shift underneath a live view?
 - What happens when the flow is interrupted halfway?
 
-Write the chosen invariant for each as one sentence in the plan (for example: "a client that reads a document version it does not understand renders nothing and never writes"). Skipping a question because it genuinely cannot occur is fine; say so in a clause, not by silence.
+Write the answer to each as one plain sentence in the plan (for example: "a client that reads a document version it does not understand shows nothing and never writes"). Never label it an invariant; the reader should not need the word. Skipping a question because it genuinely cannot occur is fine; say so in a clause, not by silence.
 
 ## 5. Decisions
 
@@ -45,15 +45,14 @@ Genuine product or scope choices become `questions` in the brief: two to four sh
 
 The plan is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
 
-1. Write `~/.claude/briefs/<repo>/<branch>/proposal.json`. One behavior line per behavior change, with the files it creates or edits. Gates from step 3 become the `test` on the line they pin. Invariants from step 4 go in that line's `detail`. Every file the plan will touch appears in `changed_files` as `[kind, path, note, why]` and on a behavior line or a map node, which is what groups it on the page.
+1. Write `~/.claude/briefs/<repo>/<branch>/proposal.json`. One behavior line per behavior change, with the files it creates or edits. Gates from step 3 become the `test` on the line they pin. The answers from step 4 go in that line's `detail` as plain sentences. Every file the plan will touch appears in `changed_files` as `[kind, path, note, why]` and on a behavior line or a map node, which is what groups it on the page.
 2. Render it and open it:
 
    ```bash
-   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/proposal.json
-   open ~/.claude/briefs/<repo>/<branch>/proposal.html
+   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/proposal.json --open
    ```
 
 3. In chat, say only: the page is open, and the numbers of any lines that need a decision. Then stop.
-4. The reply is the copied notes from the page. Anything not listed is approved. Apply the listed changes to the JSON, render again, and start on the work when nothing remains open.
+4. The reply is the copied notes from the page. Anything not listed is approved. Put the reply into the brief's `notes` field verbatim, apply the listed changes, and render with `--open` again. The tab the user already has reloads on the next version, showing their notes and what changed. Start on the work when nothing remains open.
 
 If plan mode is on, the brief is the plan: call ExitPlanMode with the path and the open decisions, nothing more.

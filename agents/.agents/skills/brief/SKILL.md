@@ -8,15 +8,16 @@ description: Render a change brief: one page that lists every behavior change wi
 One JSON file in, one page out. The page is the deliverable; chat carries only the path and what the user must decide.
 
 ```bash
-node ~/.claude/skills/brief/render.mjs <dir>/<name>.json
-open <dir>/<name>.html
+node ~/.claude/skills/brief/render.mjs <dir>/<name>.json --open
 ```
 
-Output lands next to the JSON: `<name>.html` (interactive), `<name>.png` (one image for a PR body or comment), `<name>.md` (text for a PR comment). The renderer looks for `playwright-core` in this folder, then the current repo, then every repo under `~/code`. Without it the HTML and markdown still render and the command prints `no png`.
+Output lands next to the JSON: `<name>.html` (interactive), `<name>.png` (one image for a PR body or comment), `<name>.md` (text for a PR comment). `--open` shows the page: when the browser already has it in a tab, that tab reloads and comes forward, otherwise it opens once. Leave the flag off when nobody needs to see the page, as for a PR comment. The renderer looks for `playwright-core` in this folder, then the current repo, then every repo under `~/code`. Without it the HTML and markdown still render and the command prints `no png`.
 
 The renderer validates the JSON before writing anything. A bad brief renders nothing and prints one line per problem, naming the field. Fix every line and run it again.
 
 Briefs live at `~/.claude/briefs/<repo>/<branch>/`. A proposal is `proposal.json`. A review is `review.json`. Never inside a repo, never in git.
+
+Every render that changes the brief saves a copy under `history/` as the next version: v1, v2, and so on. The page shows its version top right with a menu to switch. An earlier version opens read only, with the ticks and notes the user made on it. The newest version's page also lists, under History, each version's notes and what changed in it.
 
 ## The shape
 
@@ -28,6 +29,7 @@ Copy `example.json` (proposal) or `example-review.json` (review) in this folder 
 | `mode` | `proposal` or `review` |
 | `branch` | `<repo> / <branch>` |
 | `user` | One or two sentences: what a user can do after this that they could not before, or what changes for them |
+| `notes` | The notes the user pasted in chat, verbatim, when this render answers them. Leave it out on the first render. The page shows them under the version they produced |
 | `behaviors` | One entry per behavior change, in reading order. See below |
 | `flows` | One entry per user flow touched. `name`, `items` (behavior numbers), and either `steps` (how to reach it in the UI, one action per step) or `effect` (what the user gains or loses when there is nothing to click) |
 | `touched` | One entry per area of the codebase changed: `name` as `<project> / <area>`, `files` count |
@@ -68,15 +70,25 @@ A blocker is what will cause problems if merged. A non-blocker is a correctness 
 - A file no line explains is a finding, not a footnote. Explain it or list it under a behavior.
 - `note` says what changes, `why` says why it has to. Neither restates the path.
 - Risk is about the blast radius if the line is wrong, not about how hard it was to write.
-- Every number on the page is the reply key. Do not renumber between renders of the same brief.
+- Every number on the page is the reply key. Keep lines in place between versions. A dropped line shows in History under its old number, and a moved line names both numbers.
+
+## Writing
+
+Write for the person who reads the page, not for the agent that implements it. They will never open the code.
+
+- Say what happens to the reader, not what the code does. "A new version opens with nothing ticked", not "state is keyed by version".
+- No field names, file names, or placeholder shapes inside a sentence. A path belongs on a file row, not in prose.
+- A test line says what to do and what the reader should see, in one or two sentences.
+- No labels such as "Invariant:". Write the fact as a plain sentence.
+- Read every line as if aloud. If it needs the code to make sense, rewrite it.
 
 ## Reading the reply
 
-A proposal page copies approvals and notes by number:
+A proposal page copies approvals and notes by number, with the version they were made on:
 
 ```
 ---
-## Notes from "<title>"
+## Notes from "<title>" v1
 - 3. a
 - 5. use the existing helper instead
 Other: ...
@@ -84,5 +96,7 @@ Other: ...
 ```
 
 A number with `ok` or nothing is approved. A number with a letter is the option picked. A number with text is a change to make before starting. Anything not listed is approved. `Other` applies to the whole brief.
+
+Put the whole reply into `notes` verbatim, make the changes, and render with `--open`. The next version shows the reply and what it changed. Replace `notes` with each new reply; never append.
 
 A review page copies a prompt for a fresh session. It carries the branch, then each finding the user ticked or annotated with its full text, each behavior or file the user annotated, and the closing notes. It is complete on its own: the agent that receives it does not need the page.

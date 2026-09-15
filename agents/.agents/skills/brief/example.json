@@ -13,7 +13,7 @@
         ["edit", "src/auth/reset-controller.ts"]
       ],
       "test": "test/auth/reset-limiter.test.ts: refuses the sixth request, allows the first after the window",
-      "detail": "The limiter counts requests per lowercased email in the cache with the window length as the TTL. The controller checks it before queueing the email, so a refused request sends nothing. Invariant: a counter older than the window never blocks a request."
+      "detail": "The limiter counts requests per lowercased email in the cache, and each count expires with the window. The controller checks it before queueing the email, so a refused request sends nothing. A counter older than the window never blocks a request."
     },
     {
       "before": "Refused requests look like success",
@@ -84,7 +84,7 @@
       "q": "Where does the counter live?",
       "options": ["Cache", "Database", "In memory"],
       "recommend": "Cache",
-      "detail": "The cache already has TTL support and is shared across instances. The database adds a migration for a value that expires in an hour. In memory breaks with more than one instance."
+      "detail": "The cache already expires entries on its own and is shared across instances. The database adds a migration for a value that expires in an hour. In memory breaks with more than one instance."
     },
     {
       "q": "What does the sixth request return?",

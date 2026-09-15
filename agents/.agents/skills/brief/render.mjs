@@ -1,11 +1,14 @@
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
-import { resolve, dirname, basename, join } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, statSync, realpathSync } from 'node:fs';
+import { resolve, dirname, basename, join, relative } from 'node:path';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
-const [, , input] = process.argv;
-if (!input) { console.error('usage: node render.mjs <brief.json>'); process.exit(2); }
+const args = process.argv.slice(2);
+const openAfter = args.includes('--open');
+const input = args.find((a) => !a.startsWith('--'));
+if (!input) { console.error('usage: node render.mjs <brief.json> [--open]'); process.exit(2); }
 const brief = JSON.parse(readFileSync(input, 'utf8'));
 const outDir = dirname(resolve(input));
 const stem = basename(input).replace(/\.json$/, '');
@@ -25,6 +28,7 @@ const validate = (b) => {
   need(str(b.title), 'title: missing');
   need(['proposal', 'review'].includes(b.mode), `mode: "${b.mode}" is not proposal or review`);
   need(str(b.user), 'user: missing');
+  need(b.notes === undefined || str(b.notes), 'notes: the pasted notes verbatim, or leave it out');
   need(behaviorCount > 0, 'behaviors: empty');
   (b.behaviors || []).forEach((x, i) => {
     const at = `behaviors[${i + 1}]`;
@@ -104,6 +108,76 @@ if (problems.length) {
   process.exit(1);
 }
 
+const historyDir = join(outDir, 'history');
+const stable = (o) => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.fromEntries(Object.keys(v).sort().map((x) => [x, v[x]])) : v);
+const loadHistory = () => {
+  if (!existsSync(historyDir)) return [];
+  const re = new RegExp(`^${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.v(\\d+)\\.json$`);
+  return readdirSync(historyDir)
+    .map((f) => { const m = f.match(re); return m ? { v: Number(m[1]), file: join(historyDir, f) } : null; })
+    .filter(Boolean)
+    .sort((a, b) => a.v - b.v)
+    .map((s) => {
+      let data;
+      try { data = JSON.parse(readFileSync(s.file, 'utf8')); } catch (e) { console.error(`${s.file}: cannot read this saved version (${e.message.split('\n')[0]}), nothing rendered`); process.exit(1); }
+      return { ...s, data, at: statSync(s.file).mtime };
+    });
+};
+const versions = loadHistory();
+const newest = versions[versions.length - 1];
+const changed = !newest || stable(newest.data) !== stable(brief);
+if (changed) {
+  mkdirSync(historyDir, { recursive: true });
+  const v = newest ? newest.v + 1 : 1;
+  const file = join(historyDir, `${stem}.v${v}.json`);
+  writeFileSync(file, JSON.stringify(brief, null, 2) + '\n');
+  versions.push({ v, file, data: brief, at: new Date() });
+}
+const current = versions[versions.length - 1];
+
+const diffVersions = (prev, next) => {
+  const out = [];
+  const pb = prev.behaviors || [], nb = next.behaviors || [];
+  const paths = (b) => (b.files || []).map(([, p]) => p);
+  const match = new Map(), taken = new Set();
+  const tiers = [
+    (a, b) => a.after === b.after,
+    (a, b) => a.before === b.before,
+    (a, b) => paths(a).some((p) => paths(b).includes(p)),
+  ];
+  tiers.forEach((same) => pb.forEach((a, i) => {
+    if (match.has(i)) return;
+    const j = nb.findIndex((b, k) => !taken.has(k) && same(a, b));
+    if (j >= 0) { match.set(i, j); taken.add(j); }
+  }));
+  pb.forEach((a, i) => {
+    if (!match.has(i)) { out.push({ kind: 'dropped', text: `${a.after} (was ${i + 1})` }); return; }
+    const j = match.get(i), b = nb[j];
+    const fields = [['after', 'title'], ['before', 'before'], ['risk', 'risk'], ['files', 'files'], ['test', 'test'], ['detail', 'detail']]
+      .filter(([k]) => stable(a[k] ?? null) !== stable(b[k] ?? null)).map(([, name]) => name);
+    const moved = i !== j ? `moved from ${i + 1}` : '';
+    const what = [moved, fields.length ? `changed ${fields.join(', ')}` : ''].filter(Boolean).join(', ');
+    if (what) out.push({ kind: 'changed', text: `${j + 1} ${what}: ${b.after}` });
+  });
+  nb.forEach((b, j) => { if (!taken.has(j)) out.push({ kind: 'added', text: `${j + 1} added: ${b.after}` }); });
+  const pq = (prev.questions || []).map((q) => q.q), nq = (next.questions || []).map((q) => q.q);
+  pq.filter((q) => !nq.includes(q)).forEach((q) => out.push({ kind: 'decided', text: q }));
+  nq.filter((q) => !pq.includes(q)).forEach((q) => out.push({ kind: 'asked', text: q }));
+  const pf = new Map((prev.changed_files || []).map((f) => [f[1], f[0]])), nf = new Map((next.changed_files || []).map((f) => [f[1], f[0]]));
+  nf.forEach((k, p) => { if (!pf.has(p)) out.push({ kind: 'added', text: `file ${p}` }); else if (pf.get(p) !== k) out.push({ kind: 'changed', text: `file ${p} is now ${k}` }); });
+  pf.forEach((k, p) => { if (!nf.has(p)) out.push({ kind: 'dropped', text: `file ${p}` }); });
+  if (prev.user !== next.user) out.push({ kind: 'changed', text: 'summary reworded' });
+  if (prev.title !== next.title) out.push({ kind: 'changed', text: `title is now ${next.title}` });
+  if (stable(prev.flows || []) !== stable(next.flows || [])) out.push({ kind: 'changed', text: 'flows changed' });
+  return out;
+};
+const whenText = (d) => d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const historyAll = versions.slice(1).map((s, i) => {
+  const prev = versions[i];
+  const notes = typeof s.data.notes === 'string' && s.data.notes !== prev.data.notes ? s.data.notes : '';
+  return { v: s.v, when: whenText(s.at), notes, entries: diffVersions(prev.data, s.data) };
+});
+
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const riskName = { low: 'Low', med: 'Medium', high: 'High' };
 const bars = { low: 1, med: 2, high: 3 };
@@ -115,6 +189,9 @@ const chevron = '<button class="more" type="button" aria-label="Details"><svg wi
 const caret = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+const build = (brief, ctx) => {
+const isReview = brief.mode === 'review';
+let mapWidth = 0;
 const behaviors = brief.behaviors;
 const questions = brief.questions || [];
 const changedFiles = brief.changed_files || [];
@@ -307,8 +384,6 @@ const filesByBehavior = () => `<ul class="tree">${fileGroups().map((g) => `
     <ul>${fileTree(g.files)}</ul>
   </li>`).join('')}</ul>`;
 
-let mapWidth = 0;
-
 const mapSvg = (m) => {
   if (!m || !mapNodes.length) return '';
   const layers = m.layers;
@@ -462,6 +537,21 @@ const deltaBlock = brief.delta?.length
   ? group('Changed since the proposal', brief.delta.length, brief.delta.map((d) => `<li class="row static"><div class="line">${chip(`<i class="dot-${{ added: 'green', dropped: 'red', changed: 'yellow' }[d.kind]}"></i>${d.kind}`)}<div class="main wrap">${esc(d.text)}</div></div></li>`).join(''))
   : '';
 
+const dot = { added: 'green', dropped: 'red', changed: 'yellow', decided: 'green', asked: 'yellow' };
+const historyBlock = ctx.history.length
+  ? group('History', ctx.history.length, ctx.history.map((h) => `
+  <li class="row static hist">
+    <div class="line"><span class="key"></span><div class="main wrap"><span class="after">v${h.v}</span><span class="hdate">${esc(h.when)}</span></div></div>
+    ${h.notes ? `<pre class="hnotes">${esc(h.notes)}</pre>` : '<p class="qdetail">Made without notes from you</p>'}
+    <ul class="hlist">${h.entries.length ? h.entries.map((d) => `<li>${chip(`<i class="dot-${dot[d.kind]}"></i>${d.kind}`)}<span>${esc(d.text)}</span></li>`).join('') : '<li><span class="qdetail">No visible change</span></li>'}</ul>
+  </li>`).join(''))
+  : '';
+const newestV = ctx.versions[ctx.versions.length - 1].v;
+const verMenu = ctx.versions.length > 1
+  ? `<label class="ver"><select id="ver">${ctx.versions.map((x) => `<option value="${esc(ctx.hrefFor(x.v))}"${x.v === ctx.version ? ' selected' : ''}>v${x.v}${x.v === newestV ? ' · newest' : ''}</option>`).join('')}</select>${caret}</label>`
+  : `<span class="ver">v${ctx.version}</span>`;
+const topRight = `${ctx.readOnly ? chip('Read only') : ''}${verMenu}`;
+
 const notesBlock = isReview
   ? `<div class="notes"><h2>Notes</h2><textarea id="notes" rows="4" placeholder="Anything else the next agent should do. Included when you copy."></textarea><div class="notes-actions"><button id="copy" class="pill" type="button">Copy as prompt ↑</button><span class="hint">Paste into a fresh session. Only ticked and noted items are included.</span></div></div>`
   : `<div class="notes"><h2>Notes</h2><textarea id="notes" rows="4" placeholder="Anything else. Included when you copy notes."></textarea><div class="notes-actions"><button id="copy" class="pill" type="button">Copy notes ↑</button><span class="hint">Paste into chat. Anything not listed counts as approved.</span></div></div>`;
@@ -605,10 +695,23 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 .map .edge{fill:none;stroke-width:1.3}
 .map .edge-new{stroke:#27a644}.map .edge-existing{stroke:#62666d}.map .edge-removed{stroke:#eb5757;stroke-dasharray:4 3}
 .map .elabel{font-size:10px;fill:var(--text-3);stroke:var(--pane);stroke-width:3.5px;stroke-linejoin:round;paint-order:stroke fill}.map .elabel-new{fill:#4fbf6f}
+.topr{display:flex;align-items:center;gap:10px}
+.ver{display:inline-flex;align-items:center;color:var(--text-2);font-weight:510;position:relative}
+.ver select{appearance:none;-webkit-appearance:none;background:var(--raised);color:var(--text);border:0;border-radius:9999px;height:28px;padding:0 28px 0 12px;font:510 13px/1 var(--font);cursor:pointer}
+.ver select:hover{background:#2a2a2c}
+.ver svg{position:absolute;right:11px;pointer-events:none;color:var(--text-3)}
+.hist{padding-bottom:10px}
+.hdate{color:var(--text-4);font-size:13px;margin-left:10px;font-weight:400}
+.hnotes{margin:0 10px 8px 36px;padding:10px 12px;background:var(--window);border:1px solid var(--chip-border);border-radius:8px;font:12.5px/1.55 var(--mono);color:var(--text-2);white-space:pre-wrap;max-width:720px}
+.group .hlist{list-style:none;margin:0;padding:0 10px 4px 36px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--text-2)}
+.hlist li{display:flex;align-items:center;gap:10px}
+body.readonly .status,body.readonly .opt,body.readonly textarea{pointer-events:none}
+body.readonly textarea:placeholder-shown,body.readonly .notes-actions,body.readonly .gaction{display:none}
 @media (max-width:900px){.body{flex-direction:column;padding:32px 20px}.rail{width:auto}.line{padding:8px 6px}.chips,.detail,.opts,.qnote,.qdetail{padding-left:12px}}
-</style></head><body class="${isReview ? 'review' : 'proposal'}"><div class="pane">
+</style></head><body class="${isReview ? 'review' : 'proposal'}${ctx.readOnly ? ' readonly' : ''}"><div class="pane">
 <div class="top">
   <div class="crumb"><span>${isReview ? 'Review' : 'Proposal'}</span><span class="sep">›</span><span class="cur">${esc(brief.title)}</span>${brief.branch ? `<span class="sep">›</span><span>${esc(brief.branch)}</span>` : ''}</div>
+  <div class="topr">${topRight}</div>
 </div>
 <div class="body">
 <main class="main-col">
@@ -623,6 +726,7 @@ ${brief.map ? group('How it fits together', mapNodes.filter((x) => x.changed).le
 ${questions.length ? group('Decide', questions.length, questionRows) : ''}
 ${unexplained.length ? group('Files no line explains', unexplained.length, ledgerRows) : ''}
 ${deltaBlock}
+${historyBlock}
 ${notesBlock}
 </main>
 <aside class="rail">
@@ -646,7 +750,11 @@ ${notesBlock}
 <script>
 (() => {
   const isReview = document.body.classList.contains('review');
-  const key = 'brief:' + location.pathname;
+  const readOnly = document.body.classList.contains('readonly');
+  const key = ${JSON.stringify(ctx.stateKey)};
+  const ver = document.getElementById('ver');
+  if (ver) ver.addEventListener('change', () => { location.href = ver.value; });
+  if (readOnly) document.querySelectorAll('textarea').forEach((t) => { t.readOnly = true; });
   let state = {};
   try { state = JSON.parse(localStorage.getItem(key) || '{}'); } catch {}
   const save = () => { try { localStorage.setItem(key, JSON.stringify(state)); } catch {} };
@@ -716,7 +824,7 @@ ${notesBlock}
       if (parts.length) lines.push('- ' + id + '. ' + parts.join(', '));
     });
     const extra = (notes?.value || '').trim();
-    const out = ['---', '## Notes from ' + JSON.stringify(${JSON.stringify(brief.title)})];
+    const out = ['---', '## Notes from ' + JSON.stringify(${JSON.stringify(brief.title)}) + ' v${ctx.version}'];
     if (lines.length) out.push(...lines);
     if (extra) out.push('Other: ' + extra);
     if (!lines.length && !extra) out.push('No notes, all approved');
@@ -739,7 +847,7 @@ ${notesBlock}
       sections.set(r.dataset.section, list);
     });
     const extra = (notes?.value || '').trim();
-    const head = 'Changes requested from the review ' + JSON.stringify(${JSON.stringify(brief.title)}) + ${JSON.stringify(brief.branch ? ' on ' + brief.branch : '')} + '.';
+    const head = 'Changes requested from the review ' + JSON.stringify(${JSON.stringify(brief.title)}) + ' v${ctx.version}' + ${JSON.stringify(brief.branch ? ' on ' + brief.branch : '')} + '.';
     if (!sections.size && !extra) return head.replace('Changes requested', 'No changes requested');
     const out = [head, 'Apply each item below, then run the checks the repo defines before reporting back.'];
     for (const title of ['Blockers', 'Non-blockers', 'Behavior changes', 'Files']) {
@@ -767,12 +875,7 @@ ${notesBlock}
 })();
 </script></body></html>`;
 
-const htmlPath = join(outDir, stem + '.html');
-const pngPath = join(outDir, stem + '.png');
-const mdPath = join(outDir, stem + '.md');
-writeFileSync(htmlPath, html);
-
-const mdFiles = (files) => (files || []).map(([k, p]) => `${fileMark[k]} \`${p}\``).join('<br>');
+const mdFiles =(files) => (files || []).map(([k, p]) => `${fileMark[k]} \`${p}\``).join('<br>');
 const mdFinding = (f) => `- **${f.id} ${f.title}** (\`${f.where}\`)${f.items.length ? ` affects ${f.items.join(', ')}` : ''}<br>${f.detail}`;
 const md = [
   `## ${brief.title}`,
@@ -797,7 +900,28 @@ const md = [
   ...(unexplained.length ? ['### Files no line explains', '', ...unexplained.map(([k, p]) => `- ${fileMark[k]} \`${p}\``), ''] : []),
   ...((brief.delta || []).length ? ['### Changed since the proposal', '', ...brief.delta.map((d) => `- **${d.kind}** ${d.text}`), ''] : []),
 ].join('\n');
-writeFileSync(mdPath, md);
+return { html, md, mapWidth };
+};
+
+const realDir = realpathSync(outDir);
+const pageFor = (v) => v === current.v ? join(outDir, stem + '.html') : join(historyDir, `${stem}.v${v}.html`);
+const htmlPath = pageFor(current.v);
+const pngPath = join(outDir, stem + '.png');
+const mdPath = join(outDir, stem + '.md');
+let mapWidth = 0;
+versions.forEach((s) => {
+  const page = pageFor(s.v);
+  const built = build(s.data, {
+    version: s.v,
+    versions,
+    readOnly: s.v !== current.v,
+    hrefFor: (v) => relative(dirname(page), pageFor(v)),
+    history: historyAll.filter((h) => h.v <= s.v).reverse(),
+    stateKey: `brief:${realDir}/${stem}:v${s.v}`,
+  });
+  writeFileSync(page, built.html);
+  if (s.v === current.v) { writeFileSync(mdPath, built.md); mapWidth = built.mapWidth; }
+});
 
 const findPlaywright = () => {
   const req = createRequire(import.meta.url);
@@ -832,6 +956,31 @@ if (pw) {
 } else {
   console.error('no png: playwright-core not found (run npm install in this skill folder, or run from a repo that has it)');
 }
+const openPage = (path) => {
+  const url = pathToFileURL(realpathSync(path)).href;
+  const script = `tell application "Arc"
+  repeat with w in windows
+    repeat with t in tabs of w
+      if URL of t is "${url}" then
+        tell t to reload
+        tell t to select
+        activate
+        return "found"
+      end if
+    end repeat
+  end repeat
+  return "not open"
+end tell`;
+  let found = false;
+  if (existsSync('/Applications/Arc.app')) {
+    try { found = execFileSync('osascript', ['-e', script], { encoding: 'utf8' }).trim() === 'found'; } catch {}
+  }
+  if (!found) execFileSync('open', [path]);
+  return found;
+};
+
+console.error(changed ? `v${current.v} saved` : `v${current.v} unchanged`);
 console.log(htmlPath);
 console.log(mdPath);
 if (png) console.log(pngPath);
+if (openAfter) console.error(openPage(htmlPath) ? 'reloaded the open tab' : 'opened a new tab');
