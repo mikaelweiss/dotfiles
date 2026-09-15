@@ -102,7 +102,7 @@
       "Bash(git grep:*)"
     ]
   },
-  "model": "opus[1m]",
+  "model": "haiku",
   "hooks": {
     "PreToolUse": [
       {
@@ -230,6 +230,9 @@
   "modelSettings": {
     "claude-opus-5": {
       "effortLevel": "medium"
+    },
+    "claude-haiku-4-5": {
+      "effortLevel": "high"
     }
   },
   "awaySummaryEnabled": false,

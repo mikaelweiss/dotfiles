@@ -222,9 +222,9 @@ const ledgerRows = unexplained.map((f) => {
   </li>`;
 }).join('');
 
-const group = (title, count, body, closed) => `
+const group = (title, count, body, closed, action = '') => `
   <section class="group${closed ? ' closed' : ''}" data-group="${title.replace(/\W+/g, '-').toLowerCase()}">
-    <header tabindex="0"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="gtitle">${title}</span><span class="gcount">${count}</span></header>
+    <header tabindex="0"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="gtitle">${title}</span><span class="gcount">${count}</span>${action}</header>
     <div class="gbody">${body.trim().startsWith('<li') ? `<ul>${body}</ul>` : body}</div>
   </section>`;
 
@@ -361,6 +361,33 @@ const findingRow = (f) => {
     ${detail(id, `<p>${esc(f.detail)}</p>`, 'How to fix it, if not as written')}
   </li>`;
 };
+const fixRow = (f) => {
+  const id = 'fix-' + f.id;
+  const source = jump('finding-' + f.id, `<i class="dot-${f.blocker ? 'red' : 'yellow'}"></i>${f.blocker ? 'Blocker' : 'Non-blocker'} ${f.id}`, f.blocker ? 'chip-bad' : '');
+  return `
+  <li class="row" data-row="${id}" id="${id}">
+    <div class="head"><div class="line">
+      <span class="key">${f.id}</span>
+      <div class="main"><div class="after">${esc(f.title)}</div><div class="where">${esc(f.where)}</div></div>
+      <div class="props">${source}${f.items.map((x) => jump('row-' + x, String(x))).join('')}${chevron}</div>
+    </div></div>
+    <div class="detail" id="detail-${id}" hidden><p>${esc(f.detail)}</p></div>
+  </li>`;
+};
+
+const promptFinding = (f) => `- ${f.id} ${f.title} (${f.where})${f.items.length ? ` affects behavior ${f.items.join(', ')}` : ''}\n  ${f.detail}`;
+const fixPrompt = [
+  `Fix every item below from the review ${JSON.stringify(brief.title)}${brief.branch ? ' on ' + brief.branch : ''}.`,
+  'Read each one, make the change it describes, then run the checks the repo defines before reporting back.',
+  ...(findings.blockers.length ? ['', '## Blockers', ...findings.blockers.map(promptFinding)] : []),
+  ...(findings.nonBlockers.length ? ['', '## Non-blockers', ...findings.nonBlockers.map(promptFinding)] : []),
+].join('\n');
+
+const fixesBlock = allFindings.length
+  ? group('Suggested changes', allFindings.length, allFindings.map(fixRow).join(''), false,
+    '<button id="copy-fixes" class="pill gaction" type="button">Copy suggested changes \u2191</button>')
+  : '';
+
 const findingsBlock = isReview
   ? group('Blockers', findings.blockers.length, findings.blockers.map(findingRow).join('') || '<p class="qdetail">None. Nothing stops this from merging.</p>')
     + group('Non-blockers', findings.nonBlockers.length, findings.nonBlockers.map(findingRow).join('') || '<p class="qdetail">None</p>')
@@ -404,6 +431,7 @@ h1{font:590 24px/1.35 var(--font);letter-spacing:-.012em;margin:0 0 14px}
 .group.closed header svg{transform:rotate(-90deg)}
 .group.closed .gbody{display:none}
 .group header .gtitle{color:var(--text)}
+.group header .gaction{margin-left:auto;height:24px;font-size:12px;font-weight:510}
 .group ul{list-style:none;margin:0;padding:0}
 .row{border-radius:6px;scroll-margin-top:24px}
 .row .head{border-radius:6px;padding:4px 0;cursor:pointer}
@@ -516,6 +544,7 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 ${group('Behavior changes', behaviors.length, behaviorRows)}
 ${findingsBlock}
 ${(brief.flows || []).length ? group('Flows to test', brief.flows.length, flowRows) : ''}
+${fixesBlock}
 ${changedFiles.length ? group('Changed files', changedFiles.length, fileTree(), true) : ''}
 ${brief.map ? group('How it fits together', mapNodes.filter((x) => x.changed).length + ' changed', mapSvg(brief.map)) : ''}
 ${questions.length ? group('Decide', questions.length, questionRows) : ''}
@@ -647,6 +676,14 @@ ${notesBlock}
     if (extra) out.push('', '## Other', extra);
     return out.join('\\n');
   };
+  const fixPrompt = ${JSON.stringify(fixPrompt).replace(/</g, '\\u003c')};
+  const copyFixes = document.getElementById('copy-fixes');
+  if (copyFixes) copyFixes.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const label = copyFixes.textContent;
+    try { await navigator.clipboard.writeText(fixPrompt); copyFixes.textContent = 'Copied \u2713'; } catch { copyFixes.textContent = 'Copy failed'; }
+    setTimeout(() => { copyFixes.textContent = label; }, 1800);
+  });
   const copy = document.getElementById('copy');
   if (copy) copy.addEventListener('click', async () => {
     const text = isReview ? reviewText() : proposalText();
