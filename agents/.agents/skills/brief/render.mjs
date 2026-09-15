@@ -222,8 +222,8 @@ const ledgerRows = unexplained.map((f) => {
   </li>`;
 }).join('');
 
-const group = (title, count, body) => `
-  <section class="group" data-group="${title.replace(/\W+/g, '-').toLowerCase()}">
+const group = (title, count, body, closed) => `
+  <section class="group${closed ? ' closed' : ''}" data-group="${title.replace(/\W+/g, '-').toLowerCase()}">
     <header tabindex="0"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="gtitle">${title}</span><span class="gcount">${count}</span></header>
     <div class="gbody">${body.trim().startsWith('<li') ? `<ul>${body}</ul>` : body}</div>
   </section>`;
@@ -516,7 +516,7 @@ textarea:focus{outline:none;border-color:var(--text-4)}
 ${group('Behavior changes', behaviors.length, behaviorRows)}
 ${findingsBlock}
 ${(brief.flows || []).length ? group('Flows to test', brief.flows.length, flowRows) : ''}
-${changedFiles.length ? group('Changed files', changedFiles.length, fileTree()) : ''}
+${changedFiles.length ? group('Changed files', changedFiles.length, fileTree(), true) : ''}
 ${brief.map ? group('How it fits together', mapNodes.filter((x) => x.changed).length + ' changed', mapSvg(brief.map)) : ''}
 ${questions.length ? group('Decide', questions.length, questionRows) : ''}
 ${unexplained.length ? group('Files no line explains', unexplained.length, ledgerRows) : ''}
@@ -561,7 +561,9 @@ ${notesBlock}
   }));
   document.querySelectorAll('.group').forEach((g) => {
     const id = g.dataset.group;
-    if (get('group:' + id).closed) g.classList.add('closed');
+    const st = get('group:' + id);
+    if (st.closed === true) g.classList.add('closed');
+    if (st.closed === false) g.classList.remove('closed');
     const flip = () => { g.classList.toggle('closed'); set('group:' + id, { closed: g.classList.contains('closed') }); };
     const h = g.querySelector('header');
     h.addEventListener('click', flip);
