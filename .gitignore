@@ -204,6 +204,6 @@ codex/.codex/transcription-history.jsonl
 # cliproxy shared secret
 terminal/.config/cliproxy/env
 
-# rendered change briefs, per machine
+# rendered change briefs, synced between machines by mutagen, not by git
 claude/.claude/briefs/
 agents/.agents/skills/brief/node_modules/

@@ -15,7 +15,7 @@ Output lands next to the JSON: `<name>.html` (interactive), `<name>.png` (one im
 
 The renderer validates the JSON before writing anything. A bad brief renders nothing and prints one line per problem, naming the field. Fix every line and run it again.
 
-Briefs live at `~/.claude/briefs/<repo>/<branch>/`. A proposal is `proposal.json`. A review is `review.json`. Never inside a repo, never in git.
+Briefs live at `~/.claude/briefs/<repo>/<branch>/`. A proposal is `proposal.json`. A review is `review.json`. Never in the repo the brief is about, and never committed. The path resolves into the dotfiles tree, which mutagen syncs, so a brief rendered over ssh opens on any machine.
 
 Every render that changes the brief saves a copy under `history/` as the next version: v1, v2, and so on. The page shows its version top right with a menu to switch. An earlier version opens read only, with the ticks and notes the user made on it. The newest version's page also lists, under History, each version's notes and what changed in it.
 

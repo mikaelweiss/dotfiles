@@ -3,8 +3,8 @@
 hub=elm
 
 # Git-ignored paths that sync anyway, so `claude --resume` and ccusage see
-# every machine.
-keep='/(claude/\.claude/(projects|plugins)|codex/\.codex/plugins)$'
+# every machine, and so a brief rendered over ssh opens on the laptop.
+keep='/(claude/\.claude/(projects|plugins|briefs)|codex/\.codex/plugins)$'
 
 # ~/.mutagen.yml anchors its dotfiles ignores to a ~/code root, so a tree
 # synced as its own session root needs them re-anchored. They also cover files
