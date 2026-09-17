@@ -1,0 +1,26 @@
+#!/bin/zsh
+# Initializes pass against a GPG key for this identity, creating the key when
+# none exists. Usage: setup-pass [--new]
+uid="Mikael Weiss <campingmikael@icloud.com>"
+
+if [[ "$1" != "--new" ]]; then
+  fpr=$(gpg --list-secret-keys --with-colons "$uid" 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
+fi
+
+if [[ -z "$fpr" ]]; then
+  status=$(mktemp "${TMPDIR:-/tmp}/setup-pass.XXXXXX") || exit 1
+  # Naming an algo skips the encryption subkey that pass requires.
+  gpg --yes --status-file "$status" --quick-generate-key "$uid" default default 2y || {
+    rm -f "$status"
+    exit 1
+  }
+  fpr=$(awk '/KEY_CREATED/ {print $4}' "$status")
+  rm -f "$status"
+fi
+
+if [[ -z "$fpr" ]]; then
+  print -u2 "setup-pass: could not determine key fingerprint"
+  exit 1
+fi
+
+pass init "$fpr"
