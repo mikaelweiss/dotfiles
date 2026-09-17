@@ -189,7 +189,6 @@ terminal/.pi/agent/mcp-cache.json
 terminal/.config/composer/*
 terminal/.config/herd-lite/*
 terminal/.config/opencode/*
-!terminal/.config/opencode/AGENTS.md
 !terminal/.config/opencode/opencode.jsonc
 !terminal/.config/opencode/plugins/
 terminal/.config/psysh/*
@@ -203,6 +202,9 @@ codex/.codex/transcription-history.jsonl
 
 # cliproxy shared secret
 terminal/.config/cliproxy/env
+
+# Claude Code distributed skill buckets (machine state)
+claude/.claude/skills/synced/
 
 # rendered change briefs, synced between machines by mutagen, not by git
 claude/.claude/briefs/
