@@ -1,0 +1,41 @@
+#!/bin/zsh
+# Asks Jev (TypeSafe's System One model) typed questions about the state on
+# stdin and prints the answers as JSON. Jev judges; it does not write, count,
+# or do arithmetic, so keep those in the caller.
+# The key comes from $TYPESAFE_API_KEY, else `pass show typesafe-ai-api-key`.
+# Usage: jev <questions.json | '{...}'> < state
+#   state: JSON objects and arrays go up as structured state, anything else as text
+#   JEV_MODEL overrides jev-latest
+set -eu
+set -o pipefail
+
+(( $# == 1 )) || { print -u2 "usage: jev <questions.json | '{...}'> < state"; exit 64; }
+if [[ $1 == \{* ]]; then questions=$1; else questions=$(<"$1"); fi
+
+key=${TYPESAFE_API_KEY:-$(pass show typesafe-ai-api-key | head -n1)}
+[[ -n $key ]] || { print -u2 'jev: no API key in TYPESAFE_API_KEY or pass'; exit 78; }
+
+raw=$(cat)
+if state=$(print -rn -- "$raw" | jq -ce 'select(type == "object" or type == "array")' 2>/dev/null); then
+  :
+else
+  state=$(print -rn -- "$raw" | jq -Rs .)
+fi
+
+body=$(jq -cn --argjson s "$state" --argjson q "$questions" --arg m "${JEV_MODEL:-jev-latest}" \
+  '{state: $s, model: $m, questions: $q}')
+
+for attempt in 1 2 3 4 5; do
+  resp=$(print -r -- "$body" | curl -sS -X POST https://api.typesafe.ai/v1/systemone \
+    -H "Authorization: Bearer $key" -H 'Content-Type: application/json' \
+    -w $'\n%{http_code}' --data-binary @-)
+  code=${resp##*$'\n'}
+  resp=${resp%$'\n'*}
+  case $code in
+    200) print -r -- "$resp" | jq .answers; exit 0 ;;
+    429|529) sleep $(( attempt * 2 )) ;;
+    *) print -u2 -r -- "jev: HTTP $code: $resp"; exit 1 ;;
+  esac
+done
+print -u2 'jev: rate limited five times, giving up'
+exit 1

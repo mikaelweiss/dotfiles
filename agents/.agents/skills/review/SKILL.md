@@ -20,9 +20,9 @@ This review is read-only and non-destructive:
 
 ## Step 1 - Organize
 
-First, look at what files have changed
+Run `jev-tier` with the same revision arguments as the diff under review: no arguments for uncommitted work, `main...HEAD` for a branch, `origin/<base>...origin/<head>` after a fetch for a PR. It prints one line per changed file: the tier, Jev's confidence in it, and the path.
 
-Assign each file one of three tiers. State the assignments in one compact grouped list before reading further, so the allocation is visible and deliberate
+Take the tiers as given. Override a row only when its confidence is under 0.5 or you know something about the file that the head of its diff cannot show, and say why on that row. State the resulting assignments in one compact grouped list before reading further, so the allocation is visible and deliberate
 
 1. Ignore/tool-verify - these are files that don't really matter to review and were most likely set up right, or things that a command checks better than reading.
 2. Skim - these are files that don't have high impact if incorrect in some way, but it'd be good to look at just in case
