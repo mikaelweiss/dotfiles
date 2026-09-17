@@ -99,10 +99,12 @@
     "deny": [
       "Bash(git reset:*)",
       "Bash(git revert:*)",
-      "Bash(git grep:*)"
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.env.local)",
+      "Read(./secrets/**)"
     ]
   },
-  "model": "opus[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -154,15 +156,6 @@
             "if": "Bash(gh release create *)"
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.agents/hooks/search-guard.py"
-          }
-        ]
       }
     ],
     "SessionStart": [
@@ -184,17 +177,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.agents/hooks/search-guard.py"
-          }
-        ]
-      }
     ]
   },
   "worktree": {
@@ -205,12 +187,15 @@
     "command": "wt list statusline --format=claude-code"
   },
   "enabledPlugins": {
-    "code-simplifier@claude-plugins-official": false,
+    "clangd-lsp@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": false,
-    "worktrunk@worktrunk": true,
-    "atlassian@claude-plugins-official": false,
-    "sentry@claude-plugins-official": true
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "worktrunk@worktrunk": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -229,16 +214,12 @@
   "effortLevel": "high",
   "modelSettings": {
     "claude-opus-5": {
-      "effortLevel": "high"
-    },
-    "claude-haiku-4-5": {
-      "effortLevel": "high"
+      "effortLevel": "medium"
     }
   },
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
-  "autoMemoryEnabled": false,
-  "autoDreamEnabled": true,
+  "autoDreamEnabled": false,
   "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto",
@@ -253,5 +234,6 @@
   "voiceEnabled": true,
   "lsp": {
     "enabled": true
-  }
+  },
+  "autoMemoryEnabled": false
 }
