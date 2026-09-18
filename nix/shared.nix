@@ -34,10 +34,20 @@
 
   programs.zsh.enable = true;
 
+  # A worktree inherits the .envrc of a checkout that was already approved, so
+  # whitelisting the worktree root saves a `direnv allow` on every new branch.
   programs.direnv = {
     enable = true;
     silent = true;
     nix-direnv.enable = true;
+    settings.whitelist.prefix = [
+      "/Users/mikaelweiss/code"
+      "/Users/mikaelweiss/.worktrees"
+      "/Users/mikaelweiss/.penguin/worktrees"
+      "/home/mikaelweiss/code"
+      "/home/mikaelweiss/.worktrees"
+      "/home/mikaelweiss/.penguin/worktrees"
+    ];
   };
 
   # Global npm packages, installed and pruned on every rebuild the way

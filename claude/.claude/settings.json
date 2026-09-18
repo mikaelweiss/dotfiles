@@ -99,10 +99,7 @@
     "deny": [
       "Bash(git reset:*)",
       "Bash(git revert:*)",
-      "Read(.env)",
-      "Read(.env.*)",
-      "Read(.env.local)",
-      "Read(./secrets/**)"
+      "Bash(git grep:*)"
     ]
   },
   "model": "opus[1m]",
@@ -157,6 +154,24 @@
             "if": "Bash(gh release create *)"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.agents/hooks/search-guard.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/direnv/load.sh"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -178,6 +193,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.agents/hooks/search-guard.py"
+          }
+        ]
+      }
     ]
   },
   "worktree": {
@@ -188,15 +214,12 @@
     "command": "wt list statusline --format=claude-code"
   },
   "enabledPlugins": {
-    "clangd-lsp@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": false,
     "context7@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": false,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "worktrunk@worktrunk": true
+    "worktrunk@worktrunk": true,
+    "atlassian@claude-plugins-official": false,
+    "sentry@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -212,14 +235,19 @@
       }
     }
   },
+  "feedbackDrafts": "off",
   "effortLevel": "high",
   "modelSettings": {
     "claude-opus-5": {
+      "effortLevel": "high"
+    },
+    "claude-haiku-4-5": {
       "effortLevel": "high"
     }
   },
   "awaySummaryEnabled": false,
   "tui": "fullscreen",
+  "autoMemoryEnabled": false,
   "autoDreamEnabled": true,
   "showThinkingSummaries": true,
   "skipDangerousModePermissionPrompt": true,
