@@ -135,3 +135,6 @@ Once you've thought about how you'll respond simply, then think again and respon
 
 # Extra note:
 You should always respond simply.
+
+# Another note:
+So you know how I said I want you to respond simply? I like _really_ want you to respond simply. If you think your response is simple enough, you're actually wrong, and your response could be phrased even simpler.
