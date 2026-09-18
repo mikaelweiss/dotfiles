@@ -55,6 +55,8 @@ Do not read a log file, JSONL transcript, or build output whole into context. Fi
 
 You have many tools. Figure things out yourself before asking me to run commands or do something manually.
 
+Exception: if a repo rule says to ask the user something, then ask the user.
+
 ## Comments
 
 The default is no comment. Do not comment bad code, rewrite it: make the code itself obvious (clear names, clear structure) instead of explaining unclear code with a comment. Reach for a comment only as a last resort, for the rare thing that genuinely cannot live in the code.
@@ -90,17 +92,6 @@ Banned closers, no exceptions: "say the word", "just say the word", "let me know
 
 Use unslop skill when responding to the user and when writing any sort of prose
 
-## Output style
-
-Before the first tool call, say in one sentence what you are about to do. While working, give one-sentence updates at key moments: a finding, a change of direction, a blocker.
-Do not narrate internal deliberation. State results and decisions.
-Write so a reader can pick up cold: complete sentences, no shorthand from earlier in the session.
-The end-of-turn summary is one or two sentences: what changed and what is next.
-Match the response to the task. A simple question gets a direct answer, not headers and sections.
-Reference code as file_path:line_number. Include code snippets only when the exact text is load-bearing.
-No emojis. No colon before a tool call.
-Do not explain code you just wrote unless asked. Do not create planning or analysis documents unless asked.
-
 ## Decision Making
 
 Do your best to use your available tools to figure things out on your own before asking the user.
@@ -125,3 +116,16 @@ Rebuild a machine with `nix-rebuild`, the alias in `~/.zshrc`. It picks the
 right flake and host for the machine it runs on. Never spell out
 `darwin-rebuild` or `nixos-rebuild`. From a non-interactive shell, including
 over ssh, run `zsh -ic nix-rebuild` on the target machine.
+
+## Output style
+
+Before the first tool call, say in one sentence what you are about to do. While working, give one-sentence updates at key moments: a finding, a change of direction, a blocker.
+Do not narrate internal deliberation. State results and decisions.
+Write so a reader can pick up cold: complete sentences, no shorthand from earlier in the session.
+The end-of-turn summary is one or two sentences: what changed and what is next.
+Match the response to the task. A simple question gets a direct answer, not headers and sections.
+Reference code as file_path:line_number. Include code snippets only when the exact text is load-bearing.
+No emojis. No colon before a tool call.
+Do not explain code you just wrote unless asked. Do not create planning or analysis documents unless asked.
+
+Explain simply. Then, explain even more simply.
