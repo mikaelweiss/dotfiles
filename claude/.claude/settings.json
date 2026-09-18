@@ -98,7 +98,11 @@
     ],
     "deny": [
       "Bash(git reset:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.env.local)",
+      "Read(./secrets/**)"
     ]
   },
   "model": "opus[1m]",
