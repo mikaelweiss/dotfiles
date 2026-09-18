@@ -1,30 +1,22 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch with the branch's brief as the body, then hand over the brief image to drag in. Use when the user says "open a PR", "create the PR", or invokes /create-pr.
+description: Open a pull request for the current branch, with a body written from the branch's own diff. Use when the user says "open a PR", "create the PR", or invokes /create-pr.
 user-invocable: true
 ---
 
 # Create a pull request
 
-The branch's brief is the pull request. This skill pushes the branch, opens the PR with the brief's markdown as the body, and ends with the PNG path so the user drags the picture in.
+This skill writes the pull request body from the branch's own diff, runs the repo's gates, pushes, and opens the PR.
 
-GitHub has no API that uploads an image into a PR body. Only a browser drag does it. Never claim the image is in the PR; hand over the path and say what to do with it.
+## Step 1 - The body
 
-## Step 1 - The brief
+Read `git log <base>..HEAD` and `git diff <base>...HEAD`. Write the body as markdown to a file in the scratchpad directory:
 
-Look in `~/.claude/briefs/<repo>/<branch>/`, where `<repo>` is the checkout's directory name and `<branch>` is `git rev-parse --abbrev-ref HEAD`.
+- **What changes**: one line per behavior change the branch makes, taken from the code and not from the commit subjects, each naming the files behind it.
+- **Why**: one short paragraph, only where the diff does not already say it.
+- **Verification**: the gate commands from Step 2 and their results.
 
-- `review.json` is the body. It describes what the branch did, with proof.
-- Only `proposal.json` there means the branch was planned but never reviewed. Say so and ask whether to open the PR from the proposal or write the review first.
-- Neither means there is no brief. Load the `review` skill to produce one. Do not open a PR without a brief.
-
-Render it, and fix every problem the renderer names before going on:
-
-```bash
-node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json
-```
-
-The renderer prints the `.html`, `.md`, and `.png` paths. `no png` means playwright-core was not found, and the PR gets the markdown alone.
+Leave out a section that is empty. When the branch was reviewed this session, the review's behavior lines are the body's.
 
 ## Step 2 - Gates
 
@@ -36,7 +28,7 @@ A failing gate stops the skill. Show the output and ask. Never open a PR over a 
 
 ```bash
 git push -u origin <branch>
-gh pr create --base <base> --title "<title>" --body-file ~/.claude/briefs/<repo>/<branch>/review.md
+gh pr create --base <base> --title "<title>" --body-file <scratchpad>/pr-body.md
 ```
 
 The title is one line under 70 characters, conventional prefix, imperative, no period, in the style of `gh pr list --state merged --limit 20 --json title`. An issue id in those titles belongs to other work. Never copy one.
@@ -49,6 +41,6 @@ No attribution anywhere in the title or body: no `Co-Authored-By`, no generated-
 
 Both commands above are wrong there. `gh stack push` sends the chain, then `gh stack submit` opens or updates every PR in it, including this branch's.
 
-## Step 4 - The image
+## Step 4 - Finish
 
-End with the PR url and the PNG path, and one line saying to drag the PNG into the top of the body. Nothing else.
+End with the PR url and nothing else.

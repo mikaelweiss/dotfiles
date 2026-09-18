@@ -90,31 +90,25 @@ For every issue you are about to report, challenge it:
 
 ## Step 6 - Prove every behavior
 
-Every behavior change the diff makes gets a proof before it goes on the page: a command you ran, a test you ran, or a scratch reproduction you built, each with its result. A finding needs the same.
+Every behavior change the diff makes gets a proof before it is reported: a command you ran, a test you ran, or a scratch reproduction you built, each with its result. A finding needs the same.
 
 Do NOT modify the working tree. Use the scratchpad directory only:
 - Run tests with `npm test` or similar (against committed/staged code as-is, no temp commits)
 - Extract reproduction scripts to the scratchpad and run them there
 - Use `git diff` or `git show` to analyze the actual code paths without modifying anything
 
-Proof is out of reach only when it needs something you cannot have: production data, a paid external service, a physical device. Then the line carries `why` instead, one sentence naming what you needed, and the page lists it as a human check.
+Proof is out of reach only when it needs something you cannot have: production data, a paid external service, a physical device. Then say what you needed in one sentence and report it as a human check.
 
-## Step 7 - Output: a brief
+## Step 7 - Report
 
-The review is a brief, rendered as a page. Load the `brief` skill and follow its shape exactly.
+The review is a chat report. Write no files and render nothing.
 
-1. Take the diff you were pointed at: uncommitted changes, `git diff main...HEAD`, or a PR. `changed_files` is `git diff --name-status` for that diff, each entry `[kind, path, note, why]`: the note says what changed in that file, the why says what forced it.
-2. Write `~/.claude/briefs/<repo>/<branch>/review.json` with `mode: review`. One behavior line per behavior change the diff makes, with the files behind it and the proof from Step 6 as `verified`. `findings.blockers` holds what will cause problems; `findings.nonBlockers` holds the correctness items from Step 4 and anything that needs a human eye. Each finding names its `where` and the behavior numbers it puts at risk.
-3. When `~/.claude/briefs/<repo>/<branch>/proposal.json` exists, compare its behavior lines to yours and fill `delta`: lines the code added, dropped, or changed against what was approved. When it does not exist, leave `delta` out.
-4. Render and open:
+1. One line per behavior change the diff makes: what it does now, what it did before, the files behind it, and the proof from Step 6.
+2. **Blockers**: what will cause problems. Each one names its `file:line`, the evidence, the fix, and the behavior numbers it puts at risk.
+3. **Non-blockers**: the correctness items from Step 4 and anything that needs a human eye, in the same shape.
+4. **Human checks**: anything Step 6 could not prove, each naming what you needed.
 
-   ```bash
-   node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/<branch>/review.json --open
-   ```
-
-   The renderer refuses a brief with a missing field and prints one line per problem. Fix each one and render again.
-
-5. In chat: the page path, the blocker count, and nothing else.
+Leave out a section that is empty. Nothing else goes in the report: no diff summary, no praise, no next steps.
 
 ## Step 8 - Cleanup
 

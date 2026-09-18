@@ -1,7 +1,7 @@
 ---
 name: review-pr
 description: >
-  Review a pull request: a reader gathers the facts, the judge rules from the diff and the dossier, the result posts once as a brief with blockers and non-blockers, and the PR is approved when nothing blocks.
+  Review a pull request: a reader gathers the facts, the judge rules from the diff and the dossier, the result posts once as a comment with blockers and non-blockers, and the PR is approved when nothing blocks.
 user-invocable: true
 ---
 
@@ -29,24 +29,25 @@ Challenge every finding before it stands: is it real, is it new, is it provable 
 
 Read the PR description and comments last. Drop any finding the conversation already covers.
 
-## Step 3 - The brief
+## Step 3 - The comment
 
-Load the `brief` skill. Write `~/.claude/briefs/<repo>/pr-<number>/review.json` with `mode: review`: one behavior line per behavior change the diff makes, built from the code and never from the PR description, each with its files and its `verified` proof. `findings.blockers` and `findings.nonBlockers` hold the surviving findings, each with a title, its `where`, the behavior numbers it puts at risk, and the evidence and fix as `detail`. `changed_files` is the PR's file list, each entry `[kind, path, note, why]`: the note says what changed in that file, the why says what forced it. Render it, and fix every problem the renderer names before going on:
+Write the comment body as markdown to a file in the scratchpad directory. Nothing else is written anywhere.
 
-```bash
-node ~/.claude/skills/brief/render.mjs ~/.claude/briefs/<repo>/pr-<number>/review.json
-```
+- **What changes**: one line per behavior change the diff makes, built from the code and never from the PR description, each with its files and its proof.
+- **Blockers** and **Non-blockers**: the surviving findings, each with a title, its `file:line`, the behavior numbers it puts at risk, the evidence, and the fix.
+
+Leave out a section that is empty.
 
 ## Step 4 - Post
 
-With blockers: show the page path and the blockers in chat and ask before anything posts. The user says post, or answers the findings. An answer re-enters Step 2 with the user's words; adjust where they are right, keep what you can still prove, and ask again.
+With blockers: show the blockers in chat and ask before anything posts. The user says post, or answers the findings. An answer re-enters Step 2 with the user's words; adjust where they are right, keep what you can still prove, and ask again.
 
 Without blockers, or when the user says post:
 
 ```bash
-gh pr comment <number> --body-file ~/.claude/briefs/<repo>/pr-<number>/review.md
+gh pr comment <number> --body-file <scratchpad>/review.md
 ```
 
 When nothing blocks and the user is a requested reviewer, `gh pr review <number> --approve`. Your own PR refuses an approve; say so and move on.
 
-End with the PNG path. The user drags it into the comment.
+End with the comment url and the blocker count, and nothing else.
