@@ -1,0 +1,5 @@
+#!/bin/zsh
+# Reads a review's claims against the code they cite: `jev-map check`, under the name the
+# review skills call it by.
+# Usage: jev-check [--json] <claims.json>
+exec "${0:A:h}/jev-map" check "$@"

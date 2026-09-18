@@ -1,0 +1,1729 @@
+#!/usr/bin/env bun
+// The Jev pass over a change, printed as a reviewer's reading order: every changed file tiered
+// and screened window by window on the shapes reviews block on, the deep files ranked side by
+// side, the first of them given whole, and the tree around each one read by the import graph.
+// `check` reads a review's claims against the code they cite.
+//
+// This is penguin's pass, copied: examples/helpers/jev.ts and examples/adapters/jev.ts in the
+// penguin repo are the source, and the exam there scores any change to it. Change it there
+// first, then copy it here. No dependency beyond bun, git, and a TypeSafe key in
+// TYPESAFE_API_KEY or `pass show typesafe-ai-api-key`.
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+
+/** What one screen call may carry beside the patch, in characters. Jev's state window is 32k tokens, and irrelevant state degrades its answers. */
+const RELATED_CHARS = 40_000;
+const EXCERPT_CHARS = 5_000;
+const RELATED_FILES = 12;
+/** A patch longer than this is cut, and the report says so on the row. */
+const PATCH_CHARS = 30_000;
+/** Lines around a mention of an imported name, and the most one declaration excerpt runs. */
+const CONTEXT_LINES = 3;
+const DECLARATION_LINES = 40;
+/** A hunk longer than this splits into windows, so a finding lands on a line and not on a file. */
+const HUNK_LINES = 40;
+/** How far a barrel's re-export is followed before the declaration is given up. */
+const REEXPORT_HOPS = 3;
+/** The most test names one screen call carries. */
+const TEST_NAMES = 200;
+
+const SOURCE = /\.(?:[cm]?[jt]sx?|php)$/;
+const TEST =
+  /(?:^|\/)(?:tests?|__tests__)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$|Tests?\.php$/;
+const LOCKED = /(?:^|\/)(?:bun\.lockb?|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|composer\.lock)$/;
+const EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"];
+const PHP = /\.php$/;
+
+const DIMENSIONS = [
+  "correctness",
+  "security",
+  "reliability",
+  "compatibility",
+  "testGap",
+] as const;
+type Dimension = (typeof DIMENSIONS)[number];
+const LABELS: Record<Dimension, string> = {
+  correctness: "Correctness",
+  security: "Security",
+  reliability: "Reliability",
+  compatibility: "Compatibility",
+  testGap: "Test gap",
+};
+
+type ChangedFile = { path: string; patch: string; cut: boolean };
+type Hunk = { id: string; startLine: number; patch: string };
+type Excerpt = {
+  path: string;
+  role: "imported" | "importer" | "test" | "twin" | "doc" | "code";
+  text: string;
+};
+type Tree = { files: string[]; read(file: string): string | undefined };
+type Cells = Record<Dimension, number>;
+type Profile = { path: string; category: string; priority: number };
+type Signal = { path: string; dimension: Dimension; probe: string; probability: number };
+type Finding = {
+  path: string;
+  line: number;
+  dimension: Dimension;
+  probe: string;
+  probability: number;
+  mechanism: string;
+  severity: number;
+  owner: string | null;
+};
+
+const TIERS = ["ignore", "skim", "deep"] as const;
+type Tier = (typeof TIERS)[number];
+
+/** What the tree says about one changed file, for a reader that would otherwise go find it. */
+type Connection = { path: string; tier: Tier; excerpts: Excerpt[] };
+
+type Report = {
+  files: number;
+  tests: number;
+  /** How many related files rode along as context, across every screened file. */
+  context: number;
+  /** The cells the pass followed: the strongest per concern, at or above the floor. */
+  floor: number;
+  perConcern: number;
+  matrix: {
+    path: string;
+    cut: boolean;
+    tier: Tier;
+    cells: Cells;
+    probes: Record<string, number>;
+    /** Every window judged, so a reader can see where each probe fired. */
+    windows: { probe: string; line: number; probability: number }[];
+    /** How much more likely than its peers this file holds a blocking defect, 1 being even odds. */
+    rank?: number;
+    /** The rank on each concern the file was compared on. */
+    ranks?: Record<string, number>;
+  }[];
+  profiles: Profile[];
+  inspected: Signal[];
+  connections: Connection[];
+  findings: Finding[];
+  funnel: { cells: number; inspected: number; located: number; routed: number };
+};
+
+/** One claim a review makes, and the code it rests on. */
+type Claim = { claim: string; where: string };
+
+/** What the evidence says about a claim. `unsupported` is the code not showing it, not proof of absence. */
+const VERDICTS = ["supported", "unsupported", "contradicted"] as const;
+type Verdict = (typeof VERDICTS)[number];
+type Checked = Claim & { verdict: Verdict; confidence: number; read: boolean };
+
+/** The files a unified diff changes, each with its hunks alone, tests apart from the rest. */
+function changedIn(diff: string): { files: ChangedFile[]; tests: ChangedFile[] } {
+  const files: ChangedFile[] = [];
+  const tests: ChangedFile[] = [];
+  const blocks = diff.split(/^(?=diff --git )/m);
+  for (const block of blocks) {
+    const lines = block.split("\n");
+    if (!lines[0]?.startsWith("diff --git ")) continue;
+    if (lines.some((line) => line.startsWith("Binary files") || line === "GIT binary patch")) continue;
+    const named = pathOf(lines);
+    if (named === undefined || LOCKED.test(named)) continue;
+    const first = lines.findIndex((line) => line.startsWith("@@ "));
+    if (first === -1) continue;
+    const whole = lines.slice(first).join("\n").replace(/\n$/, "");
+    const cut = whole.length > PATCH_CHARS;
+    const file = { path: named, patch: cut ? whole.slice(0, PATCH_CHARS) : whole, cut };
+    (TEST.test(named) ? tests : files).push(file);
+  }
+  return { files, tests };
+}
+
+type Size = { files: number; lines: number };
+
+/** What a reader faces: the files a unified diff touches and the lines it adds or removes. */
+function sizeOf(diff: string): Size {
+  let files = 0;
+  let lines = 0;
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("+++ ")) files += 1;
+    else if (line.startsWith("--- ")) continue;
+    else if (line.startsWith("+") || line.startsWith("-")) lines += 1;
+  }
+  return { files, lines };
+}
+
+/** The new path, or the old one when the change deletes the file. */
+function pathOf(lines: string[]): string | undefined {
+  const added = lines.find((line) => line.startsWith("+++ "));
+  const removed = lines.find((line) => line.startsWith("--- "));
+  const named = [added, removed]
+    .map((line) => line?.slice(4).trim())
+    .find((name) => name !== undefined && name !== "/dev/null");
+  if (named === undefined) return undefined;
+  return named.replace(/^[ab]\//, "");
+}
+
+/**
+ * The hunks of one patch, each with the line its first row lands on in the new file. A long
+ * hunk splits into windows of the same shape, so a whole new file is not one candidate.
+ */
+function parseHunks(patch: string): Hunk[] {
+  const hunks: Hunk[] = [];
+  let current: string[] | undefined;
+  let startLine = 1;
+  const push = (lines: string[], at: number): void => {
+    hunks.push({ id: `hunk_${hunks.length + 1}`, startLine: at, patch: lines.join("\n") });
+  };
+  const flush = (): void => {
+    if (current === undefined) return;
+    const body = current.slice(1);
+    if (body.length <= HUNK_LINES) {
+      push(current, startLine);
+      return;
+    }
+    let line = startLine;
+    for (let from = 0; from < body.length; from += HUNK_LINES) {
+      const window = body.slice(from, from + HUNK_LINES);
+      push([`@@ from line ${line} of the new file @@`, ...window], line);
+      line += window.filter((one) => !one.startsWith("-")).length;
+    }
+  };
+  for (const line of patch.split("\n")) {
+    if (line.startsWith("@@ ")) {
+      flush();
+      startLine = Number(/\+(\d+)/.exec(line)?.[1] ?? 1);
+      current = [line];
+    } else if (current !== undefined) {
+      current.push(line);
+    }
+  }
+  flush();
+  return hunks;
+}
+
+type Import = { module: string; names: string[] };
+
+const IMPORT =
+  /\b(?:import|export)\s+(?:type\s+)?(?:([\w$]+)\s*,?\s*)?(?:\{([^}]*)\}|\*\s+as\s+[\w$]+|\*)?\s*from\s*["']([^"']+)["']/g;
+const PHP_USE = /^use\s+(?:function\s+|const\s+)?([\w\\]+)(?:\s+as\s+\w+)?\s*;/gm;
+const PHP_USE_GROUP = /^use\s+([\w\\]+)\\\{([^}]+)\}\s*;/gm;
+
+/** Every module a file names in an import, and the bindings it takes. Empty names means all of them. */
+function importsIn(text: string, file = ""): Import[] {
+  if (PHP.test(file)) return phpImportsIn(text);
+  const found: Import[] = [];
+  for (const match of text.matchAll(IMPORT)) {
+    const [, fallback, listed, module] = match;
+    if (module === undefined) continue;
+    const names: string[] = [];
+    if (fallback !== undefined) names.push("default");
+    if (listed !== undefined) {
+      for (const one of listed.split(",")) {
+        const bare = one.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]?.trim() ?? "";
+        if (bare !== "") names.push(bare);
+      }
+    }
+    const takesAll = fallback === undefined && listed === undefined;
+    found.push({ module, names: takesAll ? [] : names });
+  }
+  return found;
+}
+
+/** A PHP file's `use` lines: the module is the class, the name is what the file calls it. */
+function phpImportsIn(text: string): Import[] {
+  const found: Import[] = [];
+  for (const match of text.matchAll(PHP_USE)) {
+    const named = match[1] ?? "";
+    found.push({ module: named, names: [named.split("\\").pop() ?? named] });
+  }
+  for (const match of text.matchAll(PHP_USE_GROUP)) {
+    const prefix = match[1] ?? "";
+    for (const one of (match[2] ?? "").split(",")) {
+      const bare = one.trim().replace(/^(?:function|const)\s+/, "").split(/\s+as\s+/)[0]?.trim() ?? "";
+      if (bare === "") continue;
+      found.push({ module: `${prefix}\\${bare}`, names: [bare.split("\\").pop() ?? bare] });
+    }
+  }
+  return found;
+}
+
+/** What the tree says about where a bare module name lands: tsconfig paths and composer PSR-4. */
+type Aliases = {
+  /** tsconfig `paths`, exact keys and `prefix/*` keys, each onto its first target. */
+  paths: { key: string; target: string }[];
+  /** composer `psr-4`, each namespace prefix onto the folder it maps to, relative to the tree root. */
+  namespaces: { prefix: string; dir: string }[];
+};
+
+/**
+ * JSON as tsconfig writes it: comments and trailing commas. Strings are copied through
+ * untouched, because a path value such as `libs/*​/src` opens and closes a block comment.
+ */
+function parseJsonLoosely(text: string): unknown {
+  let bare = "";
+  let at = 0;
+  while (at < text.length) {
+    const char = text[at] ?? "";
+    if (char === '"') {
+      const from = at;
+      at += 1;
+      while (at < text.length && text[at] !== '"') at += text[at] === "\\" ? 2 : 1;
+      at += 1;
+      bare += text.slice(from, at);
+      continue;
+    }
+    if (char === "/" && text[at + 1] === "/") {
+      while (at < text.length && text[at] !== "\n") at += 1;
+      continue;
+    }
+    if (char === "/" && text[at + 1] === "*") {
+      const ends = text.indexOf("*/", at + 2);
+      at = ends === -1 ? text.length : ends + 2;
+      continue;
+    }
+    bare += char;
+    at += 1;
+  }
+  try {
+    return JSON.parse(bare.replace(/,(\s*[}\]])/g, "$1"));
+  } catch {
+    return undefined;
+  }
+}
+
+/** The alias tables the tree holds: every tsconfig with paths, every composer.json with PSR-4. */
+function aliasesOf(tree: Tree): Aliases {
+  const paths: Aliases["paths"] = [];
+  const namespaces: Aliases["namespaces"] = [];
+  for (const file of tree.files) {
+    if (file.includes("node_modules/") || file.includes("vendor/")) continue;
+    const base = path.posix.basename(file);
+    const dir = path.posix.dirname(file);
+    const at = (relative: string): string => path.posix.normalize(dir === "." ? relative : `${dir}/${relative}`);
+    if (/^tsconfig(?:\.\w+)?\.json$/.test(base)) {
+      const parsed = parseJsonLoosely(tree.read(file) ?? "") as
+        | { compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> } }
+        | undefined;
+      const options = parsed?.compilerOptions;
+      if (options?.paths === undefined) continue;
+      const root = options.baseUrl === undefined ? "." : options.baseUrl;
+      for (const [key, targets] of Object.entries(options.paths)) {
+        const target = targets[0];
+        if (target === undefined) continue;
+        paths.push({ key, target: at(path.posix.join(root, target)) });
+      }
+    } else if (base === "composer.json") {
+      const parsed = parseJsonLoosely(tree.read(file) ?? "") as
+        | { autoload?: { "psr-4"?: Record<string, string | string[]> }; "autoload-dev"?: { "psr-4"?: Record<string, string | string[]> } }
+        | undefined;
+      for (const map of [parsed?.autoload?.["psr-4"], parsed?.["autoload-dev"]?.["psr-4"]]) {
+        for (const [prefix, folders] of Object.entries(map ?? {})) {
+          const folder = Array.isArray(folders) ? folders[0] : folders;
+          if (folder === undefined) continue;
+          namespaces.push({ prefix, dir: at(folder).replace(/\/$/, "") });
+        }
+      }
+    }
+  }
+  namespaces.sort((a, b) => b.prefix.length - a.prefix.length);
+  return { paths, namespaces };
+}
+
+/** Where an import lands in the tree, or undefined for a package or a path nothing holds. */
+function resolveImport(
+  from: string,
+  module: string,
+  has: (file: string) => boolean,
+  aliases: Aliases = { paths: [], namespaces: [] },
+): string | undefined {
+  if (PHP.test(from)) return resolvePhp(module, has, aliases);
+  if (module.startsWith("./") || module.startsWith("../")) {
+    return resolveFile(path.posix.normalize(path.posix.join(path.posix.dirname(from), module)), has);
+  }
+  for (const { key, target } of aliases.paths) {
+    if (key.endsWith("/*")) {
+      const prefix = key.slice(0, -1);
+      if (!module.startsWith(prefix)) continue;
+      const landed = resolveFile(path.posix.normalize(target.replace("*", module.slice(prefix.length))), has);
+      if (landed !== undefined) return landed;
+    } else if (key === module) {
+      const landed = resolveFile(target, has);
+      if (landed !== undefined) return landed;
+    }
+  }
+  return undefined;
+}
+
+function resolveFile(base: string, has: (file: string) => boolean): string | undefined {
+  const candidates = [base];
+  for (const ext of EXTENSIONS) candidates.push(`${base}${ext}`, `${base}/index${ext}`);
+  const swapped = base.replace(/\.([cm]?)js$/, ".$1ts").replace(/\.jsx$/, ".tsx");
+  if (swapped !== base) candidates.push(swapped);
+  return candidates.find((one) => has(one) && SOURCE.test(one));
+}
+
+function resolvePhp(fqcn: string, has: (file: string) => boolean, aliases: Aliases): string | undefined {
+  const named = fqcn.replace(/^\\/, "");
+  for (const { prefix, dir } of aliases.namespaces) {
+    if (!named.startsWith(prefix)) continue;
+    const rest = named.slice(prefix.length).split("\\").join("/");
+    const file = path.posix.normalize(`${dir}/${rest}.php`);
+    if (has(file)) return file;
+  }
+  return undefined;
+}
+
+type Edge = { from: string; to: string; names: string[] };
+
+type Graph = {
+  importsOf(file: string): Edge[];
+  importersOf(file: string): Edge[];
+  resolve(from: string, module: string): string | undefined;
+};
+
+/** Every import edge between the tree's source files, read once for a pass. */
+function graphOf(tree: Tree): Graph {
+  const has = new Set(tree.files);
+  const aliases = aliasesOf(tree);
+  const resolve = (from: string, module: string): string | undefined =>
+    resolveImport(from, module, (name) => has.has(name), aliases);
+  const outgoing = new Map<string, Edge[]>();
+  const incoming = new Map<string, Edge[]>();
+  for (const file of tree.files) {
+    if (!SOURCE.test(file)) continue;
+    const text = tree.read(file);
+    if (text === undefined) continue;
+    for (const one of importsIn(text, file)) {
+      const to = resolve(file, one.module);
+      if (to === undefined || to === file) continue;
+      const edge = { from: file, to, names: one.names };
+      outgoing.set(file, [...(outgoing.get(file) ?? []), edge]);
+      incoming.set(to, [...(incoming.get(to) ?? []), edge]);
+    }
+  }
+  return {
+    importsOf: (file) => outgoing.get(file) ?? [],
+    importersOf: (file) => incoming.get(file) ?? [],
+    resolve,
+  };
+}
+
+const DECLARED =
+  /^export\s+(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\*?|class|const|let|var|type|interface|enum)\s+([\w$]+)/;
+const TOP_LEVEL = /^(?:export|import|const|let|var|function|class|type|interface|enum|\/\*\*|\/\/)/;
+const PHP_DECLARED = /^\s*(?:final\s+|abstract\s+|readonly\s+)*(?:class|interface|trait|enum)\s+(\w+)/;
+const PHP_MEMBER = /^\s*(?:public|protected)\s+(?:static\s+)?(?:function\s+\w+\s*\(|const\s+\w+|(?:readonly\s+)?[\w?|\\]+\s+\$\w+)/;
+
+/** The names a file exports through a declaration of its own. */
+function exportedIn(lines: string[], file = ""): string[] {
+  if (PHP.test(file)) {
+    const named = lines.map((line) => PHP_DECLARED.exec(line)?.[1]).find((one) => one !== undefined);
+    return named === undefined ? [] : [named];
+  }
+  const names: string[] = [];
+  for (const line of lines) {
+    const named = DECLARED.exec(line)?.[1];
+    if (named !== undefined) names.push(named);
+    else if (/^export\s+default\b/.test(line)) names.push("default");
+  }
+  return names;
+}
+
+/** The declarations of names in a file, each from its export line to the end of its block. */
+function declarations(text: string, names: string[], file = ""): string {
+  if (PHP.test(file)) return phpDeclarations(text);
+  const lines = text.split("\n");
+  const wanted = names.length === 0 ? exportedIn(lines) : names;
+  const parts: string[] = [];
+  for (const name of wanted) {
+    const start = lines.findIndex((line) =>
+      name === "default" ? /^export\s+default\b/.test(line) : DECLARED.exec(line)?.[1] === name,
+    );
+    if (start === -1) continue;
+    let end = start + 1;
+    while (end < lines.length && end - start < DECLARATION_LINES) {
+      const line = lines[end] ?? "";
+      if (line.startsWith("}")) {
+        end += 1;
+        break;
+      }
+      if (TOP_LEVEL.test(line)) break;
+      end += 1;
+    }
+    parts.push(`// line ${start + 1}\n${lines.slice(start, end).join("\n").trimEnd()}`);
+  }
+  return parts.join("\n\n");
+}
+
+/** A PHP class as its callers see it: the declaration line and every public or protected member's signature. */
+function phpDeclarations(text: string): string {
+  const lines = text.split("\n");
+  const parts: string[] = [];
+  let signature: string[] | undefined;
+  let at = 0;
+  const flush = (): void => {
+    if (signature === undefined) return;
+    parts.push(`// line ${at}\n${signature.join("\n").trimEnd()}`);
+    signature = undefined;
+  };
+  const ended = (line: string): boolean => /\{|;\s*$/.test(line);
+  lines.forEach((line, index) => {
+    if (signature !== undefined) {
+      signature.push(line);
+      if (ended(line)) flush();
+      return;
+    }
+    if (!PHP_DECLARED.test(line) && !PHP_MEMBER.test(line)) return;
+    at = index + 1;
+    signature = [line];
+    if (ended(line)) flush();
+  });
+  flush();
+  return parts.slice(0, DECLARATION_LINES).join("\n\n");
+}
+
+const REEXPORT = /\bexport\s+(?:type\s+)?(?:\{([^}]*)\}|\*)\s*from\s*["']([^"']+)["']/g;
+
+/** The names a file re-exports rather than declares, each with the module it came from. */
+function reexportsOf(text: string, names: string[]): { module: string; names: string[] }[] {
+  const found: { module: string; names: string[] }[] = [];
+  for (const match of text.matchAll(REEXPORT)) {
+    const [, listed, module] = match;
+    if (module === undefined) continue;
+    const carried =
+      listed === undefined
+        ? names
+        : names.filter((name) =>
+            listed.split(",").some((one) => {
+              const bare = one.trim().replace(/^type\s+/, "");
+              return bare === name || bare.endsWith(` as ${name}`);
+            }),
+          );
+    if (carried.length > 0) found.push({ module, names: carried });
+  }
+  return found;
+}
+
+/** The declarations of names in a file, following a barrel's re-exports to the file that holds them. */
+function declarationsThrough(
+  graph: Graph,
+  tree: Tree,
+  file: string,
+  names: string[],
+  hops = REEXPORT_HOPS,
+): string {
+  const text = tree.read(file);
+  if (text === undefined) return "";
+  const lines = text.split("\n");
+  const own = declarations(text, names, file);
+  const held = new Set(exportedIn(lines, file));
+  const missing = names.filter((name) => !held.has(name));
+  if (hops === 0 || missing.length === 0 || PHP.test(file)) return own;
+  const parts = own === "" ? [] : [own];
+  for (const one of reexportsOf(text, missing)) {
+    const to = graph.resolve(file, one.module);
+    if (to === undefined || to === file) continue;
+    const said = declarationsThrough(graph, tree, to, one.names, hops - 1);
+    if (said !== "") parts.push(`// from ${to}\n${said}`);
+  }
+  return parts.join("\n\n");
+}
+
+/** The lines of a file that mention any of the names, with a little context, merged in order. */
+function mentions(text: string, names: string[]): string {
+  if (names.length === 0) return "";
+  const lines = text.split("\n");
+  const word = new RegExp(`\\b(?:${names.map(escaped).join("|")})\\b`);
+  const windows: [number, number][] = [];
+  lines.forEach((line, index) => {
+    if (!word.test(line)) return;
+    const from = Math.max(0, index - CONTEXT_LINES);
+    const to = Math.min(lines.length, index + CONTEXT_LINES + 1);
+    const last = windows[windows.length - 1];
+    if (last !== undefined && from <= last[1]) last[1] = to;
+    else windows.push([from, to]);
+  });
+  return windows
+    .map(([from, to]) => `// line ${from + 1}\n${lines.slice(from, to).join("\n").trimEnd()}`)
+    .join("\n\n");
+}
+
+function escaped(name: string): string {
+  return name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function shortened(text: string): string {
+  if (text.length <= EXCERPT_CHARS) return text;
+  return `${text.slice(0, EXCERPT_CHARS)}\n// cut here`;
+}
+
+/**
+ * The files a change was copied from: the same path under a sibling folder, with the folder's
+ * name tokens swapped in the file name. `a/attachment-uploads/x/list-attachment-uploads.ts`
+ * has the twin `a/media-uploads/x/list-media-uploads.ts`. A copy that diverged is a defect
+ * the copy alone cannot show.
+ */
+function twinsOf(tree: Tree, file: string): string[] {
+  const has = new Set(tree.files);
+  const parts = file.split("/");
+  const twins: string[] = [];
+  for (let depth = 0; depth < parts.length - 1; depth++) {
+    const folder = parts[depth] ?? "";
+    const above = parts.slice(0, depth).join("/");
+    const siblings = new Set<string>();
+    for (const other of tree.files) {
+      if (above !== "" && !other.startsWith(`${above}/`)) continue;
+      const name = other.split("/")[depth];
+      if (name !== undefined && name !== folder && other.split("/").length > depth + 1) siblings.add(name);
+    }
+    const mine = folder.split(/[-_.]/);
+    for (const sibling of siblings) {
+      const theirs = sibling.split(/[-_.]/);
+      if (theirs.length !== mine.length) continue;
+      const swapped = parts.slice(depth + 1).map((part) =>
+        mine.reduce((said, token, index) => {
+          const replacement = theirs[index] ?? token;
+          return token === replacement ? said : said.replace(new RegExp(`(^|[-_.])${escaped(token)}(?=$|[-_.])`), `$1${replacement}`);
+        }, part),
+      );
+      const candidate = [...parts.slice(0, depth), sibling, ...swapped].join("/");
+      if (candidate !== file && has.has(candidate) && SOURCE.test(candidate)) twins.push(candidate);
+    }
+  }
+  return twins;
+}
+
+/**
+ * What the tree says about one changed file that its patch does not: the declarations it
+ * imports, the twins it was copied from, and the places that import it. Contracts first,
+ * then twins, then callers by how much they use.
+ */
+function relatedTo(graph: Graph, tree: Tree, file: string): Excerpt[] {
+  const found: { excerpt: Excerpt; weight: number }[] = [];
+  for (const edge of graph.importsOf(file)) {
+    const said = declarationsThrough(graph, tree, edge.to, edge.names);
+    if (said === "") continue;
+    found.push({
+      excerpt: { path: edge.to, role: "imported", text: shortened(said) },
+      weight: 1_000 + edge.names.length,
+    });
+  }
+  for (const twin of twinsOf(tree, file)) {
+    const text = tree.read(twin);
+    if (text === undefined) continue;
+    const said = declarations(text, [], twin);
+    if (said === "") continue;
+    found.push({ excerpt: { path: twin, role: "twin", text: shortened(said) }, weight: 500 });
+  }
+  const exported = exportedIn((tree.read(file) ?? "").split("\n"), file);
+  for (const edge of graph.importersOf(file)) {
+    const text = tree.read(edge.from);
+    if (text === undefined) continue;
+    const names = edge.names.length === 0 ? exported : edge.names;
+    const said = names.length === 0 ? "" : mentions(text, names);
+    if (said === "") continue;
+    found.push({
+      excerpt: { path: edge.from, role: TEST.test(edge.from) ? "test" : "importer", text: shortened(said) },
+      weight: said.split("// line ").length,
+    });
+  }
+  found.sort((a, b) => b.weight - a.weight);
+  const kept: Excerpt[] = [];
+  let spent = 0;
+  for (const { excerpt } of found) {
+    if (kept.length === RELATED_FILES || spent + excerpt.text.length > RELATED_CHARS) break;
+    kept.push(excerpt);
+    spent += excerpt.text.length;
+  }
+  return kept;
+}
+
+/** The changed tests that target a file: the ones that import it, and the one named after it. */
+function testsFor(graph: Graph, tests: ChangedFile[], file: string): ChangedFile[] {
+  const importers = new Set(graph.importersOf(file).map((edge) => edge.from));
+  const stem = path.posix.basename(file).replace(SOURCE, "");
+  return tests.filter(
+    (test) =>
+      importers.has(test.path) ||
+      path.posix.basename(test.path).replace(/\.(?:spec|test)\.[cm]?[jt]sx?$|Tests?\.php$/, "") === stem,
+  );
+}
+
+const TEST_NAME = /(?:^|[^\w.])(?:it|test|describe)(?:\.\w+(?:\([^)]*\))?)?\(\s*(['"`])((?:(?!\1).)+)\1/;
+const PHP_TEST_NAME = /function\s+(test\w*)\s*\(/;
+
+/** The names of the tests a patch adds or edits, in the order they appear. */
+function testNamesIn(patch: string): string[] {
+  const names: string[] = [];
+  let attributed = false;
+  for (const raw of patch.split("\n")) {
+    if (raw.startsWith("-") || raw.startsWith("@@")) continue;
+    const line = raw.replace(/^[+ ]/, "");
+    const named = TEST_NAME.exec(line)?.[2];
+    if (named !== undefined) {
+      names.push(named);
+      continue;
+    }
+    const method = PHP_TEST_NAME.exec(line)?.[1];
+    if (method !== undefined) {
+      names.push(method.replace(/^test_?/, "").replace(/_/g, " "));
+      attributed = false;
+      continue;
+    }
+    if (/#\[Test\]/.test(line)) {
+      attributed = true;
+      continue;
+    }
+    if (attributed) {
+      const fn = /function\s+(\w+)\s*\(/.exec(line)?.[1];
+      if (fn !== undefined) {
+        names.push(fn.replace(/_/g, " "));
+        attributed = false;
+      }
+    }
+  }
+  return names;
+}
+
+type TestSummary = { path: string; targeted: boolean; tests: string[] };
+
+/**
+ * Every changed test as the screen sees it: its path, whether the tree ties it to the file,
+ * and the names of the tests it adds. The tied ones come first, and the list stops at a budget.
+ */
+function testSummaries(graph: Graph, tests: ChangedFile[], file: string): TestSummary[] {
+  const tied = new Set(testsFor(graph, tests, file).map((one) => one.path));
+  const ordered = [...tests].sort((a, b) => Number(tied.has(b.path)) - Number(tied.has(a.path)));
+  const kept: TestSummary[] = [];
+  let spent = 0;
+  for (const test of ordered) {
+    const names = testNamesIn(test.patch);
+    if (names.length === 0) continue;
+    const room = TEST_NAMES - spent;
+    if (room <= 0) break;
+    kept.push({ path: test.path, targeted: tied.has(test.path), tests: names.slice(0, room) });
+    spent += Math.min(names.length, room);
+  }
+  return kept;
+}
+
+function listed(paths: string[]): string {
+  return paths.map((one) => `- \`${one}\``).join("\n");
+}
+/** How much of the tree the reviewer's prompt carries whole, in characters, and which share of the deep files it is. */
+const WHOLE_CHARS = 120_000;
+const WHOLE_SHARE = 1 / 3;
+/** The most suspected lines named per file, and the least a window must score to be named. */
+const NAMED_WINDOWS = 2;
+const NAMED_FLOOR = 0.5;
+
+/** What each probe suspects, as the reviewer reads it beside a line. */
+const SUSPECTED: Record<string, string> = {
+  correctness: "wrong behavior",
+  staleCache: "a write that leaves a view stale",
+  errorAsEmpty: "a failure shown as nothing",
+  deadControl: "a control that does nothing",
+  transition: "state left stale on a transition",
+  parity: "diverges from its twin",
+  constant: "a literal that does not match its name",
+  staleDoc: "a walkthrough it contradicts",
+  docMismatch: "describes what the code does not do",
+  security: "a weakened boundary",
+  flagLeak: "reachable outside its gate",
+  reliability: "a bad failure path",
+  compatibility: "a caller it breaks",
+};
+
+function suspected(row: Report["matrix"][number]): string {
+  const best = new Map<number, { probe: string; probability: number }>();
+  for (const one of row.windows) {
+    if (one.probe === "testGap" || one.probability < NAMED_FLOOR) continue;
+    const held = best.get(one.line);
+    if (held === undefined || held.probability < one.probability) best.set(one.line, one);
+  }
+  const named = [...best.entries()]
+    .sort((a, b) => b[1].probability - a[1].probability)
+    .slice(0, NAMED_WINDOWS);
+  if (named.length === 0) return "";
+  return `: ${named.map(([line, one]) => `line ${line}, ${SUSPECTED[one.probe] ?? one.probe}`).join("; ")}`;
+}
+
+/**
+ * The pass as the reviewer's reading order: the deep files by rank, the first of them whole,
+ * each with the lines the probes suspect, then what to skim and what to leave. It says where
+ * to look, never that a defect is there.
+ */
+function reading(report: Report, read: (file: string) => string | undefined): string {
+  const deep = [...report.matrix]
+    .filter((one) => one.tier === "deep")
+    .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+  const skim = report.matrix.filter((one) => one.tier === "skim").map((one) => one.path);
+  const ignore = report.matrix.filter((one) => one.tier === "ignore").map((one) => one.path);
+  const whole: { path: string; text: string }[] = [];
+  let spent = 0;
+  for (const row of deep.slice(0, Math.ceil(deep.length * WHOLE_SHARE))) {
+    const text = read(row.path);
+    if (text === undefined || text.length > CLAIM_CHARS || spent + text.length > WHOLE_CHARS) continue;
+    whole.push({ path: row.path, text });
+    spent += text.length;
+  }
+  const given = new Set(whole.map((one) => one.path));
+  const named = (rows: typeof deep): string =>
+    rows.map((one) => `- \`${one.path}\`${suspected(one)}`).join("\n");
+  const first = deep.filter((one) => given.has(one.path));
+  const rest = deep.filter((one) => !given.has(one.path));
+  const parts = [
+    "# Reading order",
+    "A fast model screened every changed file and ranked the ones that decide the review side by side. Read in this order. The first ones are in full under Files, with the lines it suspects and why. A suspicion is a place to look, not a finding.",
+  ];
+  if (first.length > 0) parts.push(`## Read whole\n\n${named(first)}`);
+  if (rest.length > 0) parts.push(`## Read from the diff\n\n${named(rest)}`);
+  if (skim.length > 0) parts.push(`## Skim\n\n${listed(skim)}`);
+  if (ignore.length > 0) parts.push(`## Leave to the build\n\n${listed(ignore)}`);
+  if (whole.length > 0) {
+    parts.push(
+      `# Files\n\n${whole.map((one) => `## ${one.path}\n\n\`\`\`\n${one.text}\n\`\`\``).join("\n\n")}`,
+    );
+  }
+  return parts.join("\n\n");
+}
+
+/** How much of a skim or test file's patch the reviewer's prompt carries, in characters. */
+const SKIM_CHARS = 2_000;
+
+/**
+ * The diff as the reviewer's prompt carries it: deep files whole, skim and test files cut
+ * short, ignore files and lockfiles named only. The reviewer opens a file for what is cut. Without a report
+ * the whole diff goes.
+ */
+export function diffFor(report: Report | null, diff: string): string {
+  if (report === null) return diff;
+  const tiers = new Map(report.matrix.map((one) => [one.path, one.tier]));
+  const kept: string[] = [];
+  const left: string[] = [];
+  for (const block of diff.split(/^(?=diff --git )/m)) {
+    if (!block.startsWith("diff --git ")) {
+      if (block !== "") kept.push(block);
+      continue;
+    }
+    const named = pathOf(block.split("\n"));
+    const tier = named === undefined ? undefined : tiers.get(named);
+    if (named !== undefined && (tier === "ignore" || LOCKED.test(named))) {
+      left.push(named);
+      continue;
+    }
+    if ((tier === "skim" || (named !== undefined && TEST.test(named))) && block.length > SKIM_CHARS) {
+      const shown = block.slice(0, SKIM_CHARS).replace(/\n[^\n]*$/, "");
+      const more = block.slice(shown.length).split("\n").length - 1;
+      kept.push(`${shown}\n... ${more} more lines cut, open the file for the rest\n`);
+      continue;
+    }
+    kept.push(block);
+  }
+  const note =
+    left.length === 0 ? "" : `\nNot shown, left to the build: ${left.map((one) => `\`${one}\``).join(", ")}\n`;
+  return `${kept.join("")}${note}`;
+}
+
+/** A file at or under this many characters goes to the check whole. */
+const CLAIM_CHARS = 24_000;
+/** Lines around the claim's own line when the file is too big to send whole. */
+const CLAIM_SPAN = 160;
+
+/**
+ * The code a claim rests on. A claim about ordering or scope is only visible with the block
+ * around it, so the whole file goes when it fits, and a wide window around the line when it
+ * does not. A narrow window is what makes a true claim look unsupported.
+ */
+function codeAt(tree: Tree, where: string, span = CLAIM_SPAN): string | undefined {
+  const match = /^(.*?):(\d+)/.exec(where.trim());
+  const file = match === null ? where.trim() : (match[1] ?? "");
+  const text = tree.read(file);
+  if (text === undefined) return undefined;
+  const lines = text.split("\n");
+  if (text.length <= CLAIM_CHARS) return `// ${file}, whole, from line 1\n${text}`;
+  const at = match === null ? 1 : Number(match[2]);
+  const from = Math.max(0, at - 1 - Math.floor(span / 2));
+  const to = Math.min(lines.length, from + span);
+  return `// ${file}, from line ${from + 1} of ${lines.length}\n${lines.slice(from, to).join("\n")}`;
+}
+
+/** The most walkthroughs and source patches one file carries as context, and the labels read off a patch. */
+const DOCS_EACH = 2;
+const CODE_EACH = 3;
+const CODE_CHARS = 8_000;
+const LABELS_EACH = 40;
+const DOC_FILE = /(?:^|\/)docs\/.*\.(?:mdx?|html)$/;
+/** A quoted string that reads as something a person sees: capitalized, a few words, no code punctuation. */
+const LABEL = /(["'`])([A-Z][A-Za-z0-9 ,.'&/-]{3,40})\1/g;
+/** A word a walkthrough shares with code: a bold or backticked term, or a quoted label. */
+const TERM =
+  /(?:\*\*([^*\n]{3,40})\*\*|`([^`\n]{3,40})`|<(?:code|strong)>([^<\n]{3,40})<\/(?:code|strong)>|"([A-Z][^"\n]{3,40})")/g;
+
+function labelsOf(patch: string): string[] {
+  const found = new Set<string>();
+  for (const line of patch.split("\n")) {
+    if (!line.startsWith("+")) continue;
+    for (const match of line.matchAll(LABEL)) {
+      const label = (match[2] ?? "").trim();
+      if (label.split(" ").length <= 6) found.add(label);
+    }
+  }
+  return [...found].slice(0, LABELS_EACH);
+}
+
+/**
+ * The walkthroughs under docs/ that name what a patch touches: the ones that mention the
+ * labels its added lines render, the lines around each mention. A doc that describes a
+ * control the patch changes is a defect the patch alone cannot show.
+ */
+function docsFor(tree: Tree, patch: string): Excerpt[] {
+  const labels = labelsOf(patch);
+  if (labels.length === 0) return [];
+  const scored: { path: string; text: string; hits: number }[] = [];
+  for (const file of tree.files) {
+    if (!DOC_FILE.test(file)) continue;
+    const text = tree.read(file);
+    if (text === undefined) continue;
+    const said = mentions(text, labels);
+    if (said === "") continue;
+    scored.push({ path: file, text: said, hits: said.split("// line ").length - 1 });
+  }
+  return scored
+    .sort((a, b) => b.hits - a.hits)
+    .slice(0, DOCS_EACH)
+    .map((one) => ({ path: one.path, role: "doc", text: shortened(one.text) }));
+}
+
+/**
+ * The source patches of the same change that a changed document describes: the ones that
+ * share its bold, backticked, or quoted terms. The document is judged against them.
+ */
+function codeFor(files: ChangedFile[], doc: ChangedFile): Excerpt[] {
+  const terms = new Set<string>();
+  for (const line of doc.patch.split("\n")) {
+    if (!line.startsWith("+")) continue;
+    for (const match of line.matchAll(TERM)) {
+      const term = (match.slice(1).find((group) => group !== undefined) ?? "").trim().toLowerCase();
+      if (term !== "") terms.add(term);
+    }
+  }
+  if (terms.size === 0) return [];
+  const scored = files
+    .filter((file) => file.path !== doc.path && SOURCE.test(file.path))
+    .map((file) => {
+      const lower = file.patch.toLowerCase();
+      const hits = [...terms].filter((term) => lower.includes(term)).length;
+      return { file, hits };
+    })
+    .filter((one) => one.hits > 0)
+    .sort((a, b) => b.hits - a.hits)
+    .slice(0, CODE_EACH);
+  return scored.map(({ file }) => ({
+    path: file.path,
+    role: "code",
+    text: file.patch.length > CODE_CHARS ? `${file.patch.slice(0, CODE_CHARS)}\n// cut here` : file.patch,
+  }));
+}
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+/** One window of a file judged by one probe. */
+type Window = { probe: string; hunk: Hunk; probability: number };
+
+type Noul = { type: "noul"; instructions: Json; criteria?: { true: Json; false: Json } };
+type Choice<Option extends string> = { type: "choice"; instructions: Json; criteria: Record<Option, Json> };
+type Score = { type: "score"; instructions: Json; criteria: Json[] };
+type Question = Noul | Choice<string> | Score;
+
+type Answer<Q extends Question> = Q extends Noul
+  ? { noul: number }
+  : Q extends Choice<infer Option>
+    ? { choice: Option; probabilities: Record<Option, number>; confidence: number }
+    : { score: number; confidence: number };
+type Answers<Q extends Record<string, Question>> = { [K in keyof Q]: Answer<Q[K]> };
+
+
+type Reply = {
+  model?: string;
+  answers?: Record<string, unknown>;
+  usage?: { input_tokens?: number; output_tokens?: number };
+};
+
+function noul(instructions: Json, criteria?: { true: Json; false: Json }): Noul {
+  return criteria === undefined ? { type: "noul", instructions } : { type: "noul", instructions, criteria };
+}
+
+function choice<Option extends string>(instructions: Json, criteria: Record<Option, Json>): Choice<Option> {
+  return { type: "choice", instructions, criteria };
+}
+
+function score(instructions: Json, levels: readonly string[]): Score {
+  return { type: "score", instructions, criteria: [...levels] };
+}
+
+const TIER_CRITERIA: Record<Tier, Json> = {
+  ignore: {
+    what: "A person reading it learns nothing that a build, a type check, or a test would not catch first",
+    examples: [
+      "Build and project scaffolding: tsconfig, project.json, a bundler config, a package manifest",
+      "Generated output, a lock file, a pure rename, formatting only",
+      "A stylesheet or token file with no logic in it",
+    ],
+  },
+  skim: {
+    what: "It carries behavior, but a mistake in it is cheap or shows on sight",
+    examples: ["Wiring and registration", "Constants and types", "A straightforward mapper or query", "A test fixture"],
+  },
+  deep: {
+    what: "The review turns on it",
+    examples: [
+      "It decides behavior under a condition",
+      "It guards a boundary: authorization, validation, a feature flag",
+      "It coordinates state, concurrency, or ordering",
+      "It handles failure, cancellation, or cleanup",
+    ],
+  },
+};
+
+/**
+ * What the evidence check may answer about one claim a review makes. A claim names a mechanism
+ * and what would follow from it. Only the mechanism has to be on the page: the consequence is
+ * the reader's inference, and holding the code to it reads every true claim as unsupported.
+ */
+const CLAIM_VERDICTS: Record<Verdict, Json> = {
+  supported: {
+    what: "The code holds the mechanism the claim rests on",
+    examples: [
+      "The claim names an ordering, and the code performs those steps in that order",
+      "The claim names a missing check, and the code takes that path without it",
+      "The claim names a condition or value, and the code uses that condition or value",
+    ],
+    note: "What the claim says would follow is an inference. The code does not have to state it, and a consequence the code never mentions does not make the claim unsupported",
+  },
+  unsupported: {
+    what: "The code does not hold the mechanism, whatever is true elsewhere in the codebase",
+    examples: ["These lines do something unrelated to the claim", "The mechanism lives in a file this code only calls"],
+  },
+  contradicted: {
+    what: "The code does the opposite of the mechanism the claim describes, so the claim is wrong about these lines",
+    examples: ["The claim says a guard is missing, and the guard is right there", "The claim says two steps run in an order, and the code runs them the other way"],
+  },
+};
+
+type Probe = { dimension: Dimension; docs?: boolean; ask: Noul };
+
+/**
+ * What one screen call asks over one file. Each probe is a shape a review has accepted before:
+ * a cache one view refreshes and another does not, an error shown as nothing, a control that
+ * does nothing, a route past the flag, a doc the code contradicts. `related` carries what the
+ * tree says that the patch does not, and `pr` what the author says the change is.
+ */
+const PROBES = {
+  correctness: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question: "Does file.patch directly support that this change introduces incorrect runtime behavior?",
+        inspect: [
+          "file.patch, read against related for what the code it calls returns and what its callers expect",
+          "Each changed function's name and doc comment against the condition its body enforces",
+        ],
+        focus: "Concrete behavior, state, data flow, or async errors in the added or changed lines",
+        ignore: ["Style preferences", "Naming concerns", "Speculation the code does not support"],
+      },
+      {
+        true: {
+          what: "The patch holds a realistic path to a wrong runtime result",
+          examples: [
+            "A condition now handles the opposite case",
+            "A caller in related passes a value the new signature misreads",
+            "A filter or query admits cases that its own name, doc comment, or caller says it must exclude",
+            "A loop or traversal reads only the first element of a collection it should walk",
+          ],
+        },
+        false: {
+          what: "The patch is correct, non-behavioral, or shows no direct evidence of a bug",
+          examples: ["Formatting only", "A refactor that preserves data flow"],
+        },
+      },
+    ),
+  },
+  staleCache: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question:
+          "Does file.patch add or change a write, a mutation, delete, update, or store write, whose success path refreshes fewer places than show the data it changed?",
+        inspect: [
+          "file.patch, for what the write changes and what its success path invalidates, patches, refetches, or resets",
+          "related, for the query keys, stores, and importers that show the same data under another key, view, or mode",
+        ],
+        focus: "Whether every list, cache, or view that displays the changed rows is refreshed or patched, not whether the write itself is right",
+      },
+      {
+        true: {
+          what: "Some place that shows the changed data keeps showing the old data after the write succeeds",
+          examples: [
+            "The success path invalidates the folder list, and related shows the same rows listed under an area, search, or detail key too",
+            "A cache patch updates one query's rows while a second query in related holds copies of the same rows",
+            "A delete awaits the refetch of the deleted row's own query, so the refetch rejects and the delete reports an error",
+            "A send succeeds and the list that would show the new row is not invalidated, so the action can be repeated",
+          ],
+        },
+        false: { what: "Every consumer of the changed data is refreshed or patched, or the patch holds no write" },
+      },
+    ),
+  },
+  errorAsEmpty: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question: "Does file.patch show a failed request as an empty, default, or loading state instead of an error?",
+        inspect: "file.patch, for how a query's data, isError, isLoading, or a catch block feeds what renders or returns",
+      },
+      {
+        true: {
+          what: "A failure reaches the user as nothing wrong",
+          examples: [
+            "`query.data ?? []` renders the empty state while the query errored",
+            "isLoading is derived from the data alone and never reads isError, so a 403 or 500 renders as no rows",
+            "A catch returns a default the caller cannot tell from a real result",
+          ],
+        },
+        false: { what: "The error state renders or propagates as an error, or the patch makes no request" },
+      },
+    ),
+  },
+  deadControl: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question:
+          "Does file.patch render a control or accept a handler that does nothing: a handler missing or a no-op, a prop received and never used, a callback passed down and dropped?",
+        inspect: [
+          "file.patch, for each rendered control and where its handler comes from",
+          "related, for what the importers pass in and what the imported component does with it",
+        ],
+      },
+      {
+        true: {
+          what: "A control the user can reach has no effect, or a value the caller sends goes nowhere",
+          examples: [
+            "A button renders enabled and the importer in related passes no handler for it",
+            "A component accepts a permissions prop and never reads it",
+            "A handler is destructured and never attached",
+          ],
+        },
+        false: { what: "Every control's handler reaches an effect, or the patch renders no control" },
+      },
+    ),
+  },
+  transition: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question:
+          "Does file.patch hold state that is set on one path and not reset on the path back, or a value captured before a list changes and used after?",
+        inspect: "file.patch, for every state set, ref write, and effect dependency, and for each what clears or recomputes it",
+      },
+      {
+        true: {
+          what: "A state or index goes stale on a path the patch does not handle",
+          examples: [
+            "A status set to loading on the slow path and never set on the cached path, so it sticks",
+            "An index into a list captured before more pages load and read after they do",
+            "A selection cleared on one navigation action and kept on the others",
+            "Seeding that runs only when a dialog opens, so a second open with new inputs keeps the old values",
+            "A latch set once that a later change never clears",
+          ],
+        },
+        false: { what: "Every transition resets what it must, or the patch holds no such state" },
+      },
+    ),
+  },
+  parity: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question:
+          "Does the twin in related, the file this one was copied or ported from, do something on a path that file.patch skips or does differently?",
+        inspect: "The twin entry in related against file.patch, where they correspond",
+      },
+      {
+        true: {
+          what: "The copy diverges from the twin on a path that matters",
+          examples: [
+            "The twin clears the selection on every navigation and the copy on one",
+            "The twin invalidates two keys and the copy one",
+            "The twin sorts by kind and the copy by name",
+            "The twin queues a follow-up job the copy does not",
+          ],
+        },
+        false: { what: "No twin in related, or the copy matches the twin on every path that matters" },
+      },
+    ),
+  },
+  constant: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question:
+          "Does file.patch use a literal, unit, divisor, mapping, or label that does not match what its name, its comment, its consumer, or a doc in related says it should be?",
+        inspect: "Each literal in file.patch against the name and comment beside it and the caller or doc in related",
+      },
+      {
+        true: {
+          what: "A value is wrong for what it is named or used as",
+          examples: [
+            "Elapsed-time units divided by working-time divisors",
+            "A false boolean rendered as Required",
+            "A route pattern that matches a path it must not",
+            "A query key or screen key that differs from the one the twin shares",
+          ],
+        },
+        false: { what: "Every literal matches what is said about it, or the patch holds none" },
+      },
+    ),
+  },
+  staleDoc: {
+    dimension: "correctness",
+    ask: noul(
+      {
+        question: "Does a doc entry in related describe a label, control, order, color, or behavior that file.patch changes or removes?",
+        inspect: "The doc entries in related, which are walkthroughs that mention the labels file.patch touches, against what file.patch now does",
+      },
+      {
+        true: {
+          what: "A walkthrough now tells the tester something the code no longer does",
+          examples: [
+            "The doc names a button style the patch changes",
+            "The doc tells the tester to expect an order the patch no longer produces",
+            "The doc names a control the patch renames or removes",
+          ],
+        },
+        false: { what: "No doc entry in related, or every line of it still holds" },
+      },
+    ),
+  },
+  docMismatch: {
+    dimension: "correctness",
+    docs: true,
+    ask: noul(
+      {
+        question:
+          "Does file.patch, a document, describe a control, label, order, color, step, or outcome that the code in related does not implement or contradicts?",
+        inspect: "Each step and claim in file.patch against the code entries in related, which are the source patches of the same change that share its words",
+      },
+      {
+        true: {
+          what: "A tester following the doc would mark a step failed against this code",
+          examples: [
+            "The doc says the video keeps playing and the code pauses it",
+            "The doc expects one group listed first and the code sorts alphabetically",
+            "The doc names a header control that no code renders",
+            "The doc describes a state this build cannot reach",
+          ],
+        },
+        false: { what: "Every claim in the doc matches the code, or related holds no code" },
+      },
+    ),
+  },
+  security: {
+    dimension: "security",
+    ask: noul(
+      {
+        question: "Does file.patch directly support that this change introduces or weakens a security boundary?",
+        inspect: "file.patch, with related for where its inputs come from",
+        focus: "Authorization, injection, secret exposure, trust boundaries, and unsafe defaults",
+      },
+      {
+        true: {
+          what: "The patch creates a concrete path around a security control or into an unsafe sink",
+          examples: ["An authorization check is removed", "Untrusted input reaches command execution"],
+        },
+        false: { what: "No security boundary is weakened by the patch", not_for: "Code that merely uses security-related names" },
+      },
+    ),
+  },
+  flagLeak: {
+    dimension: "security",
+    ask: noul(
+      {
+        question:
+          "Does file.patch make a route, control, or behavior reachable outside the feature flag, kill switch, role, or ownership check that pr says gates it, or that its neighbours in related use?",
+        inspect: [
+          "pr, for the flag or switch the author says gates this change",
+          "file.patch, for each new route, control, or branch and what gates it",
+          "related, for the check the neighbouring routes or controls perform",
+        ],
+      },
+      {
+        true: {
+          what: "Something new ships outside the gate the change claims or its neighbours use",
+          examples: [
+            "A new route registered without the flag guard its sibling routes pass",
+            "A control added to a shared component that also renders on pages the flag does not cover",
+            "A rename or behavior change shipped outside the kill switch the description says covers the change",
+          ],
+        },
+        false: { what: "Every new path sits behind the gate, or pr names no gate and the neighbours use none" },
+      },
+    ),
+  },
+  reliability: {
+    dimension: "reliability",
+    ask: noul(
+      {
+        question: "Does file.patch directly support that this change can crash, race, leak, deadlock, or recover poorly?",
+        inspect: "file.patch, with related for what the code it calls can throw or leave open",
+        focus: "Realistic resource, concurrency, cancellation, and failure paths",
+      },
+      {
+        true: {
+          what: "A changed path can lose work, leak resources, hang, crash, or leave inconsistent state",
+          examples: [
+            "Cleanup is skipped after failure",
+            "Concurrent work updates shared state unsafely",
+            "An irreversible effect runs before the local record that depends on it is saved",
+            "Work is reported done before the step that makes it durable runs",
+          ],
+        },
+        false: { what: "The patch preserves safe lifecycle and failure handling" },
+      },
+    ),
+  },
+  compatibility: {
+    dimension: "compatibility",
+    ask: noul(
+      {
+        question: "Does an importer in related still call what file.patch removed, renamed, or reshaped, in a way that now fails or misbehaves?",
+        inspect: "The importer entries in related, for the exact call, against the signature or shape file.patch leaves",
+        focus: "A caller the patch did not update, not the fact that a contract changed",
+      },
+      {
+        true: {
+          what: "A caller in related is broken by the change and not updated with it",
+          examples: ["An importer still passes a removed field", "An importer still calls a renamed export", "A persisted format changes with no migration for what is stored"],
+        },
+        false: { what: "Every importer in related was updated with the change, or none uses what changed" },
+      },
+    ),
+  },
+  testGap: {
+    dimension: "testGap",
+    ask: noul(
+      {
+        question: "Does file.patch change important behavior that no test named in changedTests exercises?",
+        inspect:
+          "changedTests lists every test file the change adds or edits, with the names of its tests. A test counts when its name describes the behavior file.patch adds or changes, even from a different file. targeted marks the test files the tree ties to this file",
+        focus: "New branches, boundaries, failure paths, and component interactions",
+      },
+      {
+        true: {
+          what: "Important changed behavior has no test in changedTests whose name covers it",
+          examples: ["A new failure branch has no test named for it", "A new route has no test that names the permission-denied case"],
+        },
+        false: {
+          what: "A test in changedTests names the important behavior, or the patch is non-behavioral",
+          examples: ["Documentation-only change", "A type or interface with no runtime behavior"],
+        },
+      },
+    ),
+  },
+} satisfies Record<string, Probe>;
+
+type ProbeName = keyof typeof PROBES;
+const PROBE_NAMES = Object.keys(PROBES) as ProbeName[];
+const PROBE_DIMENSIONS = Object.fromEntries(
+  PROBE_NAMES.map((name) => [name, PROBES[name].dimension]),
+) as Record<string, Dimension>;
+
+const TIER = choice(
+  {
+    question: "How closely does a person have to read file.patch for this review to be sound?",
+    inspect: "file.patch, and what related says the code around it expects",
+    focus: "What a mistake in these lines would cost, not how long the patch is",
+  },
+  TIER_CRITERIA,
+);
+
+const HUNKS_EACH = 12;
+const QUESTIONS_EACH = 60;
+/** The most files one ranking call compares. */
+const RANKED_EACH = 20;
+/** The windows each candidate shows when ranked. */
+const WINDOWS_SHOWN = 2;
+
+/** The concerns the deep files are ranked on, side by side. The strongest answer is a file's rank. */
+const RANKINGS: Record<string, string> = {
+  worst: "Which candidate window most likely holds a defect a reviewer would block the merge on?",
+  staleCache: "Which candidate window most likely writes data and leaves a list, cache, or view that shows it unrefreshed?",
+  errorAsEmpty: "Which candidate window most likely shows a failed request as an empty, default, or loading state?",
+  transition: "Which candidate window most likely leaves state stale on a transition it does not handle, or uses an index captured before its list changed?",
+  deadControl: "Which candidate window most likely renders a control or accepts a handler that does nothing?",
+  gate: "Which candidate window most likely ships a route, control, or behavior outside the flag, switch, or permission check that gates its neighbours?",
+  claim: "Which candidate window most likely contradicts what pr says the change does, or what a walkthrough in it describes?",
+};
+
+/**
+ * One question per probe per window: does this window alone show the probe's concern? The
+ * window is small enough to answer about, and the file and its connections stay in view.
+ */
+function hunkQuestions(probes: ProbeName[], hunks: Hunk[]): Record<string, Noul> {
+  const out: Record<string, Noul> = {};
+  for (const probe of probes) {
+    const ask = PROBES[probe].ask;
+    const asked = typeof ask.instructions === "object" && ask.instructions !== null && !Array.isArray(ask.instructions)
+      ? (ask.instructions as Record<string, Json>)
+      : { question: ask.instructions };
+    hunks.forEach((hunk, index) => {
+      out[`${probe}__${hunk.id}`] = noul(
+        {
+          ...asked,
+          window: `Answer for the lines of \`hunks[${index}]\` alone, read with the rest of file.patch and related as context. Evidence that sits only in another window does not count.`,
+        },
+        ask.criteria,
+      );
+    });
+  }
+  return out;
+}
+
+/** A record's entries in groups, so one call never carries more questions than it should. */
+function chunked<T>(entries: [string, T][], size: number): [string, T][][] {
+  const groups: [string, T][][] = [];
+  for (let from = 0; from < entries.length; from += size) groups.push(entries.slice(from, from + size));
+  return groups;
+}
+
+async function mapLimit<T, R>(items: T[], limit: number, job: (item: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await job(items[index] as T);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+function rested(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+
+// ---- The pass, as jev-map runs it: one Jev call per file over every window, then the deep files ranked side by side.
+
+const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
+const MODEL = process.env["JEV_MODEL"] ?? "jev-latest";
+const TIMEOUT_MS = 30_000;
+/** Two more tries after a rate limit or an overload, each after a longer pause. */
+const RETRIES = 2;
+/** Jev takes 1200 requests a minute, so a handful in flight keeps a pass to seconds without nearing it. */
+const IN_FLIGHT = 6;
+const FILE_BYTES = 1_000_000;
+/** How much of the pull request's own text a screen carries, for the probes that hold the change to what it claims. */
+const ABOUT_CHARS = 6_000;
+const DOC = /\.(?:mdx?|txt|rst)$|(?:^|\/)docs\/.*\.html$/;
+/** How sure the evidence check must be before its answer counts against a claim. */
+const SETTLED = 0.7;
+
+function key(): string {
+  const given = process.env["TYPESAFE_API_KEY"]?.trim();
+  if (given !== undefined && given !== "") return given;
+  const shown = spawnSync("pass", ["show", "typesafe-ai-api-key"], { encoding: "utf8" });
+  const line = shown.status === 0 ? (shown.stdout.split("\n")[0] ?? "").trim() : "";
+  if (line === "") {
+    process.stderr.write("jev-map: no API key in TYPESAFE_API_KEY or pass\n");
+    process.exit(78);
+  }
+  return line;
+}
+
+const spent = { input: 0, output: 0 };
+let bearer: string | undefined;
+
+async function ask<Q extends Record<string, Question>>(state: Json, questions: Q): Promise<Answers<Q>> {
+  bearer ??= key();
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: MODEL, state, questions }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if ((response.status === 429 || response.status === 529) && attempt < RETRIES) {
+      await rested(1000 * 2 ** attempt);
+      continue;
+    }
+    if (!response.ok) throw new Error(`TypeSafe answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
+    const reply = (await response.json()) as Reply;
+    if (reply.answers === undefined || typeof reply.answers !== "object") throw new Error("TypeSafe answered without answers");
+    spent.input += reply.usage?.input_tokens ?? 0;
+    spent.output += reply.usage?.output_tokens ?? 0;
+    return reply.answers as Answers<Q>;
+  }
+}
+
+function git(args: string[], cwd: string): { code: number; stdout: string; stderr: string } {
+  const ran = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 1 << 28 });
+  return { code: ran.status ?? 1, stdout: ran.stdout ?? "", stderr: ran.stderr ?? "" };
+}
+
+/** The tracked files of the checkout, read from disk on demand and never twice. */
+function treeOf(dir: string): Tree {
+  const listed = git(["ls-files", "-z"], dir);
+  if (listed.code !== 0) throw new Error(listed.stderr.trim());
+  const files = listed.stdout.split("\0").filter((one) => one !== "");
+  const held = new Map<string, string | undefined>();
+  return {
+    files,
+    read: (file) => {
+      if (held.has(file)) return held.get(file);
+      let text: string | undefined;
+      try {
+        const at = path.join(dir, file);
+        text = fs.statSync(at).size > FILE_BYTES ? undefined : fs.readFileSync(at, "utf8");
+      } catch {
+        text = undefined;
+      }
+      held.set(file, text);
+      return text;
+    },
+  };
+}
+
+/** The change under review: the diff git prints for the arguments, and with no arguments the working tree plus untracked files. */
+function diffOf(dir: string, args: string[]): string {
+  const parts = [git(["diff", "-M", ...(args.length === 0 ? ["HEAD"] : args)], dir).stdout];
+  if (args.length === 0) {
+    for (const file of git(["ls-files", "--others", "--exclude-standard"], dir).stdout.split("\n")) {
+      if (file === "") continue;
+      parts.push(git(["diff", "--no-index", "--", "/dev/null", file], dir).stdout);
+    }
+  }
+  return parts.join("");
+}
+
+/** The pass over one diff, with the checkout at `dir` holding the code it changes. Null when the diff holds nothing to screen. */
+async function review(dir: string, diff: string, about: string): Promise<Report | null> {
+  const { files, tests } = changedIn(diff);
+  if (files.length === 0) return null;
+  const tree = treeOf(dir);
+  const graph = graphOf(tree);
+  const pr = about.slice(0, ABOUT_CHARS);
+  let context = 0;
+
+  const screened = await mapLimit(files, IN_FLIGHT, async (file) => {
+    const doc = DOC.test(file.path);
+    const related: Excerpt[] = doc
+      ? codeFor(files, file)
+      : [...relatedTo(graph, tree, file.path), ...docsFor(tree, file.patch)];
+    context += related.length;
+    const changedTests = doc ? [] : testSummaries(graph, tests, file.path);
+    const hunks = parseHunks(file.patch).slice(0, HUNKS_EACH);
+    const asked = PROBE_NAMES.filter((name) => ((PROBES[name] as { docs?: boolean }).docs === true) === doc);
+    const state = {
+      pr,
+      file: { path: file.path, patch: file.patch },
+      hunks: hunks.map((hunk, index) => ({ index, id: hunk.id, startLine: hunk.startLine, patch: hunk.patch })),
+      related,
+      changedTests,
+    };
+    const windows: Window[] = [];
+    for (const group of chunked(Object.entries(hunkQuestions(asked, hunks)), QUESTIONS_EACH)) {
+      const answers = await ask(state, Object.fromEntries(group));
+      for (const [name, answer] of Object.entries(answers)) {
+        const [probe, id] = name.split("__") as [string, string];
+        const hunk = hunks.find((one) => one.id === id);
+        if (hunk !== undefined && "noul" in answer) windows.push({ probe, hunk, probability: answer.noul });
+      }
+    }
+    const rated = await ask({ file: state.file, related }, { tier: TIER });
+    const probes: Record<string, number> = {};
+    for (const name of asked) {
+      probes[name] = Math.max(0, ...windows.filter((one) => one.probe === name).map((one) => one.probability));
+    }
+    const cells = Object.fromEntries(
+      DIMENSIONS.map((dimension) => [
+        dimension,
+        Math.max(0, ...asked.filter((name) => PROBE_DIMENSIONS[name] === dimension).map((name) => probes[name] ?? 0)),
+      ]),
+    ) as Cells;
+    return { file, cells, probes, windows, related, tier: rated.tier.choice as Tier };
+  });
+
+  // Every file looks a little suspect on its own. Side by side, the one that matters stands out.
+  const candidates = screened
+    .filter((one) => one.tier === "deep")
+    .map((one) => {
+      const best = one.windows
+        .filter((window) => window.probe !== "testGap")
+        .sort((a, b) => b.probability - a.probability);
+      const shown = [...new Set(best.map((window) => window.hunk.id))]
+        .slice(0, WINDOWS_SHOWN)
+        .map((id) => best.find((window) => window.hunk.id === id)!);
+      if (shown.length === 0) return undefined;
+      return {
+        path: one.file.path,
+        probability: best[0]!.probability,
+        windows: shown.map((window) => ({
+          line: window.hunk.startLine,
+          suspected: PROBE_DIMENSIONS[window.probe] ?? "correctness",
+          patch: window.hunk.patch,
+        })),
+      };
+    })
+    .filter((one): one is NonNullable<typeof one> => one !== undefined)
+    .sort((a, b) => b.probability - a.probability);
+  const rank = new Map<string, number>();
+  const ranks = new Map<string, Record<string, number>>();
+  await mapLimit(chunked(candidates.map((one) => [one.path, one] as [string, typeof one]), RANKED_EACH), IN_FLIGHT, async (group) => {
+    if (group.length < 2) {
+      for (const [held] of group) {
+        rank.set(held, 1);
+        ranks.set(held, {});
+      }
+      return;
+    }
+    // The same comparison in two orders, so where a file sits in the list does not decide its rank.
+    const orders = [group.map(([, one]) => one), [...group].reverse().map(([, one]) => one)];
+    const summed = new Map<string, Record<string, number>>();
+    for (const order of orders) {
+      const ids = order.map((one, index) => ({ id: `c${index}`, path: one.path, windows: one.windows }));
+      const options = Object.fromEntries(ids.map((one) => [one.id, one.path]));
+      const asked = Object.fromEntries(
+        Object.entries(RANKINGS).map(([name, question]) => [
+          name,
+          choice({ question, inspect: "Each candidate's windows against the other candidates', with pr for what the change claims to do" }, options),
+        ]),
+      );
+      const answers = await ask({ pr, candidates: ids }, asked);
+      for (const one of ids) {
+        const held = summed.get(one.path) ?? {};
+        for (const [name, answer] of Object.entries(answers)) {
+          held[name] = (held[name] ?? 0) + ((answer.probabilities[one.id] ?? 0) * ids.length) / orders.length;
+        }
+        summed.set(one.path, held);
+      }
+    }
+    for (const [held, each] of summed) {
+      ranks.set(held, each);
+      rank.set(held, Math.max(...Object.values(each)));
+    }
+  });
+
+  return {
+    files: files.length,
+    tests: tests.length,
+    context,
+    floor: 0,
+    perConcern: 0,
+    matrix: screened.map(({ file, cells, probes, windows, tier }) => ({
+      path: file.path,
+      cut: file.cut,
+      tier,
+      cells,
+      probes,
+      windows: windows.map((one) => ({ probe: one.probe, line: one.hunk.startLine, probability: one.probability })),
+      rank: rank.get(file.path),
+      ranks: ranks.get(file.path),
+    })),
+    profiles: [],
+    inspected: [],
+    connections: screened.map(({ file, tier, related }) => ({ path: file.path, tier, excerpts: related })),
+    findings: [],
+    funnel: { cells: files.length * PROBE_NAMES.length, inspected: 0, located: 0, routed: 0 },
+  };
+}
+
+/** Each claim read against the code it names. A claim whose file the tree does not hold comes back unread and supported. */
+async function check(dir: string, claims: Claim[]): Promise<Checked[]> {
+  const tree = treeOf(dir);
+  return mapLimit(claims, IN_FLIGHT, async (claim): Promise<Checked> => {
+    const code = codeAt(tree, claim.where);
+    if (code === undefined) return { ...claim, verdict: "supported", confidence: 0, read: false };
+    const answers = await ask(
+      { claim: claim.claim, where: claim.where, code },
+      {
+        verdict: choice(
+          {
+            question: "Does `code` hold the mechanism that `claim` rests on?",
+            inspect: "`code` alone, which is the file `where` names, or a window of it around that line",
+            ignore: [
+              "Whether the problem would matter, or how bad it would be",
+              "Whether the consequence the claim predicts is spelled out anywhere",
+              "Whether the claim holds somewhere else in the codebase",
+            ],
+          },
+          CLAIM_VERDICTS,
+        ),
+      },
+    );
+    return { ...claim, verdict: answers.verdict.choice as Verdict, confidence: answers.verdict.confidence, read: true };
+  });
+}
+
+// ---- The command line.
+
+function usage(): never {
+  process.stderr.write(
+    [
+      "usage: jev-map [--json] [--about <file>] [<git diff args>]",
+      "       jev-map check [--json] <claims.json>",
+      "  no diff args: working tree and index against HEAD, plus untracked files",
+      "  --about: a file holding the pull request's title and description",
+      "  claims.json: [{\"claim\": \"...\", \"where\": \"path:line\"}, ...]",
+      "",
+    ].join("\n"),
+  );
+  process.exit(64);
+}
+
+async function main(argv: string[]): Promise<void> {
+  const dir = process.cwd();
+  const json = argv.includes("--json");
+  const rest = argv.filter((one) => one !== "--json");
+  if (rest[0] === "check") {
+    const file = rest[1];
+    if (file === undefined) usage();
+    const claims = JSON.parse(fs.readFileSync(file, "utf8")) as Claim[];
+    const checked = await check(dir, claims);
+    if (json) {
+      process.stdout.write(`${JSON.stringify(checked, null, 2)}\n`);
+    } else {
+      for (const one of checked) {
+        const stands = !one.read || one.confidence < SETTLED || one.verdict === "supported";
+        process.stdout.write(`${stands ? "stands " : "weak   "} ${one.read ? one.verdict.padEnd(12) : "unread      "} ${one.confidence.toFixed(2)}  ${one.where}  ${one.claim}\n`);
+      }
+    }
+    process.stderr.write(`jev: ${spent.input} input tokens\n`);
+    return;
+  }
+  let about = "";
+  const args: string[] = [];
+  for (let at = 0; at < rest.length; at++) {
+    if (rest[at] === "--about") {
+      const file = rest[++at];
+      if (file === undefined) usage();
+      about = fs.readFileSync(file, "utf8");
+    } else {
+      args.push(rest[at]!);
+    }
+  }
+  const diff = diffOf(dir, args);
+  const report = await review(dir, diff, about);
+  if (report === null) {
+    process.stderr.write("jev-map: no changed files\n");
+    return;
+  }
+  if (json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    const tree = treeOf(dir);
+    process.stdout.write(`${reading(report, tree.read)}\n\n# Diff\n\n${diffFor(report, diff)}\n`);
+  }
+  process.stderr.write(`jev: ${report.files} files, ${spent.input} input tokens\n`);
+}
+
+await main(process.argv.slice(2));
