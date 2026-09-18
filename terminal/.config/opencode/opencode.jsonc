@@ -1,19 +1,26 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "zai-coding-plan/glm-5.3",
-  "small_model": "zai-coding-plan/glm-5.3-flash",
+  "model": "novita-ai/deepseek/deepseek-v4.1-flash",
+  "small_model": "novita-ai/deepseek/deepseek-v4.1-flash",
   "disabled_providers": ["zai"],
   "provider": {
     "novita-ai": {
       "models": {
         "deepseek/deepseek-v4.1-flash": {
           "name": "DeepSeek V4.1 Flash",
-          "family": "deepseek-flash",
+          "attachment": true,
           "reasoning": true,
           "tool_call": true,
           "temperature": true,
-          "interleaved": { "field": "reasoning_content" },
-          "limit": { "context": 1048576, "output": 393216 }
+          "limit": {
+            "context": 1000000,
+            "output": 384000
+          },
+          "cost": {
+            "input": 0.15,
+            "output": 0.6,
+            "cache_read": 0.003
+          }
         }
       }
     }
