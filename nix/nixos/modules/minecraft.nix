@@ -36,7 +36,7 @@ in
     # Tailnet-only. Not port-forwarded on purpose.
     minecraft-server = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "25565:25565" ];
+      ports = [ "25565:25565" "24454:24454/udp" ];
       volumes = [ "${dataRoot}/minecraft-server/data:/data" ];
       autoStart = true;
       environment = {
@@ -44,7 +44,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "2G";
         VERSION = "26.1.2";
-        MODRINTH_PROJECTS = "fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton";
+        MODRINTH_PROJECTS = "fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         UID = "1000";
         GID = "100";
@@ -56,7 +56,7 @@ in
     # Public, on the default Java and Bedrock ports so players need no port.
     rexburg-friends = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "${toString cfg.rexburgPort}:25565" "19132:19132/udp" ];
+      ports = [ "${toString cfg.rexburgPort}:25565" "19132:19132/udp" "24454:24454/udp" ];
       volumes = [ "${dataRoot}/rexburg-friends/data:/data" ];
       autoStart = true;
       environment = {
@@ -64,7 +64,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "2G";
         VERSION = "26.1.2";
-        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton";
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         UID = "1000";
@@ -111,6 +111,6 @@ in
   systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") names;
 
   networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 ];
-  networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 ];
+  networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 24454 ];
   };
 }
