@@ -64,7 +64,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "2G";
         VERSION = "26.1.2";
-        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray";
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         UID = "1000";
