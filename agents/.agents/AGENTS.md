@@ -7,6 +7,14 @@ I love simplicity and clarity.
 
 Spawn with `description` and `prompt` only and read the final report from the tool result. Never pass `name` (it creates an addressable teammate with mailbox machinery; SendMessage back-and-forth is equally banned). Put every reporting requirement in the spawn prompt so the report is complete on its own. Use Opus/Sonnet for sub-agents, never Fable.
 
+## Context depth
+
+Re-reading accumulated context costs more than producing output, so keep the main thread's context small.
+
+Delegate reading. Surveys, scouting, log triage, and wide searches belong in sub-agents that return findings rather than contents. Ask each one for its conclusion and the `file:line` behind it.
+
+Never pull a raw dump, a full log, or a wide search result into the main thread when a sub-agent can hand back the answer instead.
+
 ## Plan mode
 
 Only enter plan mode when I explicitly ask ("make a plan", "use plan mode").
