@@ -4,7 +4,7 @@ I love simplicity and clarity. 10 well put words beat 100 sloppy ones that say t
 
 ## Always
 
-- Never type an em dash (—, U+2014). Not in chat, code, comments, docstrings, string literals, commit messages, PR and review text, generated docs, or filenames. Use a period, comma, colon, parentheses, or a plain hyphen. Not a semicolon. When editing text that already has one, replace it. The only allowed appearance is inside a pattern meant to find em dashes.
+- Never type an em dash (U+2014). Use a period, comma, colon, parentheses, or a plain hyphen. Not a semicolon.
 - Use the `unslop` skill when writing prose, in responses and in files.
 - Before the first tool call, say in one sentence what you are about to do. Give one-sentence updates at a finding, a change of direction, or a blocker. State results and decisions, never internal deliberation.
 - Write so a reader can pick up cold: complete sentences, no shorthand from earlier in the session.
@@ -24,9 +24,8 @@ When asserting absence, name the search ("grepped `X` in `Y/`, no matches"). A p
 
 <important if="you are searching the codebase">
 
-- Search with `rg` in the shell. Never `git grep`: it skips untracked files and nested repos, and mangles non-ASCII paths.
+- Search with `rg` in the shell, never `git grep`.
 - Quote every pattern and glob. Use `rg -F` when the needle contains `.`, `[`, `(`, `|`, or `+`. `rg -E` is the encoding flag, not extended regex.
-- An empty result proves nothing until one retry with `rg -uuu -F 'needle' path`. Say which flags found it.
 - "binary file matches" is a hit. Rerun with `-a`.
 - Built-in grep tools hide gitignored files and stop at 100 matches. When the count matters, use `rg -c` in the shell.
 - Structural questions (calls of a given shape, functions missing a guard) go to `ast-grep run -p`, not regex.
