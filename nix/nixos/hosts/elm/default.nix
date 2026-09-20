@@ -29,6 +29,7 @@
     handbrake
     makemkv
     cockpit
+    python3 # Claude Code hooks shell out to it
   ];
 
   fileSystems."/mnt/backup" = {

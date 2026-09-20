@@ -16,6 +16,10 @@
 
   networking.hostName = "sparrow";
 
+  environment.systemPackages = with pkgs; [
+    python3 # Claude Code hooks shell out to it
+  ];
+
   # Static address: the port forwards on the gateway point here, and the
   # gateway sees this box through an extender that rewrites its MAC, so a
   # DHCP reservation cannot be trusted to stick.
