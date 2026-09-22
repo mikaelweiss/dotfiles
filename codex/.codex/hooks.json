@@ -4,14 +4,6 @@
       {
         "hooks": [
           {
-            "command": "npx agent-friction hook trace-post-tool",
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
             "command": "python3 \"$HOME/.agents/hooks/search-guard.py\"",
             "timeout": 10,
             "type": "command"
@@ -30,40 +22,12 @@
         ]
       }
     ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "command": "npx agent-friction hook run-on-session-end",
-            "type": "command"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "npx agent-friction hook trace-session-start",
-            "type": "command"
-          }
-        ]
-      },
       {
         "hooks": [
           {
             "command": "bash '/Users/mikaelweiss/.codex/herdr-agent-state.sh' session",
             "timeout": 10,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "npx agent-friction hook run-on-stop",
             "type": "command"
           }
         ]
