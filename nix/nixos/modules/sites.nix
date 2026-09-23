@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" ];
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
@@ -82,6 +82,24 @@ let
       echo "Deployed $service"
     '';
   };
+  deployBun = pkgs.writeShellApplication {
+    name = "deploy-bun";
+    runtimeInputs = buildTools ++ [ pkgs.bun pkgs.systemd ];
+    text = ''
+      site_user=$1 dir=$2 service=$3
+      echo "Deploying $service..."
+      ${sudo} -u "$site_user" env PATH="$PATH" bash -c "
+        set -e
+        cd $dir
+        git fetch origin main
+        git reset --hard origin/main
+        bun install --frozen-lockfile
+        bun run build
+      "
+      ${sudo} systemctl restart "$service"
+      echo "Deployed $service"
+    '';
+  };
   deployStatic = pkgs.writeShellApplication {
     name = "deploy-static";
     runtimeInputs = buildTools;
@@ -118,6 +136,8 @@ let
     hook name "${deployPhoenix}/bin/deploy-phoenix" [ name "/opt/${name}" name "/etc/${name}/env" migrate ];
   nodeHook = name:
     hook name "${deployNode}/bin/deploy-node" [ name "/opt/${name}" name ];
+  bunHook = name:
+    hook name "${deployBun}/bin/deploy-bun" [ name "/opt/${name}" name ];
   staticHook = name:
     hook name "${deployStatic}/bin/deploy-static" [ name "/opt/${name}" ];
   hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
@@ -130,6 +150,7 @@ let
     (nodeHook "vault")
     (nodeHook "rubrix")
     (staticHook "mikaelmc")
+    (bunHook "parlance")
   ]);
 in
 {
@@ -175,11 +196,33 @@ in
       serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4008 --root /opt/mikaelmc --ignore-hidden-files=true";
     };
 
+    parlance = mkService "parlance" {
+      environment = { NODE_ENV = "production"; PORT = "4010"; DATABASE_PATH = "/var/lib/parlance/parlance.db"; };
+      serviceConfig = {
+        EnvironmentFile = "/etc/parlance/env";
+        StateDirectory = "parlance";
+        StateDirectoryMode = "0700";
+        ExecStart = "${pkgs.bun}/bin/bun server/index.ts";
+      };
+    };
+
+    parlance-backup = mkService "parlance" {
+      description = "parlance nightly database copy";
+      after = [ "network.target" "parlance.service" ];
+      partOf = [ "parlance.service" ];
+      environment = { DATABASE_PATH = "/var/lib/parlance/parlance.db"; BACKUP_DIR = "/var/lib/parlance/backups"; };
+      serviceConfig = {
+        StateDirectory = "parlance";
+        StateDirectoryMode = "0700";
+        ExecStart = "${pkgs.bun}/bin/bun scripts/backup.ts";
+      };
+    };
+
     webhook = {
       description = "GitHub webhook deploy receiver";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ deployPhoenix deployNode ];
+      path = [ deployPhoenix deployNode deployBun ];
       preStart = ''
         secret=$(cat /etc/webhook/secret)
         sed "s|@SECRET@|$secret|g" ${hooksTemplate} > /run/webhook/hooks.json
@@ -197,5 +240,5 @@ in
 
   systemd.tmpfiles.rules = [ "d /opt/deploy 0755 mikaelweiss users -" ];
 
-  environment.systemPackages = [ deployPhoenix deployNode deployStatic pkgs.elixir_1_19 pkgs.nodejs_22 ];
+  environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic pkgs.elixir_1_19 pkgs.nodejs_22 pkgs.bun ];
 }
