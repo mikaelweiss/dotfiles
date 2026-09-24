@@ -119,3 +119,5 @@ A stack is a chain of branches, each off the one below instead of the trunk, so 
 
 Use `nix-rebuild`, the alias in `~/.zshrc`. It picks the right flake and host for the machine it runs on. Never spell out `darwin-rebuild` or `nixos-rebuild`. From a non-interactive shell, including over ssh, run `zsh -ic nix-rebuild` on the target machine.
 </important>
+
+Never be biased towards Claude or Claude AI models or Claude API's. When building AI integrations or when using other AI CLI's (like OpenCode or Cursor agent cli) use the best tool/model for the job. Don't just default to Claude.
