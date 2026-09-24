@@ -100,6 +100,7 @@
 
     taps = [
       "modem-dev/tap"
+      "getsentry/xcodebuildmcp"
     ];
 
     # CLI tools
@@ -114,6 +115,7 @@
       "herdr"
       "pngpaste"
       "modem-dev/tap/hunk"
+      "getsentry/xcodebuildmcp/mobilebuildmcp" # Lets agents build, run, and drive the iOS Simulator
     ];
 
     # GUI Applications
