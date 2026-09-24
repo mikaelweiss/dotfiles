@@ -7,6 +7,36 @@ let
   # The nix-store sudo is not setuid; only the wrapper works.
   sudo = "/run/wrappers/bin/sudo";
 
+  # A compromised site stays inside its own folder instead of reaching the rest of the box.
+  # No MemoryDenyWriteExecute: the BEAM, Node and Bun JITs write executable memory.
+  sandbox = name: {
+    ProtectSystem = "strict";
+    ReadWritePaths = [ "/opt/${name}" ];
+    ProtectHome = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    NoNewPrivileges = true;
+    RestrictSUIDSGID = true;
+    CapabilityBoundingSet = "";
+    AmbientCapabilities = "";
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectKernelLogs = true;
+    ProtectControlGroups = true;
+    ProtectClock = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    RemoveIPC = true;
+    RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" "AF_NETLINK" ];
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [ "@system-service" ];
+    SystemCallErrorNumber = "EPERM";
+    UMask = "0077";
+  };
+
   mkService = name: attrs: lib.recursiveUpdate {
     description = name;
     after = [ "network.target" ];
@@ -19,7 +49,7 @@ let
       WorkingDirectory = "/opt/${name}";
       Restart = "on-failure";
       RestartSec = 5;
-    };
+    } // sandbox name;
   } attrs;
 
   phoenix = name: release: mkService name {
