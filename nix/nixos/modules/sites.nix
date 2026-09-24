@@ -232,11 +232,18 @@ in
     };
 
     parlance = mkService "parlance" {
-      environment = { NODE_ENV = "production"; PORT = "4010"; DATABASE_PATH = "/var/lib/parlance/parlance.db"; };
+      environment = {
+        NODE_ENV = "production";
+        PORT = "4010";
+        DATABASE_PATH = "/var/lib/parlance/parlance.db";
+        REPO_CACHE_DIR = "/var/cache/parlance/repos";
+      };
       serviceConfig = {
         EnvironmentFile = "/etc/parlance/env";
         StateDirectory = "parlance";
         StateDirectoryMode = "0700";
+        CacheDirectory = "parlance";
+        CacheDirectoryMode = "0700";
         ExecStart = "${pkgs.bun}/bin/bun server/index.ts";
       };
     };
