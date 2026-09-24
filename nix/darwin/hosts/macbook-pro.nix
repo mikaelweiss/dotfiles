@@ -28,5 +28,6 @@
     "docker-desktop"
     "harvest"
     "cursor"
+    "obsidian"
   ];
 }

@@ -16,6 +16,8 @@
 
   homebrew.brews = [
     "deno"
+    "yt-dlp"
+    "ffmpeg"
   ];
 
   homebrew.casks = [
