@@ -72,6 +72,8 @@
     enable = true;
     settings = {
       PasswordAuthentication = false;
+      # Keyboard-interactive login still asks for the account password through PAM.
+      KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
     };
   };

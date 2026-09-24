@@ -71,6 +71,12 @@
     };
   };
 
+  # Key-only SSH. Loads before /etc/ssh/sshd_config, and sshd keeps the first value it reads.
+  services.openssh.extraConfig = ''
+    PasswordAuthentication no
+    KbdInteractiveAuthentication no
+  '';
+
   # Passwordless Sudo
   security.sudo.extraConfig = ''
     mikaelweiss ALL=(ALL) NOPASSWD: ALL
