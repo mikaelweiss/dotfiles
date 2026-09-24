@@ -12,7 +12,6 @@
     # bruno-cli
     llvm
     sqlite
-    bun
     gh # GitHub CLI
     rsync # GNU rsync
     pass # Password manager, on PATH so GUI apps (Raycast) find it
@@ -112,7 +111,6 @@
       "mole"
       "openjdk@21"
       # "mise" # node/python/etc version manager, per-project pinning
-      "worktrunk"
       "herdr"
       "pngpaste"
       "modem-dev/tap/hunk"

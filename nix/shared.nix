@@ -21,10 +21,13 @@
     atuin
     btop
     yazi
+    git
     lazygit
     tmux
     tldr
     stow
+    bun
+    worktrunk
   ];
 
   environment.variables = {
