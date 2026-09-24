@@ -1,7 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "novita-ai/deepseek/deepseek-v4.1-flash",
-  "small_model": "novita-ai/deepseek/deepseek-v4.1-flash",
   "disabled_providers": ["zai"],
   "provider": {
     "novita-ai": {
@@ -14,15 +12,39 @@
           "temperature": true,
           "limit": {
             "context": 1000000,
-            "output": 384000
+            "output": 384000,
           },
           "cost": {
             "input": 0.15,
             "output": 0.6,
-            "cache_read": 0.003
-          }
-        }
-      }
-    }
-  }
+            "cache_read": 0.003,
+          },
+        },
+        "zai-org/glm-5.3-flash": {
+          "name": "GLM 5.3 Flash",
+          "family": "glm",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "interleaved": {
+            "field": "reasoning_content",
+          },
+          "modalities": {
+            "input": ["text", "image", "video"],
+            "output": ["text"],
+          },
+          "limit": {
+            "context": 1048576,
+            "output": 131072,
+          },
+          "cost": {
+            "input": 0.15,
+            "output": 0.5,
+            "cache_read": 0.03,
+          },
+        },
+      },
+    },
+  },
 }
