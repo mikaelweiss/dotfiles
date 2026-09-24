@@ -150,6 +150,9 @@ alias s='bunx convex dev'
 alias sta='pnpm -F web electron:dev'
 alias sa='pnpm run start'
 alias claudef='claude --model fable'
+alias fulcrum='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
+alias f='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
+alias p='bin/penguin'
 
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"
@@ -181,3 +184,31 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 
 # bun completions
 [ -s "/Users/mikaelweiss/spike-bun-test/bunlatest/_bun" ] && source "/Users/mikaelweiss/spike-bun-test/bunlatest/_bun"
+
+# pass
+setup-pass() {
+  local uid="Mikael Weiss <campingmikael@icloud.com>"
+  local fpr statusfile
+
+  if [[ "$1" != "--new" ]]; then
+    fpr=$(gpg --list-secret-keys --with-colons "$uid" 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
+  fi
+
+  if [[ -z "$fpr" ]]; then
+    statusfile=$(mktemp "${TMPDIR:-/tmp}/setup-pass.XXXXXX") || return 1
+    # Naming an algo skips the encryption subkey that pass requires.
+    gpg --yes --status-file "$statusfile" --quick-generate-key "$uid" default default 2y || {
+      rm -f "$statusfile"
+      return 1
+    }
+    fpr=$(awk '/KEY_CREATED/ {print $4}' "$statusfile")
+    rm -f "$statusfile"
+  fi
+
+  if [[ -z "$fpr" ]]; then
+    print -u2 "setup-pass: could not determine key fingerprint"
+    return 1
+  fi
+
+  pass init "$fpr"
+}
