@@ -197,7 +197,7 @@ setup-pass() {
   if [[ -z "$fpr" ]]; then
     statusfile=$(mktemp "${TMPDIR:-/tmp}/setup-pass.XXXXXX") || return 1
     # Naming an algo skips the encryption subkey that pass requires.
-    gpg --yes --status-file "$statusfile" --quick-generate-key "$uid" default default 2y || {
+    gpg --batch --passphrase "" --yes --status-file "$statusfile" --quick-generate-key "$uid" default default 2y || {
       rm -f "$statusfile"
       return 1
     }

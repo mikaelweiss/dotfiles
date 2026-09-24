@@ -16,7 +16,6 @@
     rsync # GNU rsync
     pass # Password manager, on PATH so GUI apps (Raycast) find it
     gnupg # GPG key manager (pass dependency)
-    pinentry_mac # GPG passphrase prompt that saves to the macOS Keychain
     pandoc # Change files to other file types
     # For typescriptLSP Claude Code plugin
     typescript

@@ -91,10 +91,6 @@ codex/.codex/tmp/
 terminal/.config/herdr/*
 !terminal/.config/herdr/config.toml
 
-# GnuPG keys and state (keep gpg-agent.conf)
-terminal/.gnupg/*
-!terminal/.gnupg/gpg-agent.conf
-
 # Composer global install (keep composer.json + lock, drop credentials and vendor)
 terminal/.config/composer/auth.json
 terminal/.config/composer/vendor/
