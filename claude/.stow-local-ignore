@@ -1,0 +1,3 @@
+# Claude Code writes runtime state into this package. Only the tracked
+# config below belongs in $HOME.
+/\.claude/(?!(?:CLAUDE\.md|commands|direnv|hooks|no-attribution|no-chatbait|settings\.json|skills)$)[^/]*
