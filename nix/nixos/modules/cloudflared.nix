@@ -25,6 +25,7 @@ in
         "deploy.mikaelweiss.dev" = "http://localhost:9000";
         "mikaelmc.com" = "http://localhost:4008";
         "parlance.weisssolutions.org" = "http://localhost:4010";
+        "orbit.weisssolutions.org" = "http://localhost:4011";
       };
     };
   };

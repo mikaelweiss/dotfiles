@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" ];
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" "orbit" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
@@ -150,6 +150,7 @@ let
     (nodeHook "vault")
     (nodeHook "rubrix")
     (staticHook "mikaelmc")
+    (staticHook "orbit")
     (bunHook "parlance")
   ]);
 in
@@ -194,6 +195,10 @@ in
 
     mikaelmc = mkService "mikaelmc" {
       serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4008 --root /opt/mikaelmc --ignore-hidden-files=true";
+    };
+
+    orbit = mkService "orbit" {
+      serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4011 --root /opt/orbit/site/public";
     };
 
     parlance = mkService "parlance" {
