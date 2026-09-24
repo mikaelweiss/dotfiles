@@ -30,7 +30,7 @@ let
   };
 
   static = name: port: mkService name {
-    serviceConfig.ExecStart = "${pkgs.nodePackages.serve}/bin/serve dist -l ${toString port}";
+    serviceConfig.ExecStart = "${pkgs.serve}/bin/serve dist -l ${toString port}";
   };
 
   deployPhoenix = pkgs.writeShellApplication {
