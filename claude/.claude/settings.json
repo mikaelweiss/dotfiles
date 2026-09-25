@@ -95,11 +95,6 @@
       "mcp__linear__get_user",
       "mcp__linear__search_documentation",
       "mcp__postgres__query"
-    ],
-    "deny": [
-      "Bash(git reset:*)",
-      "Bash(git revert:*)",
-      "Bash(git grep:*)"
     ]
   },
   "model": "opus[1m]",
