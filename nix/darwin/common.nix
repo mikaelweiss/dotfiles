@@ -94,6 +94,16 @@
     };
   };
 
+  # Android builds. Both come from Homebrew below. openjdk@21 is keg-only, so
+  # nothing finds it without JAVA_HOME. Variables reach non-interactive shells too.
+  environment.variables = {
+    ANDROID_HOME = "/opt/homebrew/share/android-commandlinetools";
+    JAVA_HOME = "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home";
+  };
+  programs.zsh.interactiveShellInit = ''
+    export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+  '';
+
   # Homebrew configuration
   homebrew = {
     enable = true;
