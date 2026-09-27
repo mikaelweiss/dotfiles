@@ -1,0 +1,60 @@
+#!/bin/zsh
+# Removing a folder on one machine leaves the other side's ignored files
+# (node_modules, .direnv, caches), and mutagen will not delete a folder that
+# still holds them. This finishes those deletions. It resolves only conflicts
+# where one side deleted a whole directory and the other side added nothing
+# but ignored files, and skips any folder that is still a live git repo or
+# registered worktree.
+set -e
+
+remove_leftover='
+dir=$1
+[ -d "$dir" ] || exit 0
+[ -d "$dir/.git" ] && exit 1
+if [ -f "$dir/.git" ]; then
+  gitdir=$(sed -n "s/^gitdir: //p" "$dir/.git")
+  [ -n "$gitdir" ] && [ -e "$gitdir" ] && exit 1
+fi
+rm -rf "$dir"
+'
+
+# One "session<TAB>side<TAB>root" line per conflict that is safe to finish,
+# where side is the endpoint still holding the leftover folder.
+leftovers() {
+  mutagen sync list --template '{{json .}}' | jq -r '
+    def deleted_dir($changes; $root):
+      ($changes | length) == 1
+      and $changes[0].path == $root
+      and $changes[0].old.kind == "directory"
+      and $changes[0].new == null;
+    def only_ignored($changes):
+      all($changes[]; .old == null and .new.kind == "untracked");
+    .[] | .name as $session | (.conflicts // [])[] |
+    if deleted_dir(.alphaChanges; .root) and only_ignored(.betaChanges) then
+      [$session, "beta", .root]
+    elif deleted_dir(.betaChanges; .root) and only_ignored(.alphaChanges) then
+      [$session, "alpha", .root]
+    else empty end | @tsv'
+}
+
+endpoint() {
+  mutagen sync list --template '{{json .}}' |
+    jq -r --arg s "$1" --arg side "$2" '.[] | select(.name == $s) | .[$side] | [.path, .protocol, .host] | @tsv'
+}
+
+leftovers | while IFS=$'\t' read -r session side root; do
+  IFS=$'\t' read -r base protocol host <<< "$(endpoint "$session" "$side")"
+  dir="$base/$root"
+  if [[ $protocol == ssh ]]; then
+    ssh -o BatchMode=yes -o ConnectTimeout=5 "$host" sh -s -- ${(q)dir} <<< "$remove_leftover" && ok=1 || ok=0
+    where="$host:$dir"
+  else
+    sh -c "$remove_leftover" _ "$dir" && ok=1 || ok=0
+    where=$dir
+  fi
+  if (( ok )); then
+    print -r -- "removed $where"
+  else
+    print -r -- "skipped $where: still a git repo or worktree"
+  fi
+done

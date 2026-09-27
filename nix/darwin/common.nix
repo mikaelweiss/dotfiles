@@ -70,6 +70,20 @@
     };
   };
 
+  launchd.daemons.sync-resolve = {
+    serviceConfig = {
+      UserName = "mikaelweiss";
+      EnvironmentVariables = {
+        HOME = "/Users/mikaelweiss";
+        PATH = "${pkgs.mutagen}/bin:${pkgs.jq}/bin:/usr/bin:/bin";
+      };
+      ProgramArguments = [ "/Users/mikaelweiss/code/dotfiles/terminal/bin/sync-resolve" ];
+      StartInterval = 300;
+      StandardOutPath = "/tmp/sync-resolve.log";
+      StandardErrorPath = "/tmp/sync-resolve.log";
+    };
+  };
+
   # Key-only SSH. Loads before /etc/ssh/sshd_config, and sshd keeps the first value it reads.
   services.openssh.extraConfig = ''
     PasswordAuthentication no
