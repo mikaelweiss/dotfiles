@@ -16,10 +16,6 @@
 
   networking.hostName = "sparrow";
 
-  environment.systemPackages = with pkgs; [
-    python3 # Claude Code hooks shell out to it
-  ];
-
   # Static address: the port forwards on the gateway point here and must
   # survive the gateway losing its reservation table.
   networking.networkmanager.enable = false;

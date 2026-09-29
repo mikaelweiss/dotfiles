@@ -60,5 +60,6 @@
     "nx"
     "@earendil-works/pi-coding-agent"
     "opencode-ai"
+    "@anthropic-ai/claude-code"
   ];
 }

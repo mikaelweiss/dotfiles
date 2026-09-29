@@ -44,6 +44,7 @@
     jq
     unzip
     mise
+    python3 # Claude Code hooks shell out to it
     tailscale
     zsh-powerlevel10k
     meslo-lgs-nf
