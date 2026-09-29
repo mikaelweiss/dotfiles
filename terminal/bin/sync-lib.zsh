@@ -29,7 +29,6 @@ repos_under() {
 # The answer freezes at session creation, which is why ~/.mutagen.yml still
 # carries bare names: those keep matching directories created later. Run
 # sync-check to see when a session has drifted far enough to rebuild.
-# .git/wt/trash holds worktrees `wt remove` deleted, and git never reports it.
 gitignored() {
   local root=$1 repo prefix
   local -a repos
@@ -38,7 +37,6 @@ gitignored() {
     prefix=${repo#$root}
     { git -C "$repo" status --ignored --porcelain 2>/dev/null || true; } |
       sed -n 's|^!! ||p' | sed 's|^"||; s|"$||' | sed "s|^|$prefix/|; s|/\$||"
-    print -r -- "$prefix/.git/wt/trash"
   done | grep -vE "$keep" | sed 's|^|--ignore=|'
 }
 

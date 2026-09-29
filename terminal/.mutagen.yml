@@ -53,6 +53,8 @@ sync:
         - ".direnv"
         # Transient git lock files
         - "index.lock"
+        # Worktrunk cache, hook logs, and trash. Per machine and rebuildable.
+        - "**/.git/wt"
         # Agent caches
         - "image-cache"
         # Machine-local Xcode state that stow links into dotfiles/xcode
