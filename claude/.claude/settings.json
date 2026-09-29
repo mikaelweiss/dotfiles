@@ -222,8 +222,12 @@
     "context7@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": false,
     "worktrunk@worktrunk": true,
-    "atlassian@claude-plugins-official": false,
-    "sentry@claude-plugins-official": true
+    "sentry@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "telemetry@builtin": false,
+    "revenuecat@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -237,6 +241,12 @@
         "source": "github",
         "repo": "max-sixty/worktrunk"
       }
+    },
+    "RevenueCat": {
+      "source": {
+        "source": "github",
+        "repo": "RevenueCat/ai-toolkit"
+      }
     }
   },
   "feedbackDrafts": "off",
@@ -249,6 +259,9 @@
       "effortLevel": "high"
     },
     "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-sonnet-5-5": {
       "effortLevel": "high"
     }
   },
