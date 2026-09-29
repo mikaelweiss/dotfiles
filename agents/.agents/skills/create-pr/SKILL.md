@@ -1,46 +1,51 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch, with a body written from the branch's own diff. Use when the user says "open a PR", "create the PR", or invokes /create-pr.
+description: Open a pull request for the current branch. Use when the user says "open a PR", "create the PR", or invokes /create-pr.
 user-invocable: true
 ---
 
 # Create a pull request
 
-This skill writes the pull request body from the branch's own diff, runs the repo's gates, pushes, and opens the PR.
+## Create the PR
 
-## Step 1 - The body
+- Leave the pr body empty
+- push the code and create a PR
+- If the branch is based off of a Jira ticket, then start the ticket with the jira number (ex: "SS-134" etc)
+- No attribution anywhere in the title or body: no `Co-Authored-By`, no generated-with footer, no session URL.
 
-Read `git log <base>..HEAD` and `git diff <base>...HEAD`. Write the body as markdown to a file in the scratchpad directory:
+## Watch for reviews
 
-- **What changes**: one line per behavior change the branch makes, taken from the code and not from the commit subjects, each naming the files behind it.
-- **Why**: one short paragraph, only where the diff does not already say it.
-- **Verification**: the gate commands from Step 2 and their results.
+Wait for the AI reviewer to automatically respond with a review
+Fix any major and minor issues it brought up, and then commit, push, respond to, and resolve the conversation
+Wait for the AI reviewer again 'till it comes back with no findings, or the minor findings aren't worth fixing in this PR.
+IF
+the minor review findings change the scope of the PR significantly or are pre-existing issues, ask the user if they'd like to fix these issues or ignore.
+You'll almost always want to fix the major blocking findings from the AI review bot, but every once in a while, it will change the scope a lot or be pre-existing, or there will be some other reason to ignore it. Bring these cases up with the user and wait for their judgment call.
+Specifically tell the user:
 
-Leave out a section that is empty. When the branch was reviewed this session, the review's behavior lines are the body's.
+- what the issue that was brought up is (explained very simply)
+- the impact, risks, or benefits of fixing it
+- if you think it should be part of this PR or not
 
-## Step 2 - Gates
+Again: 99% of the time, you can make the judgement call on your own. Only involve the user when it's clear you need their input.
 
-This is the one moment the repo's gates run. Find them where the repo names them: its own instruction file, `package.json` scripts, the CI workflow. Run lint and tests on the branch head.
+Once: the review bot doesn't come back with any findings, or no major findings
+request review from k8devtx and brytoncoopertech
 
-A failing gate stops the skill. Show the output and ask. Never open a PR over a red gate without the user saying so.
+Wait for review from them
 
-## Step 3 - Push and open
+Once they respond,
+Fix any issues they bring up following the same rules as with AI review
+Commit and push, and request re-review from whoever reviewed it.
+Continue 'till you have the approval from either one of them and then add the PR to the PR queue
+Watch 'till the PR is merged
 
-```bash
-git push -u origin <branch>
-gh pr create --base <base> --title "<title>" --body-file <scratchpad>/pr-body.md
-```
+Once you have an approval from a person, you can pretty much ignore the AI review bot unless it has blocking findings.
 
-The title is one line under 70 characters, conventional prefix, imperative, no period, in the style of `gh pr list --state merged --limit 20 --json title`. An issue id in those titles belongs to other work. Never copy one.
+Notes:
+ALWAYS git fetch and rebase on main before pushing (fix any rebase conflicts)
+ALWAYS check the pr again before pushing to make sure no other reviews came in while you were fixing things. Because the AI review bot runs on every push, we don't want to trigger it unnecessarily.
 
-An open PR for the branch already exists when `gh pr list --head <branch> --state open` returns one. Update its body with `gh pr edit --body-file` instead of opening a second.
+## Done looks like:
 
-No attribution anywhere in the title or body: no `Co-Authored-By`, no generated-with footer, no session URL. A hook rejects the command when one slips through.
-
-### When the branch is in a stack
-
-Both commands above are wrong there. `gh stack push` sends the chain, then `gh stack submit` opens or updates every PR in it, including this branch's.
-
-## Step 4 - Finish
-
-End with the PR url and nothing else.
+The PR is merged
