@@ -76,6 +76,9 @@
       # Keyboard-interactive login still asks for the account password through PAM.
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
+      # A Mac that sleeps or changes networks never closes its connection, leaving mutagen agents rescanning forever.
+      ClientAliveInterval = 30;
+      ClientAliveCountMax = 3;
     };
   };
 
