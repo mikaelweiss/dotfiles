@@ -30,6 +30,12 @@
   }];
   networking.defaultGateway = "10.0.0.1";
 
+  # Tailscale on Linux sends to a peer's IPv6 link-local address without its
+  # interface zone, so replies to LAN peers never arrive. Without IPv6 on eno1
+  # Tailscale can only pick working paths.
+  # https://github.com/tailscale/tailscale/issues/21411
+  boot.kernel.sysctl."net.ipv6.conf.eno1.disable_ipv6" = 1;
+
   zramSwap.enable = true;
 
   system.stateVersion = "25.11";
