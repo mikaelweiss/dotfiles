@@ -93,6 +93,24 @@
 
   services.jellyfin.enable = true;
   services.jellyfin.user = "mikaelweiss";
+  services.jellyfin.forceEncodingConfig = true;
+  services.jellyfin.hardwareAcceleration = {
+    enable = true;
+    type = "vaapi";
+    device = "/dev/dri/renderD128";
+  };
+  services.jellyfin.transcoding = {
+    enableHardwareEncoding = true;
+    throttleTranscoding = true;
+    hardwareDecodingCodecs = {
+      h264 = true;
+      hevc = true;
+      mpeg2 = true;
+      vc1 = true;
+      vp8 = true;
+      vp9 = true;
+    };
+  };
   networking.firewall.allowedTCPPorts = [ 8096 ];
 
   system.stateVersion = "25.11";
