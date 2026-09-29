@@ -109,6 +109,7 @@ terminal/.config/cmux/
 terminal/.config/gh/
 terminal/.config/worktrunk/approvals.toml
 terminal/.config/worktrunk/*.lock
+terminal/.config/lazygit/config.yml
 terminal/.cmuxterm/
 terminal/.pi/agent/global-input-history.jsonl
 terminal/.pi/agent/models-store.json
