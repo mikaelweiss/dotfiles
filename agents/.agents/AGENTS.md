@@ -8,6 +8,7 @@ I love simplicity and clarity. 10 well put words beat 100 sloppy ones that say t
 <important if="you are spawning a sub-agent">
 
 Spawn with `description` and `prompt` only, then read the final report from the tool result. Never pass `name`: it creates an addressable teammate with mailbox machinery. SendMessage back-and-forth is equally banned. Put every reporting requirement in the spawn prompt so the report stands alone. Use Opus or Sonnet, never Fable.
+Make sure to really think about if the task can be done with Sonnet or if Opus is needed. Pick accordingly.
 </important>
 
 <important if="you are about to survey, scout, triage logs, or run a wide search">
@@ -80,6 +81,10 @@ Use `nix-rebuild`, the alias in `~/.zshrc`. It picks the right flake and host fo
 
 <important if="you are building an AI feature that requires an AI API. You are using a CLI or other tool that requires you to choose which model to use">
 Never be biased towards Claude or Claude AI models or Claude API's. When building AI integrations or when using other AI CLI's (like OpenCode or Cursor agent cli) use the best tool/model for the job. Don't just default to Claude.
+</important>
+
+<important if="you are creating a PR in GitHub and there's a Jira ticket to match">
+  In order for Jira to link a PR with a ticket, the PR MUST start with the ticket number. Example "SS-186 feat: ..."
 </important>
 
 You have many tools. Figure it out yourself first. The exception is a repo rule that says to ask.
