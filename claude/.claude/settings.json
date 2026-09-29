@@ -218,16 +218,12 @@
     "command": "wt list statusline --format=claude-code"
   },
   "enabledPlugins": {
-    "code-simplifier@claude-plugins-official": false,
     "context7@claude-plugins-official": true,
-    "ralph-loop@claude-plugins-official": false,
     "worktrunk@worktrunk": true,
     "sentry@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "telemetry@builtin": false,
-    "revenuecat@claude-plugins-official": true,
-    "slack@claude-plugins-official": true
+    "telemetry@builtin": false
   },
   "extraKnownMarketplaces": {
     "svelte": {
