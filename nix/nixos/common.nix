@@ -48,6 +48,7 @@
     tailscale
     zsh-powerlevel10k
     meslo-lgs-nf
+    python3 # Claude Code hooks shell out to it
   ];
 
   programs.nix-ld.enable = true;
