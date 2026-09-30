@@ -214,3 +214,5 @@ setup-pass() {
 
   pass init "$fpr"
 }
+
+unsetopt autocd
