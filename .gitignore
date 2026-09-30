@@ -218,3 +218,6 @@ terminal/.config/gcloud/
 
 # qBittorrent runtime state
 terminal/.config/qBittorrent/
+
+# strive
+terminal/.config/strive/credentials.lock
