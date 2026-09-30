@@ -98,6 +98,13 @@
     ]
   },
   "model": "opus[1m]",
+  "skillOverrides": {
+    "anthropic-skills:pdf": "off",
+    "anthropic-skills:pptx": "off",
+    "anthropic-skills:docs": "off",
+    "anthropic-skills:docx": "off",
+    "anthropic-skills:xlsx": "off"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -223,7 +230,8 @@
     "sentry@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "telemetry@builtin": false
+    "telemetry@builtin": false,
+    "revenuecat@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
