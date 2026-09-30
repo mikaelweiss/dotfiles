@@ -26,6 +26,7 @@ sync:
         - "xcuserdata"
         - "DerivedData"
         - ".build"
+        - ".build-*"
         - ".swiftpm"
         # Rust
         - "target"
