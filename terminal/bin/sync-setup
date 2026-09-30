@@ -6,10 +6,42 @@
 set -e
 source "${0:A:h}/sync-lib.zsh"
 
+# A new session has no sync history, so mutagen copies whatever either side
+# holds and a stale worktree folder on one machine spreads to every machine.
+# Stale means its git metadata is gone: no .git, or a gitdir that no longer
+# exists. Runs on both ends because elm can hold its own stale folders.
+list_stale='
+for d in $1; do
+  [ -d "$d" ] || continue
+  [ -d "$d/.git" ] && continue
+  if [ -f "$d/.git" ]; then
+    gitdir=$(sed -n "s/^gitdir: //p" "$d/.git")
+    [ -n "$gitdir" ] && [ -e "$gitdir" ] && continue
+  fi
+  echo "$d"
+done
+'
+
+stale_worktrees() {
+  local name=$1 root=$2 pattern
+  [[ $name == *worktrees ]] || return 0
+  # ~/.worktrees holds <repo>/<branch>, a per-repo root holds <branch>
+  [[ $root == $HOME/.worktrees ]] && pattern="$root/*/*" || pattern="$root/*"
+  sh -c "$list_stale" _ "$pattern" | sed 's|^|  |'
+  ssh -o BatchMode=yes "$hub" sh -s -- ${(q)pattern} <<< "$list_stale" | sed "s|^|  $hub:|"
+}
+
 create() {
-  local name=$1 root=$2
+  local name=$1 root=$2 stale
   if mutagen sync list "$name" >/dev/null 2>&1; then
     echo "session '$name' already exists"
+    return
+  fi
+  stale=$(stale_worktrees "$name" "$root")
+  if [[ -n $stale ]]; then
+    print -r -- "skipping '$name': stale worktree folders would spread to every machine."
+    print -r -- "Archive or delete them, then run sync-setup again:"
+    print -r -- "$stale"
   else
     local -a ig
     ig=( ${(f)"$(gitignored "$root")"} ${(f)"$(extra_ignores "$name")"} )
