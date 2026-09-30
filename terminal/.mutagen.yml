@@ -34,6 +34,8 @@ sync:
         - "_build"
         - "deps"
         - ".elixir_ls"
+        - ".expert"
+        - "**/priv/static/assets"
         - "erl_crash.dump"
         # Java / Android
         - ".gradle"
@@ -50,14 +52,18 @@ sync:
         - "**/apps/web-react/libs"
         - "**/apps/desktop/src-tauri/binaries"
         - "**/apps/desktop/src-tauri/engine"
+        # Penguin Go binaries. Anchored because dotfiles/terminal/bin is source.
+        - "/penguin/*/bin"
+        - "/penguin-v2/bin"
         # direnv
         - ".direnv"
         # Transient git lock files
         - "index.lock"
         # Worktrunk cache, hook logs, and trash. Per machine and rebuildable.
         - "**/.git/wt"
-        # Agent caches
+        # Agent caches and agent-made worktrees
         - "image-cache"
+        - "**/.claude/worktrees"
         # Machine-local Xcode state that stow links into dotfiles/xcode
         # (~/Library/Developer points there); untracked by git
         - "/dotfiles/xcode/Library/Developer/CoreSimulator"
@@ -98,3 +104,4 @@ sync:
         - "/dotfiles/codex/.codex/history.jsonl"
         - "/dotfiles/codex/.codex/auth.json"
         - "/dotfiles/codex/.codex/ipc"
+        - "/dotfiles/codex/.codex/worktrees"
