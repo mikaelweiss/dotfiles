@@ -113,6 +113,9 @@
   environment.variables = {
     ANDROID_HOME = "/opt/homebrew/share/android-commandlinetools";
     JAVA_HOME = "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home";
+    # `ssh wolf tmux attach` runs no login shell, and without a UTF-8 locale
+    # tmux draws every icon as an underscore.
+    LANG = "en_US.UTF-8";
   };
   programs.zsh.interactiveShellInit = ''
     export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
