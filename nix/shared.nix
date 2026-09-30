@@ -28,6 +28,7 @@
     stow
     bun
     worktrunk
+    go
   ];
 
   environment.variables = {
