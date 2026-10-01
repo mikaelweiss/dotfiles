@@ -41,12 +41,14 @@ gitignored() {
 }
 
 extra_ignores() {
-  [[ $1 == dotfiles ]] && reanchor dotfiles
+  case $1 in
+    dotfiles|penguin-v2) reanchor $1 ;;
+  esac
   return 0
 }
 
 # One "name root" pair per line. The work MacBook Pro syncs only the surestake
-# and penguin trees and dotfiles; every machine syncs penguin's own worktrees
+# and penguin trees (including penguin-v2) and dotfiles; every machine syncs penguin's own worktrees
 # and run state, which live outside ~/code.
 sessions() {
   case "$(scutil --get LocalHostName 2>/dev/null)" in
@@ -55,6 +57,7 @@ sessions() {
       print -r -- "surestake-worktrees $HOME/.worktrees/surestake"
       print -r -- "penguin $HOME/code/penguin"
       print -r -- "penguin-worktrees $HOME/.worktrees/penguin"
+      print -r -- "penguin-v2 $HOME/code/penguin-v2"
       print -r -- "dotfiles $HOME/code/dotfiles"
       ;;
     *)
