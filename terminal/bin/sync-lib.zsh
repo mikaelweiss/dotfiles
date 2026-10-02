@@ -13,8 +13,7 @@ reanchor() {
   sed -n "s|^ *- \"/$1\(/[^\"]*\)\"\$|--ignore=\1|p" "$HOME/.mutagen.yml"
 }
 
-# Descends until it finds a repo, then stops. Penguin nests its worktrees at
-# ~/.penguin/worktrees/<repo>/<branch>, three levels down.
+# Descends until it finds a repo, then stops.
 repos_under() {
   setopt local_options null_glob
   local root=$1 depth=${2:-3} d
@@ -48,8 +47,7 @@ extra_ignores() {
 }
 
 # One "name root" pair per line. The work MacBook Pro syncs only the surestake
-# and penguin trees (including penguin-v2) and dotfiles; every machine syncs penguin's own worktrees
-# and run state, which live outside ~/code.
+# and penguin trees (including penguin-v2) and dotfiles.
 sessions() {
   case "$(scutil --get LocalHostName 2>/dev/null)" in
     Mikaels-MacBook-Pro)
@@ -65,8 +63,6 @@ sessions() {
       print -r -- "worktrees $HOME/.worktrees"
       ;;
   esac
-  print -r -- "penguin-home $HOME/.penguin"
-  print -r -- "penguin-state $HOME/.local/state/penguin"
 }
 
 session_ignores() {
