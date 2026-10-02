@@ -140,6 +140,10 @@ export TERM=xterm-256color
 # SwiftPM
 export PATH="$HOME/.swiftpm/bin:$PATH"
 
+# Route claude through the rotating proxy on wolf. Each machine keeps its own
+# device key outside ~/.config, which mutagen syncs.
+[[ -r ~/.local/state/claude-rotate/env ]] && source ~/.local/state/claude-rotate/env
+
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
 alias claude='claude --dangerously-skip-permissions'
