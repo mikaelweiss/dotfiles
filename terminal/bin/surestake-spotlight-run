@@ -1,0 +1,109 @@
+#!/bin/bash
+# Runs a command in a surestake worktree while dx spotlight mirrors that
+# worktree into the primary checkout. PHP and artisan always run the primary
+# checkout's code, so checks and the pre-push hook only see a worktree's change
+# while it is spotlighted. Waits for a spotlight another penguin workspace
+# holds, and refuses to take over any other, which someone started by hand.
+# Usage: surestake-spotlight-run <command> [args...]
+set -u
+
+worktree=$(git rev-parse --show-toplevel) || exit 1
+common=$(git rev-parse --path-format=absolute --git-common-dir) || exit 1
+root=$(dirname "$common")
+lock="$common/dx-spotlight/lock.json"
+[ "$worktree" != "$root" ] || { echo "surestake-spotlight-run: run it inside a linked worktree" >&2; exit 1; }
+
+holder() {
+  [ -f "$lock" ] || return 1
+  python3 - "$lock" <<'EOF'
+import json, os, sys
+try:
+    lock = json.load(open(sys.argv[1]))
+    os.kill(int(lock["pid"]), 0)
+except Exception:
+    sys.exit(1)
+print(lock.get("worktree", ""))
+EOF
+}
+
+penguin_workspaces="$HOME/.penguin/"
+for _ in $(seq 1 1800); do
+  current=$(holder) || break
+  [ "$current" = "$worktree" ] && break
+  case "$current" in
+    "$penguin_workspaces"*) sleep 2 ;;
+    *)
+      echo "surestake-spotlight-run: a spotlight from $current holds the repo root; not taking it over" >&2
+      exit 75
+      ;;
+  esac
+done
+if current=$(holder) && [ "$current" != "$worktree" ]; then
+  echo "surestake-spotlight-run: the spotlight from $current did not finish within an hour" >&2
+  exit 75
+fi
+
+log=$(mktemp "${TMPDIR:-/tmp}/surestake-spotlight.XXXXXX") || exit 1
+node "$worktree/tools/dx/cli/index.mjs" spotlight >"$log" 2>&1 </dev/null &
+pid=$!
+
+stop() {
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -INT "$pid"
+    for _ in $(seq 1 600); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+  fi
+  if holder >/dev/null || [ -f "$common/dx-spotlight/state.json" ]; then
+    node "$worktree/tools/dx/cli/index.mjs" spotlight:stop >>"$log" 2>&1
+  fi
+  if [ "$spotlight_ok" = 1 ]; then
+    grep -E 'Synced|DONE|Repo root restored|failed' "$log" | sed 's/^/[spotlight] /' >&2
+  else
+    sed 's/^/[spotlight] /' "$log" >&2
+  fi
+  rm -f "$log"
+}
+spotlight_ok=0
+trap stop EXIT
+
+synced=0
+for _ in $(seq 1 1200); do
+  kill -0 "$pid" 2>/dev/null || { echo "surestake-spotlight-run: dx spotlight exited before it synced" >&2; exit 1; }
+  if grep -q 'Synced [0-9]* file' "$log"; then
+    synced=1
+    break
+  fi
+  sleep 0.5
+done
+[ "$synced" = 1 ] || { echo "surestake-spotlight-run: dx spotlight did not sync within 10 minutes" >&2; exit 1; }
+
+idle=0
+for _ in $(seq 1 3600); do
+  if pgrep -P "$pid" >/dev/null; then idle=0; else idle=$((idle + 1)); fi
+  [ "$idle" -ge 4 ] && break
+  sleep 0.5
+done
+if grep -q 'Migrations failed\|composer install failed\|npm install failed\|Sync failed' "$log"; then
+  echo "surestake-spotlight-run: dx spotlight could not prepare the repo root" >&2
+  exit 1
+fi
+
+spotlight_ok=1
+
+env_value() {
+  sed -n "s/^$1=//p" "$root/apps/api/.env" | tail -1 | tr -d '"' | tr -d "'"
+}
+skip_clone=$(env_value TESTING_SKIP_CLONE)
+test_db=$(env_value TESTING_MYSQL_DATABASE)
+if [ "$skip_clone" = true ] && [ -n "$test_db" ]; then
+  . "$worktree/.githooks/pre-push-checks.sh"
+  overrides=$(api_host_env_overrides)
+  # With cloning off the test database is maintained by hand, so it gets the same forward-only migrate dx gives dev.
+  (cd "$root/apps/api" && env $overrides DB_DATABASE="$test_db" php artisan migrate --force --no-interaction) >&2 || {
+    echo "surestake-spotlight-run: migrating $test_db failed" >&2
+    exit 1
+  }
+fi
+
+"$@"
+status=$?
+exit "$status"
