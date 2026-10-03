@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "1.0.0",
   "defaultProvider": "cursor",
   "defaultModel": "kimi-k3-high",
   "defaultThinkingLevel": "high",
@@ -42,5 +42,8 @@
   ],
   "hideThinkingBlock": false,
   "collapseChangelog": false,
-  "doubleEscapeAction": "tree"
+  "doubleEscapeAction": "tree",
+  "extensions": [
+    "-builtin:mcp"
+  ]
 }
