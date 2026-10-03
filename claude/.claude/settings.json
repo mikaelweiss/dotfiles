@@ -231,7 +231,8 @@
     "gopls-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "telemetry@builtin": false,
-    "revenuecat@claude-plugins-official": true
+    "revenuecat@claude-plugins-official": true,
+    "linear@anthropic-plugin-directory": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
