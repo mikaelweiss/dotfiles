@@ -189,6 +189,8 @@ xcode/Library/Developer/MobileBuildMCP
 # Pi
 terminal/.pi/agent/mcp.json
 terminal/.pi/agent/mcp-cache.json
+terminal/.pi/agent/mcp-onboarding.json
+terminal/.pi/agent/pi-subagents/
 terminal/.config/composer/*
 terminal/.config/herd-lite/*
 terminal/.config/opencode/*
