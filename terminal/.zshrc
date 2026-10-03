@@ -158,7 +158,7 @@ alias cf='claude --model fable'
 alias cs='claude --model sonnet'
 alias fulcrum='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
 alias f='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
-alias p='$HOME/code/penguin/bin/penguin'
+alias p='$HOME/code/penguin-v2/bin/penguin'
 
 # Added by ma CLI installer
 export PATH="$HOME/.ma/bin:$PATH"
