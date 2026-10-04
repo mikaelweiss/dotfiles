@@ -1,0 +1,69 @@
+#!/bin/bash
+# High-effort off switch for YouTube Blocker.
+# Adds 15 minutes of watch time to today's budget, but only after you type a
+# random 96-character string in reverse, by hand. A mistake restarts with a
+# new string. Repeatable — every 15 minutes costs another full challenge.
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Run with sudo: sudo youtube-unblock"
+  exit 1
+fi
+
+ROOT_DIR="/Library/Application Support/YouTubeBlocker"
+TODAY=$(date +%F)
+LEN=96
+BONUS_GRANT=900
+LIMIT=1800
+
+echo
+echo "To buy 15 more minutes of YouTube today, type the ${LEN}-character"
+echo "string below in REVERSE (last character first). Case matters."
+echo "Any mistake generates a new string and you start over."
+echo "Take a breath. Is this really how you want to spend the next few minutes?"
+echo
+
+attempt=0
+while true; do
+  attempt=$((attempt + 1))
+  CH=$(LC_ALL=C tr -dc 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789' < /dev/urandom | head -c "$LEN")
+  echo "  $CH"
+  echo
+  printf "Reversed: "
+  IFS= read -r RESP
+  EXPECTED=$(printf '%s' "$CH" | rev)
+  if [ "$RESP" = "$EXPECTED" ]; then
+    BONUS_DATE=""
+    BONUS_SECONDS=0
+    [ -f "$ROOT_DIR/bonus" ] && . "$ROOT_DIR/bonus"
+    [ "$BONUS_DATE" != "$TODAY" ] && BONUS_SECONDS=0
+    BONUS_SECONDS=$((BONUS_SECONDS + BONUS_GRANT))
+    {
+      echo "BONUS_DATE=$TODAY"
+      echo "BONUS_SECONDS=$BONUS_SECONDS"
+    } > "$ROOT_DIR/bonus"
+    chmod 644 "$ROOT_DIR/bonus"
+    /bin/bash @enforce@
+    ST_DATE=""
+    ST_SECONDS=0
+    [ -f "$ROOT_DIR/state" ] && . "$ROOT_DIR/state"
+    remaining=$(((LIMIT + BONUS_SECONDS - ST_SECONDS) / 60))
+    echo
+    echo "15 minutes added. You have ${remaining}m of watch time left today."
+    echo "When it runs out, YouTube blocks again."
+    exit 0
+  fi
+  echo
+  max_len=${#EXPECTED}
+  [ "${#RESP}" -gt "$max_len" ] && max_len=${#RESP}
+  mismatch=0
+  while [ "$mismatch" -lt "$max_len" ] && [ "${EXPECTED:$mismatch:1}" = "${RESP:$mismatch:1}" ]; do
+    mismatch=$((mismatch + 1))
+  done
+  expected_char=${EXPECTED:$mismatch:1}
+  entered_char=${RESP:$mismatch:1}
+  [ -z "$expected_char" ] && expected_char="<end>"
+  [ -z "$entered_char" ] && entered_char="<end>"
+  echo "First mismatch at character $((mismatch + 1)): expected '$expected_char', entered '$entered_char'."
+  echo "Wrong (attempt $attempt). New string:"
+  echo
+done

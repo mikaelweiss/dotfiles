@@ -1,0 +1,31 @@
+#!/bin/bash
+# Shows today's YouTube and social media time and block status.
+
+ROOT_DIR="/Library/Application Support/YouTubeBlocker"
+LIMIT=1800
+TODAY=$(date +%F)
+
+ST_DATE=""
+ST_SECONDS=0
+[ -f "$ROOT_DIR/state" ] && . "$ROOT_DIR/state"
+[ "$ST_DATE" != "$TODAY" ] && ST_SECONDS=0
+
+BONUS_DATE=""
+BONUS_SECONDS=0
+[ -f "$ROOT_DIR/bonus" ] && . "$ROOT_DIR/bonus"
+[ "$BONUS_DATE" != "$TODAY" ] && BONUS_SECONDS=0
+
+effective=$((LIMIT + BONUS_SECONDS))
+mins=$((ST_SECONDS / 60))
+secs=$((ST_SECONDS % 60))
+budget=$((effective / 60))
+
+bonus_note=""
+[ "$BONUS_SECONDS" -gt 0 ] && bonus_note=" (30m + $((BONUS_SECONDS / 60))m bonus)"
+
+echo "YouTube + social today: ${mins}m ${secs}s of ${budget}m${bonus_note}"
+if [ "$ST_SECONDS" -ge "$effective" ]; then
+  echo "Status: BLOCKED until midnight (sudo youtube-unblock buys 15 more minutes)"
+else
+  echo "Status: $(((effective - ST_SECONDS) / 60))m remaining"
+fi

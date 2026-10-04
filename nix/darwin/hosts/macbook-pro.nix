@@ -2,6 +2,8 @@
 { pkgs, ... }:
 
 {
+  imports = [ ../youtube-blocker ];
+
   # surestake CI runs node 22, and the Analog vitest pool aborts under nix node 24.
   node.package = pkgs.nodejs_22;
 
