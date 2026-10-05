@@ -12,7 +12,7 @@
 # Usage: wolf-image            copy/screenshot an image first, then run this
 set -u
 
-[ "$(hostname -s)" = "wolf" ] && { echo "wolf-image: run this on the laptop, not wolf" >&2; exit 1 }
+[ "$(hostname -s | tr A-Z a-z)" = "wolf" ] && { echo "wolf-image: run this on the laptop, not wolf" >&2; exit 1 }
 
 drop="$HOME/code/.image-drop"
 mkdir -p "$drop"
@@ -60,14 +60,17 @@ fi
 # Keep the drop folder from growing without bound.
 find "$drop" -name 'img-*.png' -mtime +7 -delete 2>/dev/null
 
-# Push it to wolf and wait for the sync cycle so the path resolves there.
+# The image travels laptop -> elm -> wolf, so flush both hops, then wait for
+# the file to land before handing claude its path.
 mutagen sync flush code >/dev/null 2>&1
+ssh wolf "mutagen sync flush code >/dev/null 2>&1; for i in \$(seq 20); do test -f ${(q)out} && exit 0; sleep 0.5; done; exit 1" 2>/dev/null ||
+  echo "wolf-image: $out has not reached wolf yet" >&2
 
 # Same keeper session wolf-split/post-switch target: name = worktree dir tail.
 # tmux 3.7 needs the "=name:" form for send-keys (pane target), "=name" for
 # has-session (session target).
 worktree=$(git rev-parse --show-toplevel 2>/dev/null) || worktree=$PWD
-name=${worktree:t}
+name=${${worktree:t}//[.:]/-}
 msg="$out "
 
 result=$(ssh wolf "if tmux has-session -t '=$name' 2>/dev/null; then tmux send-keys -t '=$name:' -l ${(q)msg}; echo SENT; else echo NOSESSION; fi" 2>/dev/null)
