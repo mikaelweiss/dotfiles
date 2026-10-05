@@ -351,7 +351,7 @@ herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{
 [[post-switch]]
 wolf-pane-tmux = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
-[ "$(hostname -s)" = "Mikaels-MacBook-Air" ] || exit 0
+[ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 [ "$(tmux list-panes -t ={{ branch }} 2>/dev/null | grep -c .)" = "1" ] || exit 0
 tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
@@ -359,7 +359,7 @@ tmux split-window -h -t ={{ branch }} -c {{ worktree_path }} \
 '''
 wolf-pane-herdr = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
-[ "$(hostname -s)" = "Mikaels-MacBook-Air" ] || exit 0
+[ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
 tabs=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" 2>&1)
 err=$(printf '%s' "$tabs" | jq -r '.error.message // empty')

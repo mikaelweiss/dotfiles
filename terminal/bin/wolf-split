@@ -7,7 +7,7 @@
 # the old viewer's wolf-attach exits cleanly.
 # Usage: wolf-split [cmd...]   (cmd only runs if the session doesn't exist yet)
 set -u
-[ "$(hostname -s)" = "wolf" ] && { echo "wolf-split: already on wolf" >&2; exit 1 }
+[ "$(hostname -s | tr A-Z a-z)" = "wolf" ] && { echo "wolf-split: already on wolf" >&2; exit 1 }
 
 worktree=$(git rev-parse --show-toplevel 2>/dev/null) || worktree=$PWD
 name=${worktree:t}

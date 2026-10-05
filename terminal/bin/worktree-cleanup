@@ -11,7 +11,7 @@ rawname=$2
 name=${2//[.:]/-}
 worktree=$3
 
-[ "$(hostname -s)" = "wolf" ] && exit 0
+[ "$(hostname -s | tr A-Z a-z)" = "wolf" ] && exit 0
 
 if [ -d "$worktree" ]; then
   # wt merge fires post-merge before its backgrounded removal deletes the
