@@ -223,3 +223,6 @@ terminal/.config/qBittorrent/
 
 # strive
 terminal/.config/strive/credentials.lock
+
+# Codex token refresh lock
+codex/.codex/auth.json.lock
