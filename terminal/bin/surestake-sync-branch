@@ -1,0 +1,110 @@
+#!/bin/bash
+# Rebases a penguin sub-task branch onto the newest code it builds on, then
+# force-pushes it with a lease. A branch builds on origin/main, or on the branch
+# of the open pull request it is stacked on, which git config names as
+# branch.<branch>.penguinBase. branch.<branch>.penguinBaseSha is the base commit
+# the branch was last built on: only commits after it are replayed, because a
+# base rewritten by its own rebase or merged by the rebase queue has new SHAs.
+# Run inside a worktree of the branch, attached or detached. The push lease is
+# the remote head the workspace started from, which .sdlc/lease holds (empty
+# when the branch was not on the remote yet), so a push from anywhere else in
+# the meantime is never overwritten.
+# Usage: surestake-sync-branch rebase <branch> [--always]
+#        surestake-sync-branch check <branch>
+#        surestake-sync-branch push <branch>
+# rebase skips a branch with no commits beyond its remote unless --always, and
+# leaves a conflicted rebase in progress, printing {"conflict":"yes"}.
+set -euo pipefail
+
+repo=sawtooth-technologies/surestake
+mode=${1:?mode}
+branch=${2:?branch}
+always=${3:-}
+state=.sdlc/sync.json
+mkdir -p .sdlc
+
+die() { echo "surestake-sync-branch: $*" >&2; exit 1; }
+
+field() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2],""))' "$state" "$1"; }
+
+rebasing() {
+  [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]
+}
+
+fetch_branch() {
+  git fetch -q origin "+refs/heads/$1:refs/remotes/origin/$1" 2>/dev/null
+}
+
+case "$mode" in
+rebase)
+  rebasing && die "a rebase is already in progress"
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || die "the worktree has uncommitted changes"
+  git fetch -q origin main
+  lease=""
+  if [ -f .sdlc/lease ]; then
+    lease=$(tr -d ' \n' <.sdlc/lease)
+  elif fetch_branch "$branch"; then
+    lease=$(git rev-parse "origin/$branch")
+    git merge-base --is-ancestor "$lease" HEAD || die "origin/$branch has commits this workspace lacks"
+  fi
+  if [ "$always" != --always ] && [ "$lease" = "$(git rev-parse HEAD)" ]; then
+    printf '{"branch":"%s","skipped":true}\n' "$branch" >"$state"
+    echo '{"conflict":"no","push":"no"}'
+    exit 0
+  fi
+  base=$(git config --get "branch.$branch.penguinBase" || true)
+  point=$(git config --get "branch.$branch.penguinBaseSha" || true)
+  target=main
+  if [ -n "$base" ]; then
+    base_state=$(gh pr list -R "$repo" --head "$base" --state all --json number,state --jq 'sort_by(.number) | last | .state // ""')
+    case "$base_state" in
+      OPEN) fetch_branch "$base" || die "origin/$base is gone though its pull request is open"; target=$base ;;
+      MERGED) ;;
+      *) die "the pull request of $base, which $branch is stacked on, is ${base_state:-missing}" ;;
+    esac
+  fi
+  target_sha=$(git rev-parse "origin/$target")
+  printf 'origin/%s\n' "$target" >.sdlc/parent
+  printf '{"branch":"%s","base":"%s","target":"%s","target_sha":"%s","lease":"%s","skipped":false}\n' \
+    "$branch" "$base" "$target" "$target_sha" "$lease" >"$state"
+  if git rebase --onto "origin/$target" "${point:-origin/$target}" >&2; then
+    printf '{"conflict":"no","push":"yes","onto":"%s"}\n' "$target"
+  else
+    rebasing || die "the rebase onto origin/$target failed without a conflict"
+    git status --short >&2
+    printf '{"conflict":"yes","push":"yes","onto":"%s"}\n' "$target"
+  fi
+  ;;
+check)
+  [ "$(field skipped)" = True ] && exit 0
+  rebasing && die "the rebase onto origin/$(field target) is still in progress"
+  target_sha=$(field target_sha)
+  git merge-base --is-ancestor "$target_sha" HEAD || die "HEAD is not on origin/$(field target) ($target_sha)"
+  [ "$(git rev-list --count "$target_sha..HEAD")" -gt 0 ] || die "nothing to ship beyond origin/$(field target)"
+  ;;
+push)
+  if [ "$(field skipped)" = True ]; then
+    git rev-parse HEAD
+    exit 0
+  fi
+  "$0" check "$branch"
+  target=$(field target)
+  lease=$(field lease)
+  /Users/mikaelweiss/code/dotfiles/terminal/bin/surestake-spotlight-run \
+    git push --force-with-lease="refs/heads/$branch:$lease" origin "HEAD:refs/heads/$branch" >&2
+  git rev-parse HEAD >.sdlc/lease
+  if [ "$target" = main ]; then
+    git config --unset "branch.$branch.penguinBase" || true
+    git config --unset "branch.$branch.penguinBaseSha" || true
+  else
+    git config "branch.$branch.penguinBase" "$target"
+    git config "branch.$branch.penguinBaseSha" "$(field target_sha)"
+  fi
+  pr=$(gh pr list -R "$repo" --head "$branch" --state open --json number,baseRefName --jq '.[0] | select(.) | "\(.number) \(.baseRefName)"')
+  if [ -n "$pr" ] && [ "${pr#* }" != "$target" ]; then
+    gh pr edit "${pr%% *}" -R "$repo" --base "$target" >&2
+  fi
+  git rev-parse HEAD
+  ;;
+*) die "unknown mode $mode" ;;
+esac
