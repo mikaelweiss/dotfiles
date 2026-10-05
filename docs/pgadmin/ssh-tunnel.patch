@@ -1,0 +1,75 @@
+--- a/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/sshtunnel.py
++++ b/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/sshtunnel.py
+@@ -1404,8 +1404,19 @@
+                 self._transport.connect(hostkey=self.ssh_host_key,
+                                         username=self.ssh_username,
+                                         pkey=key)
+-                if self._transport.is_alive:
+-                    return
++                # multi-factor servers accept the key, then require a
++                # password. Try it once and stop: every retry is another
++                # failed login, and sshd blocks the client IP after a few.
++                if not self._transport.is_authenticated() and \
++                        self.ssh_password:
++                    try:
++                        self._transport.auth_password(self.ssh_username,
++                                                      self.ssh_password)
++                    except paramiko.AuthenticationException:
++                        self.logger.debug('Password rejected after key')
++                if not self._transport.is_authenticated():
++                    self._stop_transport()
++                return
+             except paramiko.AuthenticationException:
+                 self.logger.debug('Authentication error')
+                 self._stop_transport()
+@@ -1418,8 +1429,9 @@
+                 self._transport.connect(hostkey=self.ssh_host_key,
+                                         username=self.ssh_username,
+                                         password=self.ssh_password)
+-                if self._transport.is_alive:
++                if self._transport.is_authenticated():
+                     return
++                self._stop_transport()
+             except paramiko.AuthenticationException:
+                 self.logger.debug('Authentication error')
+                 self._stop_transport()
+--- a/Resources/web/pgadmin/utils/driver/psycopg3/server_manager.py
++++ b/Resources/web/pgadmin/utils/driver/psycopg3/server_manager.py
+@@ -577,6 +577,13 @@
+                 current_app.logger.exception(e)
+                 return False, gettext("Failed to decrypt the SSH tunnel "
+                                       "password.\nError: {0}").format(str(e))
++
++        # The tunnel server requires a key and a password. A passwordless
++        # attempt still counts as a failed login, and sshd blocks the client
++        # IP after a few of them. Restored sessions carry an encrypted empty
++        # string, so check after decrypting.
++        if self.tunnel_authentication == 1 and not tunnel_password:
++            return False, gettext("SSH tunnel password is required.")
+ 
+         try:
+             # If authentication method is 1 then it uses identity file
+@@ -593,6 +600,7 @@
+                     ssh_username=self.tunnel_username,
+                     ssh_pkey=get_complete_file_path(self.tunnel_identity_file),
+                     ssh_private_key_password=tunnel_password,
++                    ssh_password=tunnel_password,
+                     remote_bind_address=(self.host, self.port),
+                     logger=ssh_logger,
+                     set_keepalive=int(self.tunnel_keep_alive)
+--- a/Resources/web/pgadmin/browser/server_groups/servers/__init__.py
++++ b/Resources/web/pgadmin/browser/server_groups/servers/__init__.py
+@@ -1545,10 +1545,9 @@
+         This function will check whether to prompt tunnel password or not.
+         """
+         prompt_tunnel_password = True
+-        # In case of identity file check the value of tunnel_prompt_password.
+-        if server.tunnel_password is not None or \
+-            (server.tunnel_identity_file is not None and
+-             server.tunnel_prompt_password != 1):
++        # The tunnel server requires a key and a password, so prompt
++        # whenever no tunnel password is saved
++        if server.tunnel_password is not None:
+             prompt_tunnel_password = False
+ 
+         return prompt_tunnel_password

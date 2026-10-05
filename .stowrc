@@ -5,3 +5,4 @@
 --ignore='fix-ios-dev.sh'
 --ignore='otto'
 --ignore='\.specs'
+--ignore='docs'
