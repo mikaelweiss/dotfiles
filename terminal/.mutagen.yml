@@ -28,6 +28,9 @@ sync:
         - ".build"
         - ".build-*"
         - ".swiftpm"
+        # Agent-chosen -derivedDataPath folders
+        - ".dd"
+        - ".dd-*"
         # Rust
         - "target"
         # Elixir / Phoenix
