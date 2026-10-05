@@ -2,8 +2,8 @@
 # Runs a command in a surestake worktree while dx spotlight mirrors that
 # worktree into the primary checkout. PHP and artisan always run the primary
 # checkout's code, so checks and the pre-push hook only see a worktree's change
-# while it is spotlighted. Waits for a spotlight another penguin workspace
-# holds, and refuses to take over any other, which someone started by hand.
+# while it is spotlighted. Penguin workspaces queue for the spotlight in arrival
+# order, and it refuses to take over one someone started by hand.
 # Usage: surestake-spotlight-run <command> [args...]
 set -u
 
@@ -27,19 +27,39 @@ EOF
 }
 
 penguin_workspaces="$HOME/.penguin/"
+if current=$(holder) && [ "$current" = "$worktree" ]; then
+  "$@"
+  exit $?
+fi
+
+# Each waiter takes a ticket named for the time it arrived, and the oldest live ticket holds the spotlight, so checking and starting can never race.
+queue="$common/dx-spotlight/queue"
+mkdir -p "$queue"
+ticket="$queue/$(python3 -c 'import time; print(time.time_ns())')-$$"
+: >"$ticket"
+trap 'rm -f "$ticket"' EXIT
+turn=0
 for _ in $(seq 1 1800); do
-  current=$(holder) || break
-  [ "$current" = "$worktree" ] && break
-  case "$current" in
-    "$penguin_workspaces"*) sleep 2 ;;
-    *)
-      echo "surestake-spotlight-run: a spotlight from $current holds the repo root; not taking it over" >&2
-      exit 75
-      ;;
-  esac
+  first=""
+  for t in $(ls "$queue" | sort); do
+    kill -0 "${t##*-}" 2>/dev/null || { rm -f "$queue/$t"; continue; }
+    first=$t
+    break
+  done
+  if [ "$queue/$first" = "$ticket" ]; then
+    current=$(holder) || { turn=1; break; }
+    case "$current" in
+      "$penguin_workspaces"*) ;;
+      *)
+        echo "surestake-spotlight-run: a spotlight from $current holds the repo root; not taking it over" >&2
+        exit 75
+        ;;
+    esac
+  fi
+  sleep 2
 done
-if current=$(holder) && [ "$current" != "$worktree" ]; then
-  echo "surestake-spotlight-run: the spotlight from $current did not finish within an hour" >&2
+if [ "$turn" != 1 ]; then
+  echo "surestake-spotlight-run: the spotlight queue did not reach this run within an hour" >&2
   exit 75
 fi
 
@@ -60,7 +80,7 @@ stop() {
   else
     sed 's/^/[spotlight] /' "$log" >&2
   fi
-  rm -f "$log"
+  rm -f "$log" "$ticket"
 }
 spotlight_ok=0
 trap stop EXIT
