@@ -80,6 +80,11 @@ fi
 alias nix-update='(cd ~/code/dotfiles/nix && nix flake update) && nix-rebuild'
 alias nix-config='nvim ~/code/dotfiles/nix/shared.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias clean='mole clean && nix-clean'
+else
+  alias clean='nix-clean'
+fi
 alias tm='tmux new-session -A -s main'
 alias stopheat='xcrun simctl shutdown all'
 
