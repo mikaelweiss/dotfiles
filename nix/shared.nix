@@ -63,4 +63,23 @@
     "opencode-ai"
     "@anthropic-ai/claude-code"
   ];
+
+  # Codex on every machine runs on wolf's ChatGPT login; codex-token fetches the token.
+  # A system layer, so each machine's own ~/.codex/config.toml still applies on top.
+  environment.etc."codex/config.toml".text = ''
+    model_provider = "wolf"
+
+    [model_providers.wolf]
+    name = "Wolf ChatGPT"
+    base_url = "https://chatgpt.com/backend-api/codex"
+    wire_api = "responses"
+
+    [model_providers.wolf.auth]
+    command = "/Users/mikaelweiss/code/dotfiles/terminal/bin/codex-token"
+  '';
+
+  programs.ssh.knownHosts.wolf = {
+    hostNames = [ "wolf" "100.112.196.57" ];
+    publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJYqIHOimV6RsqDeYDo4Et4er9co7WVSr+Gv4gy1g1Gm";
+  };
 }
