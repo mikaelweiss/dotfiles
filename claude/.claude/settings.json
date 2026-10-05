@@ -232,7 +232,7 @@
     "typescript-lsp@claude-plugins-official": true,
     "telemetry@builtin": false,
     "revenuecat@claude-plugins-official": true,
-    "linear@anthropic-plugin-directory": true
+    "linear@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -264,7 +264,8 @@
       "effortLevel": "high"
     },
     "claude-opus-5-5": {
-      "effortLevel": "high"
+      "effortLevel": "high",
+      "autoCompactWindow": "auto"
     },
     "claude-sonnet-5-5": {
       "effortLevel": "high"
