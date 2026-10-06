@@ -1,4 +1,5 @@
 {
+  "syncClaudeAiSkills": false,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CONTEXT7_API_KEY": "ctx7sk-676a75cb-db5c-4f8d-91ff-c5a0a2476723"
@@ -232,7 +233,8 @@
     "typescript-lsp@claude-plugins-official": true,
     "telemetry@builtin": false,
     "revenuecat@claude-plugins-official": true,
-    "linear@claude-plugins-official": true
+    "linear@claude-plugins-official": true,
+    "skill-creator@anthropic-plugin-directory": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
