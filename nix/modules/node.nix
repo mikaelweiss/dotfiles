@@ -7,5 +7,5 @@
     default = pkgs.nodejs_24;
   };
 
-  config.environment.systemPackages = [ config.node.package ];
+  config.environment.systemPackages = [ config.node.package pkgs.pnpm ];
 }
