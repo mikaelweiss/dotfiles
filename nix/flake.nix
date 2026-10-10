@@ -1,5 +1,5 @@
 {
-  description = "Every machine: Macs via nix-darwin, elm and sparrow via NixOS";
+  description = "Every machine: Macs via nix-darwin, elm, sparrow and oak via NixOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -33,6 +33,7 @@
     nixosConfigurations = {
       elm = linux [ ./nixos/hosts/elm ];
       sparrow = linux [ disko.nixosModules.disko ./nixos/hosts/sparrow ];
+      oak = linux [ disko.nixosModules.disko ./nixos/hosts/oak ];
     };
   };
 }
