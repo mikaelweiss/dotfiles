@@ -95,3 +95,7 @@ You have many tools. Figure it out yourself first. The exception is a repo rule 
 
 When a step doesn't need my input, keep going. Put status notes in the same message as your next action.
 Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.
+
+<important if="you are considering putting work on a new branch">
+  Always do work on the branch the user started the session in. If they started in main, they wanted you to commit on main. If they started on a branch or in a worktree, they wanted you to do work on that branch or worktree. They will RARELY ask you to create a new branch or put your work on a branch other than the branch they started the session in. They will almost ALWAYS want you to commit to whatever branch they started the conversation in. Do not create a new branch or worktree unless they asked you to.
+</important>
