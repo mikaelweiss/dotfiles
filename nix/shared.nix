@@ -22,6 +22,7 @@
     btop
     yazi
     git
+    git-lfs
     lazygit
     tmux
     tldr

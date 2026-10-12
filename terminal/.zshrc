@@ -163,8 +163,8 @@ alias claudef='claude --model fable'
 alias cf='claude --model fable'
 alias cs='claude --model sonnet'
 alias ca='env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN claude'
-alias fulcrum='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
-alias f='/Users/mikaelweiss/Applications/Fulcrum.app/Contents/Resources/bin/fulcrum'
+alias aspen="/Users/mikaelweiss/Applications/Aspen Grove.app/Contents/Resources/bin/aspen"
+alias a="/Users/mikaelweiss/Applications/Aspen Grove.app/Contents/Resources/bin/aspen"
 alias p='$HOME/code/penguin-v2/bin/penguin'
 
 # Added by ma CLI installer
