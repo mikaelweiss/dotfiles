@@ -145,9 +145,9 @@ let
       echo "Deployed $dir"
     '';
   };
-  # The API lives in the corpus repo's api folder and serves the latest data
-  # release, so it deploys on new releases as well as pushes. Pushes that leave
-  # api/ alone keep the running API and its caches.
+  # The site and API live in the corpus repo's web folder and serve the latest
+  # data release, so they deploy on new releases as well as pushes. Pushes that
+  # leave web/ alone keep the running app and its caches.
   deployCorpus = pkgs.writeShellApplication {
     name = "deploy-corpus";
     runtimeInputs = buildTools ++ (with pkgs; [ systemd jq util-linux ]);
@@ -160,22 +160,24 @@ let
       as_corpus() { ${sudo} -u corpus env PATH="$PATH" bash -c "set -e; cd /opt/corpus; $1"; }
 
       as_corpus "git fetch origin main && git reset --hard origin/main"
-      api=$(as_corpus "git rev-parse HEAD:api")
+      web=$(as_corpus "git rev-parse HEAD:web")
       tag=$(curl --fail --silent --show-error \
         https://api.github.com/repos/mikaelweiss/standard-works-corpus/releases/latest | jq -r .tag_name)
 
-      if [ "$api $tag" = "$(as_corpus "cat .deployed 2>/dev/null || true")" ]; then
-        echo "corpus: API and data unchanged"
+      if [ "$web $tag" = "$(as_corpus "cat .deployed 2>/dev/null || true")" ]; then
+        echo "corpus: web and data unchanged"
         exit 0
       fi
 
       echo "Deploying corpus..."
       as_corpus "
-        cd api
+        cd web
         set -a && source /etc/corpus/env && set +a
         export MIX_ENV=prod
         mix deps.get
         mix corpus.install
+        mix compile
+        mix assets.deploy
         mix release --overwrite
       "
       ${sudo} systemctl restart corpus
@@ -185,9 +187,9 @@ let
           "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
           -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
           -H "Content-Type: application/json" \
-          --data "{\"hosts\": [\"$PHX_HOST\"]}"
+          --data "{\"hosts\": [\"$PHX_HOST\", \"api.$PHX_HOST\"]}"
       '
-      as_corpus "echo \"$api \$(readlink api/data/current)\" > .deployed"
+      as_corpus "echo \"$web \$(readlink web/data/current)\" > .deployed"
       echo "Deployed corpus"
     '';
   };
@@ -293,7 +295,7 @@ in
     corpus = mkService "corpus" {
       serviceConfig = {
         EnvironmentFile = "/etc/corpus/env";
-        ExecStart = "/opt/corpus/api/_build/prod/rel/corpus/bin/corpus start";
+        ExecStart = "/opt/corpus/web/_build/prod/rel/corpus/bin/corpus start";
       };
     };
 
