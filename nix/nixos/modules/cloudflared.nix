@@ -26,6 +26,7 @@ in
         "mikaelmc.com" = "http://localhost:4008";
         "parlance.weisssolutions.org" = "http://localhost:4010";
         "orbit.weisssolutions.org" = "http://localhost:4011";
+        "api.standardworkscorpus.org" = "http://localhost:4012";
       };
     };
   };

@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" "orbit" ];
+  siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" "orbit" "corpus" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
@@ -145,6 +145,40 @@ let
       echo "Deployed $dir"
     '';
   };
+  # The API lives in the corpus repo's api folder and serves the latest data
+  # release, so it deploys on new releases as well as pushes.
+  deployCorpus = pkgs.writeShellApplication {
+    name = "deploy-corpus";
+    runtimeInputs = buildTools ++ [ pkgs.systemd ];
+    # The purge expands the secrets as the corpus user, inside single quotes.
+    excludeShellChecks = [ "SC2016" ];
+    text = ''
+      echo "Deploying corpus..."
+      ${sudo} -u corpus env PATH="$PATH" bash -c "
+        set -e
+        cd /opt/corpus
+        git fetch origin main
+        git reset --hard origin/main
+        cd api
+        set -a && source /etc/corpus/env && set +a
+        export MIX_ENV=prod
+        mix deps.get
+        mix corpus.install
+        mix release --overwrite
+      "
+      ${sudo} systemctl restart corpus
+      ${sudo} -u corpus env PATH="$PATH" bash -c '
+        set -e
+        set -a && source /etc/corpus/env && set +a
+        curl --fail --silent --show-error -X POST \
+          "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
+          -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          --data "{\"hosts\": [\"$PHX_HOST\"]}"
+      '
+      echo "Deployed corpus"
+    '';
+  };
   hookRule = ''
     {
       "and": [
@@ -170,6 +204,22 @@ let
     hook name "${deployBun}/bin/deploy-bun" [ name "/opt/${name}" name ];
   staticHook = name:
     hook name "${deployStatic}/bin/deploy-static" [ name "/opt/${name}" ];
+  corpusHook = hook "corpus" "${deployCorpus}/bin/deploy-corpus" [] // {
+    trigger-rule = builtins.fromJSON ''
+      {
+        "and": [
+          { "match": { "type": "payload-hmac-sha256", "secret": "@SECRET@",
+                       "parameter": { "source": "header", "name": "X-Hub-Signature-256" } } },
+          { "or": [
+            { "match": { "type": "value", "value": "refs/heads/main",
+                         "parameter": { "source": "payload", "name": "ref" } } },
+            { "match": { "type": "value", "value": "published",
+                         "parameter": { "source": "payload", "name": "action" } } }
+          ] }
+        ]
+      }
+    '';
+  };
   hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
     (phoenixHook "portfolio" "false")
     (phoenixHook "weisssolutions" "false")
@@ -182,6 +232,7 @@ let
     (staticHook "mikaelmc")
     (staticHook "orbit")
     (bunHook "parlance")
+    corpusHook
   ]);
 in
 {
@@ -227,6 +278,13 @@ in
       serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4008 --root /opt/mikaelmc --ignore-hidden-files=true";
     };
 
+    corpus = mkService "corpus" {
+      serviceConfig = {
+        EnvironmentFile = "/etc/corpus/env";
+        ExecStart = "/opt/corpus/api/_build/prod/rel/corpus/bin/corpus start";
+      };
+    };
+
     orbit = mkService "orbit" {
       serviceConfig.ExecStart = "${pkgs.static-web-server}/bin/static-web-server --port 4011 --root /opt/orbit/site/public";
     };
@@ -264,7 +322,7 @@ in
       description = "GitHub webhook deploy receiver";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ deployPhoenix deployNode deployBun ];
+      path = [ deployPhoenix deployNode deployBun deployCorpus ];
       preStart = ''
         secret=$(cat /etc/webhook/secret)
         sed "s|@SECRET@|$secret|g" ${hooksTemplate} > /run/webhook/hooks.json
@@ -282,5 +340,5 @@ in
 
   systemd.tmpfiles.rules = [ "d /opt/deploy 0755 mikaelweiss users -" ];
 
-  environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic pkgs.elixir_1_19 pkgs.nodejs_22 pkgs.bun ];
+  environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic deployCorpus pkgs.elixir_1_19 pkgs.nodejs_22 pkgs.bun ];
 }
