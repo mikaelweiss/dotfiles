@@ -146,19 +146,31 @@ let
     '';
   };
   # The API lives in the corpus repo's api folder and serves the latest data
-  # release, so it deploys on new releases as well as pushes.
+  # release, so it deploys on new releases as well as pushes. Pushes that leave
+  # api/ alone keep the running API and its caches.
   deployCorpus = pkgs.writeShellApplication {
     name = "deploy-corpus";
-    runtimeInputs = buildTools ++ [ pkgs.systemd ];
+    runtimeInputs = buildTools ++ (with pkgs; [ systemd jq util-linux ]);
     # The purge expands the secrets as the corpus user, inside single quotes.
     excludeShellChecks = [ "SC2016" ];
     text = ''
+      exec 9>/tmp/deploy-corpus.lock
+      flock 9
+
+      as_corpus() { ${sudo} -u corpus env PATH="$PATH" bash -c "set -e; cd /opt/corpus; $1"; }
+
+      as_corpus "git fetch origin main && git reset --hard origin/main"
+      api=$(as_corpus "git rev-parse HEAD:api")
+      tag=$(curl --fail --silent --show-error \
+        https://api.github.com/repos/mikaelweiss/standard-works-corpus/releases/latest | jq -r .tag_name)
+
+      if [ "$api $tag" = "$(as_corpus "cat .deployed 2>/dev/null || true")" ]; then
+        echo "corpus: API and data unchanged"
+        exit 0
+      fi
+
       echo "Deploying corpus..."
-      ${sudo} -u corpus env PATH="$PATH" bash -c "
-        set -e
-        cd /opt/corpus
-        git fetch origin main
-        git reset --hard origin/main
+      as_corpus "
         cd api
         set -a && source /etc/corpus/env && set +a
         export MIX_ENV=prod
@@ -167,8 +179,7 @@ let
         mix release --overwrite
       "
       ${sudo} systemctl restart corpus
-      ${sudo} -u corpus env PATH="$PATH" bash -c '
-        set -e
+      as_corpus '
         set -a && source /etc/corpus/env && set +a
         curl --fail --silent --show-error -X POST \
           "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
@@ -176,6 +187,7 @@ let
           -H "Content-Type: application/json" \
           --data "{\"hosts\": [\"$PHX_HOST\"]}"
       '
+      as_corpus "echo \"$api \$(readlink api/data/current)\" > .deployed"
       echo "Deployed corpus"
     '';
   };
