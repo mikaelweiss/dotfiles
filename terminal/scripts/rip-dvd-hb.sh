@@ -17,7 +17,7 @@ YEAR="$2"
 DEVICE="${3:-/dev/sr0}"
 trap 'eject "$DEVICE" 2>/dev/null || true' EXIT
 TITLE="${4:-}"
-MOVIES_DIR="/mnt/raid/videos/movies"
+MOVIES_DIR="${MOVIES_DIR:-/mnt/raid/videos/movies}"
 OUTPUT_DIR="$MOVIES_DIR/$NAME ($YEAR)"
 OUTPUT_FILE="$OUTPUT_DIR/$NAME ($YEAR).mkv"
 
