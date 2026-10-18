@@ -51,7 +51,7 @@ for i in "${!EP_NUMS[@]}"; do
       -i "$DEVICE" \
       -o "$PART_FILE" \
       --title "$t" \
-      --preset="Super HQ 480p30 Surround" \
+      --preset="HQ 480p30 Surround" \
       -f av_mkv \
       2>&1) || true
 

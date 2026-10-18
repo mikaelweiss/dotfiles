@@ -36,7 +36,7 @@ exec 3< <(HandBrakeCLI \
   -i "$DEVICE" \
   -o "$OUTPUT_FILE" \
   ${TITLE:+--title "$TITLE"} ${TITLE:---main-feature} $DVDNAV \
-  --preset="Super HQ 480p30 Surround" \
+  --preset="HQ 480p30 Surround" \
   -f av_mkv \
   2>&1)
 HB_PID=$!

@@ -75,7 +75,7 @@ while IFS= read -r line; do
 done < <(HandBrakeCLI \
   -i "$RIPPED_FILE" \
   -o "$OUTPUT_FILE" \
-  --preset="Super HQ 480p30 Surround" \
+  --preset="HQ 480p30 Surround" \
   -f av_mkv \
   2>&1) || true
 

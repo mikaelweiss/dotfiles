@@ -52,7 +52,7 @@ for EP in $(seq "$START_EP" "$END_EP"); do
     -i "$DEVICE" \
     -o "$OUTPUT_FILE" \
     --title "$TITLE" \
-    --preset="Super HQ 480p30 Surround" \
+    --preset="HQ 480p30 Surround" \
     -f av_mkv \
     2>&1) || true
 
