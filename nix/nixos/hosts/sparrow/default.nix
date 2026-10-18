@@ -8,6 +8,7 @@
     ../../modules/cloudflared.nix
     ../../modules/minecraft.nix
     ../../modules/backups.nix
+    ../../modules/dvd-ripping.nix
   ];
 
   resticBackups.sparrowState = true;

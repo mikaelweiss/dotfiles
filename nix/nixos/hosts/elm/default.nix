@@ -7,6 +7,7 @@
     ../../modules/remote-desktop.nix
     ../../modules/minecraft.nix
     ../../modules/backups.nix
+    ../../modules/dvd-ripping.nix
   ];
 
   minecraft.private = true;
@@ -16,18 +17,10 @@
   networking.hostName = "elm";
   networking.networkmanager.enable = true;
 
-  boot.kernelModules = [ "sg" ];
-  users.users.mikaelweiss.extraGroups = [ "cdrom" ];
-
   environment.systemPackages = with pkgs; [
     elixir
     erlang
     postgresql
-    ffmpeg
-    libdvdcss
-    dvdbackup
-    handbrake
-    makemkv
     cockpit
   ];
 
