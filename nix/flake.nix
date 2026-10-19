@@ -9,6 +9,8 @@
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs-stable";
     noctalia.url = "github:noctalia-dev/noctalia/cachix";
+    # Unregistered MakeMKV builds expire, so this input gets bumped on its own.
+    nixpkgs-makemkv.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, noctalia, ... }:
