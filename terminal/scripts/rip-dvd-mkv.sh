@@ -11,7 +11,7 @@ NAME="$1"
 YEAR="$2"
 DEVICE="${3:-/dev/sr0}"
 trap 'eject "$DEVICE" 2>/dev/null || true' EXIT
-MOVIES_DIR="/mnt/raid/videos/movies"
+MOVIES_DIR="${MOVIES_DIR:-/mnt/raid/videos/movies}"
 OUTPUT_DIR="$MOVIES_DIR/$NAME ($YEAR)"
 OUTPUT_FILE="$OUTPUT_DIR/$NAME ($YEAR).mkv"
 TMP_DIR=$(mktemp -d)
@@ -45,7 +45,7 @@ while IFS= read -r line; do
       printf "\r  Ripping    [%s%s] %3d%%  " "$bar_fill" "$bar_empty" "$pct"
     fi
   fi
-done < <(makemkvcon mkv --minlength=2400 --robot disc:0 all "$TMP_DIR" 2>&1) || true
+done < <(makemkvcon mkv --minlength=2400 --robot "dev:$DEVICE" all "$TMP_DIR" 2>&1) || true
 
 echo ""
 

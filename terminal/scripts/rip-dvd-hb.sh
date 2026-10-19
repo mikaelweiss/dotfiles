@@ -42,9 +42,11 @@ exec 3< <(HandBrakeCLI \
 HB_PID=$!
 
 error_count=0
+encoding=false
 while IFS= read -r -t 1800 line <&3; do
   if [[ "$line" =~ Encoding:.*,\ ([0-9]+\.[0-9]+)\ %.*ETA\ ([0-9h]+[0-9m]+[0-9s]+) ]]; then
     error_count=0
+    encoding=true
     pct="${BASH_REMATCH[1]%.*}"
     eta="${BASH_REMATCH[2]}"
     width=40
@@ -54,7 +56,8 @@ while IFS= read -r -t 1800 line <&3; do
     [ "$filled" -gt 0 ] && bar_fill=$(printf '%0.s#' $(seq 1 "$filled"))
     [ "$empty" -gt 0 ] && bar_empty=$(printf '%0.s-' $(seq 1 "$empty"))
     printf "\r  Encoding  [%s%s] %3d%%  ETA: %s  " "$bar_fill" "$bar_empty" "$pct" "$eta"
-  elif [[ "$line" =~ "error" || "$line" =~ "Error" ]]; then
+  # Scanning decoy titles on protected discs logs harmless CSS errors.
+  elif $encoding && [[ "$line" =~ "error" || "$line" =~ "Error" ]]; then
     echo "$line" >&2
     ((error_count++)) || true
     if [ "$error_count" -ge 10 ]; then
