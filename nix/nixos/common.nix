@@ -86,7 +86,7 @@
   # Tailscale tracks upstream faster than the stable channel; pull it from unstable.
   nixpkgs.overlays = [
     (final: prev: {
-      tailscale = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
+      tailscale = inputs.nixpkgs-tailscale.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
     })
   ];
   services.tailscale.enable = true;
