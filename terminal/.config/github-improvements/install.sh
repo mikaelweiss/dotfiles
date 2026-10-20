@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SOURCE="https://raw.githubusercontent.com/mikaelweiss/dotfiles/main/terminal/.config/github-improvements"
-TARGET="$HOME/.github-improvements"
+TARGET="$HOME/.config/github-improvements"
 
 mkdir -p "$TARGET"
 for file in manifest.json content.js styles.css; do
