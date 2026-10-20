@@ -1,75 +1,38 @@
 #github-improvements {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin-top: 8px;
-  padding: 12px 16px;
+  padding: 8px 16px;
   border: 1px solid var(--borderColor-default);
   border-radius: 6px;
-  background: var(--bgColor-muted);
 }
 
 :has(> #github-improvements) {
   overflow: visible !important;
 }
 
-#github-improvements .arc-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--borderColor-default);
-}
-
-#github-improvements .arc-chips[hidden] {
-  display: none;
-}
-
-#github-improvements .arc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 4px;
-  border: 1px solid var(--chip-color);
-  border-radius: 999px;
-  font-size: 14px;
-  color: var(--fgColor-default);
-  text-decoration: none;
-}
-
-#github-improvements .arc-chip:not(:has(img)) {
-  padding-left: 12px;
-}
-
-#github-improvements .arc-chip img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-
-#github-improvements .arc-chip span {
-  font-weight: 600;
-  color: var(--chip-color);
-}
-
-.arc-chip-approved { --chip-color: var(--fgColor-success); }
-.arc-chip-changes { --chip-color: var(--fgColor-danger); }
-.arc-chip-commented { --chip-color: var(--fgColor-muted); }
-.arc-chip-pending { --chip-color: var(--fgColor-attention); }
-
-#github-improvements .arc-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-#github-improvements .arc-reviewers {
-  flex: 1;
-  min-width: 0;
-}
-
+/* GitHub's reviewer list duplicates the chips, so only its picker stays visible. */
 #github-improvements .discussion-sidebar-item {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+#github-improvements .js-issue-sidebar-form > :not(#reviewers-select-menu, .js-large-teams-check-warning-container) {
+  display: none;
+}
+
+#github-improvements #reviewers-select-menu > summary {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+#github-improvements #reviewers-select-menu > summary svg {
+  float: none;
 }
 
 #github-improvements .hx_rsm-modal {
@@ -77,21 +40,67 @@
   right: auto;
 }
 
-#github-improvements .arc-approve {
+#github-improvements .gi-chips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  min-width: 0;
+}
+
+#github-improvements .gi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+#github-improvements .gi-chip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--fgColor-default);
+}
+
+#github-improvements .gi-chip img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+#github-improvements .gi-rerequest {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fgColor-muted);
+  cursor: pointer;
+}
+
+#github-improvements .gi-rerequest:hover {
+  color: var(--fgColor-accent);
+}
+
+#github-improvements .gi-approve {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
 }
 
-#github-improvements .arc-error {
+#github-improvements .gi-approve[hidden] {
+  display: none;
+}
+
+#github-improvements .gi-error {
   max-width: 240px;
   font-size: 12px;
   text-align: right;
   color: var(--fgColor-danger);
 }
 
-#arc-scroll-buttons {
+#github-improvements-scroll {
   position: fixed;
   right: 24px;
   bottom: 24px;
@@ -105,7 +114,7 @@
   box-shadow: var(--shadow-floating-small);
 }
 
-#arc-scroll-buttons button {
+#github-improvements-scroll button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,11 +127,11 @@
   cursor: pointer;
 }
 
-#arc-scroll-buttons button:hover {
+#github-improvements-scroll button:hover {
   background: var(--control-transparent-bgColor-hover);
 }
 
-#arc-scroll-buttons hr {
+#github-improvements-scroll hr {
   height: 1px;
   margin: 0 8px;
   border: 0;

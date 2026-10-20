@@ -1,5 +1,5 @@
 const BAR_ID = 'github-improvements';
-const SCROLL_ID = 'arc-scroll-buttons';
+const SCROLL_ID = 'github-improvements-scroll';
 const REVIEWERS = '.js-discussion-sidebar-item[data-url*="sidebar%2Fshow%2Freviewers"]';
 const TOKEN_KEY = 'github-improvements-token';
 
@@ -9,16 +9,18 @@ const STATUS_BY_TOOLTIP = [
   [/^(.+) requested changes$/, 'changes'],
   [/^(.+) left review comments$/, 'commented'],
 ];
-const STATUS_LABEL = {
-  approved: '✓ Approved',
-  changes: '± Changes requested',
-  commented: '💬 Commented',
-  pending: '● Pending',
-};
 
 function pullRef() {
   const m = location.pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/);
   return m && { owner: m[1], repo: m[2], number: m[3] };
+}
+
+function viewerLogin() {
+  return document.querySelector('meta[name="user-login"]')?.content;
+}
+
+function pullAuthor() {
+  return document.querySelector('a.author')?.textContent.trim();
 }
 
 function token() {
@@ -59,58 +61,75 @@ function reviewerStatuses(reviewers) {
       const match = text.match(pattern);
       if (!match) continue;
       const row = tip.closest('.d-flex');
+      const targetId = tip.getAttribute('for');
+      const target = targetId && reviewers.querySelector(`#${CSS.escape(targetId)}`);
       return [{
         login: match[1],
         status,
+        text,
         href: row?.querySelector('a.assignee')?.getAttribute('href') ?? `/${match[1]}`,
         avatar: row?.querySelector('img')?.src,
+        icon: target?.querySelector('svg'),
+        reRequest: row?.querySelector('button[name="re_request_reviewer_id"]'),
       }];
     }
     return [];
   });
 }
 
-function buildChip({ login, status, href, avatar }) {
-  const chip = document.createElement('a');
-  chip.className = `arc-chip arc-chip-${status}`;
-  chip.href = href;
+function buildChip({ login, status, text, href, avatar, icon, reRequest }) {
+  const chip = document.createElement('span');
+  chip.className = `gi-chip gi-chip-${status}`;
+  chip.title = text;
+
+  const link = document.createElement('a');
+  link.href = href;
   if (avatar) {
     const img = document.createElement('img');
     img.src = avatar;
     img.alt = '';
-    chip.append(img);
+    link.append(img);
   }
-  const name = document.createElement('strong');
-  name.textContent = login;
-  const state = document.createElement('span');
-  state.textContent = STATUS_LABEL[status];
-  chip.append(name, state);
+  link.append(login);
+  chip.append(link);
+  if (icon) chip.append(icon.cloneNode(true));
+
+  if (reRequest) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'gi-rerequest';
+    button.title = 'Re-request review';
+    button.append(reRequest.querySelector('svg').cloneNode(true));
+    button.addEventListener('click', () => reRequest.click());
+    chip.append(button);
+  }
   return chip;
 }
 
-function renderChips(bar, reviewers) {
-  const chips = bar.querySelector('.arc-chips');
+function render(bar, reviewers) {
   const statuses = reviewerStatuses(reviewers);
-  const signature = JSON.stringify(statuses);
-  if (chips.dataset.signature === signature) return;
-  chips.dataset.signature = signature;
-  chips.replaceChildren(...statuses.map(buildChip));
-  chips.hidden = statuses.length === 0;
+  const signature = JSON.stringify(statuses.map(({ login, status, reRequest }) => [login, status, !!reRequest]));
+  const chips = bar.querySelector('.gi-chips');
+  if (chips.dataset.signature !== signature) {
+    chips.dataset.signature = signature;
+    chips.replaceChildren(...statuses.map(buildChip));
+  }
+  const login = viewerLogin();
+  const approved = statuses.some(s => s.login === login && s.status === 'approved');
+  bar.querySelector('.gi-approve').hidden = approved || login === pullAuthor();
 }
 
 function buildBar() {
   const bar = document.createElement('div');
   bar.id = BAR_ID;
   bar.innerHTML = `
-    <div class="arc-chips" hidden></div>
-    <div class="arc-row">
-      <div class="arc-reviewers"></div>
-      <div class="arc-approve">
-        <button type="button" class="btn btn-primary">Approve</button>
-        <span class="arc-error"></span>
-      </div>
+    <div class="gi-reviewers"></div>
+    <div class="gi-chips"></div>
+    <div class="gi-approve">
+      <button type="button" class="btn btn-sm btn-primary">Approve</button>
+      <span class="gi-error"></span>
     </div>`;
-  const [button, error] = bar.querySelector('.arc-approve').children;
+  const [button, error] = bar.querySelector('.gi-approve').children;
   button.addEventListener('click', () => approve(button, error));
   return bar;
 }
@@ -123,10 +142,10 @@ function mountBar() {
     bar = buildBar();
     mergebox.after(bar);
   }
-  const slot = bar.querySelector('.arc-reviewers');
+  const slot = bar.querySelector('.gi-reviewers');
   const reviewers = [...document.querySelectorAll(REVIEWERS)].find(el => !bar.contains(el));
   if (reviewers) slot.replaceChildren(reviewers);
-  if (slot.firstElementChild) renderChips(bar, slot.firstElementChild);
+  if (slot.firstElementChild) render(bar, slot.firstElementChild);
 }
 
 function scrollIcon(path) {
