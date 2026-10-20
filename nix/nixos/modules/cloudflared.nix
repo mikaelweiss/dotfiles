@@ -13,7 +13,6 @@ in
       default = "http_status:404";
       ingress = {
         "mikaelweiss.dev" = "http://localhost:4000";
-        "mikaelweiss.org" = "http://localhost:4000";
         "weisssolutions.org" = "http://localhost:4001";
         "pmgforrms.org" = "http://localhost:4003";
         "rachelweiss.org" = "http://localhost:4004";
