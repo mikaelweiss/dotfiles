@@ -106,7 +106,7 @@ in
   {
     systemd.services = lib.mkMerge [
       (lib.mkIf (cfg.minecraftPath != null) {
-        minecraft-all-backup = baseService {
+        minecraft-all-backup = lib.recursiveUpdate (baseService {
           description = "Restic backup of all Minecraft server data";
           extraPath = [ pkgs.util-linux ];
           scriptBody = resticTo {
@@ -114,6 +114,9 @@ in
             path = cfg.minecraftPath;
             localRepo = "/mnt/backup/minecraft-all-backup";
           };
+        }) {
+          # The servers write some world files readable only by the minecraft user.
+          serviceConfig.AmbientCapabilities = [ "CAP_DAC_READ_SEARCH" ];
         };
       })
       (lib.mkIf cfg.sparrowState {

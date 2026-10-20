@@ -64,8 +64,6 @@ in
     group = "minecraft";
   };
   users.groups.minecraft.gid = uid;
-  # The restic backup reads the world files as mikaelweiss.
-  users.users.mikaelweiss.extraGroups = [ "minecraft" ];
   dmz.users = [ "minecraft" ];
 
   # lazymc runs as minecraft and may only start and stop its own containers.
