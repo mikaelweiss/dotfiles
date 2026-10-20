@@ -20,7 +20,7 @@
 }
 
 #github-improvements .js-issue-sidebar-form > :not(#reviewers-select-menu, .js-large-teams-check-warning-container) {
-  display: none;
+  display: none !important;
 }
 
 #github-improvements #reviewers-select-menu > summary {
