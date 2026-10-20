@@ -13,6 +13,8 @@ let
     ProtectSystem = "strict";
     ReadWritePaths = [ "/opt/${name}" ];
     ProtectHome = true;
+    # ProtectHome covers /home, but homes on these hosts live under /Users.
+    InaccessiblePaths = [ "/Users" ];
     PrivateTmp = true;
     PrivateDevices = true;
     NoNewPrivileges = true;
@@ -87,7 +89,7 @@ let
           MIX_ENV=prod mix ecto.migrate
         "
       fi
-      ${sudo} systemctl restart "$service"
+      systemctl restart "$service"
       echo "Deployed $service"
     '';
   };
@@ -108,7 +110,7 @@ let
         else npm install && npm run build
         fi
       "
-      ${sudo} systemctl restart "$service"
+      systemctl restart "$service"
       echo "Deployed $service"
     '';
   };
@@ -126,7 +128,7 @@ let
         bun install --frozen-lockfile
         bun run build
       "
-      ${sudo} systemctl restart "$service"
+      systemctl restart "$service"
       echo "Deployed $service"
     '';
   };
@@ -180,7 +182,7 @@ let
         mix assets.deploy
         mix release --overwrite
       "
-      ${sudo} systemctl restart corpus
+      systemctl restart corpus
       as_corpus '
         set -a && source /etc/corpus/env && set +a
         curl --fail --silent --show-error -X POST \
@@ -250,14 +252,41 @@ let
   ]);
 in
 {
+  imports = [ ./dmz.nix ];
+
   users.users = lib.genAttrs siteUsers (name: {
     isSystemUser = true;
     group = name;
     home = "/opt/${name}";
     createHome = true;
     shell = pkgs.bash;
-  });
-  users.groups = lib.genAttrs siteUsers (_: {});
+  }) // {
+    deploy = {
+      isSystemUser = true;
+      group = "deploy";
+      home = "/opt/deploy";
+    };
+  };
+  users.groups = lib.genAttrs (siteUsers ++ [ "deploy" ]) (_: {});
+  dmz.users = siteUsers ++ [ "deploy" ];
+
+  # The webhook is reachable from the internet, so it runs as deploy, which
+  # may only build as a site user and restart site services.
+  security.sudo.extraRules = [{
+    users = [ "deploy" ];
+    runAs = lib.concatStringsSep "," siteUsers;
+    commands = [{ command = "ALL"; options = [ "NOPASSWD" ]; }];
+  }];
+  security.polkit.enable = true;
+  security.polkit.extraConfig = ''
+    polkit.addRule(function (action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" && subject.user == "deploy"
+          && ${builtins.toJSON (map (n: "${n}.service") siteUsers)}.indexOf(action.lookup("unit")) >= 0
+          && action.lookup("verb") == "restart") {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 
   services.postgresql = {
     enable = true;
@@ -338,11 +367,13 @@ in
       wantedBy = [ "multi-user.target" ];
       path = [ deployPhoenix deployNode deployBun deployCorpus ];
       preStart = ''
-        secret=$(cat /etc/webhook/secret)
+        secret=$(cat "$CREDENTIALS_DIRECTORY/secret")
         sed "s|@SECRET@|$secret|g" ${hooksTemplate} > /run/webhook/hooks.json
       '';
       serviceConfig = {
-        User = "mikaelweiss";
+        User = "deploy";
+        LoadCredential = "secret:/etc/webhook/secret";
+        PrivateTmp = true;
         RuntimeDirectory = "webhook";
         RuntimeDirectoryMode = "0700";
         WorkingDirectory = "/opt/deploy";
@@ -352,7 +383,7 @@ in
     };
   };
 
-  systemd.tmpfiles.rules = [ "d /opt/deploy 0755 mikaelweiss users -" ];
+  systemd.tmpfiles.rules = [ "d /opt/deploy 0755 deploy deploy -" ];
 
   environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic deployCorpus pkgs.elixir_1_19 pkgs.nodejs_22 pkgs.bun ];
 }

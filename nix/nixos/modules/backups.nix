@@ -2,7 +2,7 @@
 
 let
   cfg = config.resticBackups;
-  oak = "sftp:mikaelweiss@oak:/home/mikaelweiss/backups";
+  oak = "rest:http://oak:8000";
   keep = "--keep-daily 7 --keep-weekly 4 --keep-monthly 6";
   stateDir = "/var/backup/sparrow-state";
 
@@ -24,18 +24,20 @@ let
       User = "mikaelweiss";
       Nice = 19;
       IOSchedulingClass = "idle";
+      # RESTIC_REST_USERNAME and RESTIC_REST_PASSWORD for this host's login on oak.
+      EnvironmentFile = "/etc/restic/rest-env";
     } // lib.optionalAttrs (preStart != null) { ExecStartPre = "+${preStart}"; };
     environment.RESTIC_PASSWORD_FILE = "/etc/restic/password";
-    path = [ pkgs.restic pkgs.openssh ] ++ extraPath;
+    path = [ pkgs.restic ] ++ extraPath;
     script = scriptBody;
   };
 
   # A remote (oak) repo, plus an optional local USB mirror that is skipped when
-  # the drive is not mounted.
+  # the drive is not mounted. oak is append-only, so a hacked client can add
+  # snapshots but never delete them, and oak prunes its repos itself.
   resticTo = { repo, path, localRepo ? null }: ''
     restic -r ${oak}/${repo} cat config >/dev/null 2>&1 || restic -r ${oak}/${repo} init
-    restic -r ${oak}/${repo} backup ${path}
-    restic -r ${oak}/${repo} forget ${keep} --prune
+    restic -r ${oak}/${repo} backup --retry-lock 2h ${path}
   '' + lib.optionalString (localRepo != null) ''
     if mountpoint -q /mnt/backup; then
       restic -r ${localRepo} cat config >/dev/null 2>&1 || restic -r ${localRepo} init
@@ -64,9 +66,44 @@ in
       description = "Minecraft data dir to back up, or null to skip.";
     };
     sparrowState = lib.mkEnableOption "Postgres + site-secret backup";
+    server = lib.mkEnableOption "the append-only repo server the other hosts back up to";
   };
 
-  config = {
+  config = lib.mkMerge [
+  (lib.mkIf cfg.server {
+    services.restic.server = {
+      enable = true;
+      appendOnly = true;
+    };
+
+    systemd.services.restic-prune = {
+      description = "Prune the append-only repos";
+      serviceConfig = {
+        Type = "oneshot";
+        User = "restic";
+        Nice = 19;
+        IOSchedulingClass = "idle";
+        LoadCredential = "password:/etc/restic/password";
+      };
+      path = [ pkgs.restic ];
+      script = ''
+        export RESTIC_PASSWORD_FILE=$CREDENTIALS_DIRECTORY/password
+        for repo in ${config.services.restic.server.dataDir}/*/; do
+          if [ -f "$repo/config" ]; then
+            restic -r "$repo" --no-cache forget ${keep} --prune
+          fi
+        done
+      '';
+    };
+    systemd.timers.restic-prune = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "Sun 04:00";
+        Persistent = true;
+      };
+    };
+  })
+  {
     systemd.services = lib.mkMerge [
       (lib.mkIf (cfg.minecraftPath != null) {
         minecraft-all-backup = baseService {
@@ -92,5 +129,6 @@ in
       (lib.mkIf (cfg.minecraftPath != null) { minecraft-all-backup = dailyTimer; })
       (lib.mkIf cfg.sparrowState { sparrow-state-backup = dailyTimer; })
     ];
-  };
+  }
+  ];
 }

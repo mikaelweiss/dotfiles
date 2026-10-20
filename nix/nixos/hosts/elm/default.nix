@@ -54,7 +54,8 @@
   services.cockpit = {
     enable = true;
     port = 9090;
-    openFirewall = true;
+    # Reached over Tailscale only, which the firewall already trusts.
+    openFirewall = false;
     settings.WebService = {
       AllowUnencrypted = true;
       Origins = lib.mkForce "https://localhost:9090 http://localhost:9090 https://elm:9090 http://elm:9090 https://100.81.131.90:9090 http://100.81.131.90:9090";

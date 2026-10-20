@@ -4,7 +4,10 @@
   imports = [
     ./hardware.nix
     ./disko.nix
+    ../../modules/backups.nix
   ];
+
+  resticBackups.server = true;
 
   networking.hostName = "oak";
   networking.networkmanager.enable = false;
@@ -22,10 +25,8 @@
     { type = "ecdsa"; path = "/etc/ssh/ssh_host_ecdsa_key"; }
   ];
 
-  # Restic clients that push to ~/backups and ~/pg-backup over sftp.
+  # pip pushes its Postgres dumps to ~/pg-backup over sftp.
   users.users.mikaelweiss.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOblJ/RxhoeC0kmf1Q0WUK9AXoH9aY3ZMzGmaOctgy/S mikaelweiss@elm"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDvnGvSvnLqfQzfxIoSGA0AdjPRyQGiNC2vVywkFg/pa mikaelweiss@sparrow"
     ''restrict,command="internal-sftp" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFQ1CCxRjR9eT2fh51oqbrV6lrcnaAhphAJBRkQC9Qy pg-backup@pip''
   ];
 

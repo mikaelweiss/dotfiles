@@ -16,7 +16,8 @@
     enable = true;
     autoStart = true;
     capSysAdmin = true;
-    openFirewall = true;
+    # Moonlight connects over Tailscale only, which the firewall already trusts.
+    openFirewall = false;
     settings = {
       capture = "wlr";
       encoder = "vaapi";
