@@ -11,6 +11,7 @@
   ];
 
   minecraft.private = true;
+  minecraft.shire = true;
   minecraft.dataRoot = "/mnt/nvme/minecraft";
   resticBackups.minecraftPath = "/mnt/nvme/minecraft";
 

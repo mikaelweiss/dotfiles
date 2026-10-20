@@ -4,12 +4,13 @@ let
   cfg = config.minecraft;
   dataRoot = cfg.dataRoot;
   names = lib.optional cfg.private "minecraft-server"
-    ++ lib.optionals cfg.public [ "rexburg-friends" "skyblock" ];
+    ++ lib.optionals cfg.public [ "rexburg-friends" "skyblock" ]
+    ++ lib.optional cfg.shire "the-shire";
 
   version = "26.1.2";
   protocol = 775;
-  publicPort = { minecraft-server = 25565; rexburg-friends = cfg.rexburgPort; skyblock = 25566; };
-  internalPort = { minecraft-server = 35565; rexburg-friends = 35566; skyblock = 35567; };
+  publicPort = { minecraft-server = 25565; rexburg-friends = cfg.rexburgPort; skyblock = 25566; the-shire = 25567; };
+  internalPort = { minecraft-server = 35565; rexburg-friends = 35566; skyblock = 35567; the-shire = 35568; };
 
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
@@ -45,6 +46,7 @@ in
     };
     private = lib.mkEnableOption "the tailnet-only minecraft-server";
     public = lib.mkEnableOption "the port-forwarded rexburg-friends and skyblock servers";
+    shire = lib.mkEnableOption "the port-forwarded the-shire server";
   };
 
   config = {
@@ -132,11 +134,38 @@ in
       };
     };
     })
+    (lib.mkIf cfg.shire {
+    the-shire = {
+      image = "docker.io/itzg/minecraft-server:java25";
+      ports = [ "127.0.0.1:${toString internalPort.the-shire}:25565" "19134:19132/udp" "24455:24454/udp" ];
+      volumes = [ "${dataRoot}/the-shire/data:/data" ];
+      autoStart = false;
+      # Podman's default 10s stop kills the server mid-save.
+      extraOptions = [ "--stop-timeout=60" ];
+      environment = {
+        EULA = "TRUE";
+        TYPE = "FABRIC";
+        MEMORY = "4G";
+        VERSION = version;
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
+        MODRINTH_ALLOWED_VERSION_TYPE = "beta";
+        ENFORCE_SECURE_PROFILE = "false";
+        UID = "1000";
+        GID = "100";
+        MOTD = "The Shire";
+        PAUSE_WHEN_EMPTY_SECONDS = "0";
+        ENABLE_WHITELIST = "TRUE";
+        WHITELIST = "Moroni56,hogtide";
+        OPS = "Moroni56";
+      };
+    };
+    })
     ];
   };
 
+  systemd.services = lib.mkMerge [
   # Podman pulls the image on first start, which raced DNS at boot.
-  systemd.services = lib.genAttrs (map (n: "podman-${n}") names) (_: {
+  (lib.genAttrs (map (n: "podman-${n}") names) (_: {
     after = [ "network-online.target" ];
     wants = [ "network-online.target" ];
   })
@@ -152,11 +181,24 @@ in
       Restart = "on-failure";
       TimeoutStopSec = 120;
     };
-  }) names);
+  }) names))
+  # elm's private server holds voice chat's 24454, so clients must be told the
+  # forwarded port. The mod rewrites its config, so this sets it on every start.
+  (lib.mkIf cfg.shire {
+    podman-the-shire.preStart = ''
+      conf=${dataRoot}/the-shire/data/config/voicechat/voicechat-server.properties
+      if [ -f "$conf" ]; then
+        ${pkgs.gnused}/bin/sed -i 's/^voice_host=.*/voice_host=shire.mikaelmc.com:24455/' "$conf"
+      fi
+    '';
+  })
+  ];
 
   systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0755 1000 100 -") names;
 
-  networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 ];
-  networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 24454 ];
+  networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 ]
+    ++ lib.optional cfg.shire 25567;
+  networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 24454 ]
+    ++ lib.optionals cfg.shire [ 19134 24455 ];
   };
 }
