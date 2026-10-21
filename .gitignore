@@ -227,3 +227,12 @@ terminal/.config/strive/credentials.lock
 
 # Codex token refresh lock
 codex/.codex/auth.json.lock
+
+# Atlassian CLI auth and state
+terminal/.config/acli/
+
+# Codex logs
+codex/.codex/log/
+
+# CodexBar lock
+terminal/.config/codexbar/config.json.lock
