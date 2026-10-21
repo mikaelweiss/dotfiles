@@ -1,0 +1,83 @@
+#!/usr/bin/env bun
+// What changed on a pull request since a review read it: penguin's change watch for review-pr,
+// cut to the changes that end a round or a wait.
+// Usage: watch snap <pr url>          prints the state now, as one JSON line
+//        watch since <pr url> <snap>  prints each change since the snapshot, one per line
+//        watch wait <pr url> <snap>   polls until a change, then prints it
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+
+const POLL_MS = 30_000;
+const QUEUE_QUERY =
+  "query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){isInMergeQueue}}}";
+
+type Snap = { state: string; isDraft: boolean; headRefOid: string; isInMergeQueue: boolean; approvals: number };
+
+function gh(args: string[]): string {
+  const ran = spawnSync("gh", args, { encoding: "utf8" });
+  if (ran.status !== 0) throw new Error(`gh ${args[0]} ${args[1] ?? ""} failed: ${ran.stderr.trim()}`);
+  return ran.stdout.trim();
+}
+
+const me = (): string => gh(["api", "user", "--jq", ".login"]);
+
+function snap(url: string, login: string): Snap {
+  const read = JSON.parse(gh(["pr", "view", url, "--json", "state,isDraft,headRefOid,reviews"])) as {
+    state: string;
+    isDraft: boolean;
+    headRefOid: string;
+    reviews: { state: string; author: { login: string } | null }[];
+  };
+  const [, owner, name, number] = url.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/) ?? [];
+  if (number === undefined) throw new Error(`${url} is not a pull request url`);
+  const queued = gh(["api", "graphql", "-f", `query=${QUEUE_QUERY}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${number}`, "--jq", ".data.repository.pullRequest.isInMergeQueue"]);
+  return {
+    state: read.state,
+    isDraft: read.isDraft,
+    headRefOid: read.headRefOid,
+    isInMergeQueue: queued === "true",
+    approvals: read.reviews.filter((one) => one.state === "APPROVED" && one.author?.login === login).length,
+  };
+}
+
+/** Your own approval ends a round, so a wait, where nothing is under review, does not count it. */
+function changed(last: Snap, now: Snap, waiting: boolean): string[] {
+  const found: string[] = [];
+  if (now.state !== last.state && now.state !== "OPEN") found.push(`closed ${now.state}`);
+  if (!waiting && now.approvals > last.approvals) found.push("approved");
+  if (now.isDraft && !last.isDraft) found.push("draft");
+  if (!now.isDraft && last.isDraft) found.push("ready");
+  if (now.isInMergeQueue && !last.isInMergeQueue) found.push("queued");
+  if (!now.isInMergeQueue && last.isInMergeQueue) found.push("dequeued");
+  if (now.headRefOid !== last.headRefOid) found.push("commits");
+  return found;
+}
+
+const [mode, url, file] = process.argv.slice(2);
+if (url === undefined || (mode !== "snap" && file === undefined)) {
+  process.stderr.write("usage: watch snap <pr url> | watch since <pr url> <snap> | watch wait <pr url> <snap>\n");
+  process.exit(64);
+}
+const login = me();
+if (mode === "snap") {
+  process.stdout.write(`${JSON.stringify(snap(url, login))}\n`);
+  process.exit(0);
+}
+const last = JSON.parse(fs.readFileSync(file!, "utf8")) as Snap;
+if (mode === "since") {
+  for (const one of changed(last, snap(url, login), false)) process.stdout.write(`${one}\n`);
+  process.exit(0);
+}
+for (;;) {
+  try {
+    const found = changed(last, snap(url, login), true);
+    if (found.length > 0) {
+      for (const one of found) process.stdout.write(`${one}\n`);
+      process.exit(0);
+    }
+  } catch (error) {
+    // One failed poll is a network blip, not a change.
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  }
+  await Bun.sleep(POLL_MS);
+}

@@ -2,7 +2,8 @@
 // The Jev pass over a change, printed as a reviewer's reading order: every changed file tiered
 // and screened window by window on the shapes reviews block on, the deep files ranked side by
 // side, the first of them given whole, and the tree around each one read by the import graph.
-// `check` reads a review's claims against the code they cite.
+// `check` reads a review's claims against the code they cite. `triage` says whether a pull request
+// is small and plain enough for a person to read in a minute.
 //
 // This is penguin's pass, copied: examples/helpers/jev.ts and examples/adapters/jev.ts in the
 // penguin repo are the source, and the exam there scores any change to it. Change it there
@@ -1664,6 +1665,122 @@ async function check(dir: string, claims: Claim[]): Promise<Checked[]> {
   });
 }
 
+/** What a person reads in a minute: a few files, tens of changed lines. Past either, no question is asked. */
+const EYEBALL_FILES = 5;
+const EYEBALL_LINES = 100;
+/** The full review wins a disagreement, so a reason for it counts from low odds, and plainness from high. */
+const RISK = 0.3;
+const PLAIN = 0.7;
+
+/**
+ * The reasons a pull request needs the full review, over the diff and what the author and
+ * reviewers said about it. `plain` is the one reason it does not.
+ */
+const SHAPE = {
+  traced: noul(
+    {
+      question: "Does diff hold logic a reader has to trace to judge it: control flow, state, concurrency, or error paths?",
+      inspect: "diff, with pr.description for what the author says it does",
+    },
+    {
+      true: {
+        what: "Judging the change means following how values move or what runs when",
+        examples: ["A new branch in a condition", "An await moved across a loop", "A catch that changes what propagates"],
+      },
+      false: {
+        what: "The change is right or wrong on its face",
+        examples: ["A copy edit", "A version bump", "A rename", "A comment", "A config value", "A test that follows the pattern next to it"],
+      },
+    },
+  ),
+  reaches: noul(
+    {
+      question: "Does the change reach code the diff does not show: a shared function, an exported symbol, a schema, a migration?",
+      inspect: "diff, for what the changed lines are used by outside the changed files",
+    },
+    {
+      true: {
+        what: "Whether the change is right depends on callers, readers, or data the diff does not include",
+        examples: ["An exported signature changes", "A schema or migration changes", "A shared helper's behavior changes"],
+      },
+      false: { what: "Every effect of the change is visible in the diff itself" },
+    },
+  ),
+  risky: noul(
+    {
+      question: "Does the change touch security, permissions, money, or data loss?",
+      inspect: "diff, with pr.description and pr.comments for what the code is for",
+    },
+    {
+      true: {
+        what: "A mistake in the change would expose data, grant access, move money, or destroy records",
+        examples: ["An authorization check", "A payment amount", "A delete or a migration that drops data"],
+      },
+      false: { what: "A mistake in the change costs a fix and nothing else" },
+    },
+  ),
+  plain: noul(
+    {
+      question: "Does the change do one plain thing?",
+      inspect: "diff, with pr.title and pr.description for what one thing it claims to do",
+    },
+    {
+      true: {
+        what: "One purpose, and the diff is all of it",
+        examples: ["A copy edit", "A version bump", "A rename", "A dependency bump", "A config value", "A test that follows the pattern next to it"],
+      },
+      false: {
+        what: "Several unrelated things, or one thing whose effect the diff alone does not show",
+        examples: ["A rename beside a behavior change", "A new feature", "A refactor that moves logic between files"],
+      },
+    },
+  ),
+};
+
+type Risk = "traced" | "reaches" | "risky";
+const RISKS: Risk[] = ["traced", "reaches", "risky"];
+const RISK_REASONS: Record<Risk, string> = {
+  traced: "it holds logic a reader has to trace",
+  reaches: "it reaches code the diff does not show",
+  risky: "it touches security, permissions, money, or data loss",
+};
+
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** The strongest of the named nouls at or over the bar, or undefined when none reaches it. */
+function strongest<Key extends string>(
+  answers: Record<Key, { noul: number }>,
+  keys: Key[],
+  bar: number,
+): Key | undefined {
+  const over = keys.filter((key) => answers[key].noul >= bar);
+  over.sort((a, b) => answers[b].noul - answers[a].noul);
+  return over[0];
+}
+
+type Triaged = { eyeball: boolean; reason: string };
+
+/**
+ * Whether a person can read the whole pull request and judge it in a minute. Size is counted
+ * here and settles it alone; Jev judges the shape of what is small enough. `reason` is the one
+ * fact that decided it.
+ */
+async function triage(pr: { title: string; description: string; comments: Json }, diff: string): Promise<Triaged> {
+  const size = sizeOf(diff);
+  if (size.files > EYEBALL_FILES) return { eyeball: false, reason: `${size.files} files change` };
+  if (size.lines > EYEBALL_LINES) return { eyeball: false, reason: `${size.lines} lines change` };
+  const answers = await ask({ pr, diff }, SHAPE);
+  const risk = strongest(answers, RISKS, RISK);
+  if (risk !== undefined) return { eyeball: false, reason: RISK_REASONS[risk] };
+  if (answers.plain.noul < PLAIN) return { eyeball: false, reason: "it does more than one plain thing" };
+  return {
+    eyeball: true,
+    reason: `${counted(size.files, "file")} and ${counted(size.lines, "changed line")} doing one plain thing`,
+  };
+}
+
 // ---- The command line.
 
 function usage(): never {
@@ -1671,9 +1788,12 @@ function usage(): never {
     [
       "usage: jev-map [--json] [--about <file>] [<git diff args>]",
       "       jev-map check [--json] <claims.json>",
+      "       jev-map triage [--json] <pr.json> [<diff file>]",
       "  no diff args: working tree and index against HEAD, plus untracked files",
       "  --about: a file holding the pull request's title and description",
       "  claims.json: [{\"claim\": \"...\", \"where\": \"path:line\"}, ...]",
+      "  pr.json: {\"title\": \"...\", \"description\": \"...\", \"comments\": [{\"author\": \"...\", \"body\": \"...\"}]}",
+      "  diff file: a unified diff, or stdin when omitted",
       "",
     ].join("\n"),
   );
@@ -1697,6 +1817,16 @@ async function main(argv: string[]): Promise<void> {
         process.stdout.write(`${stands ? "stands " : "weak   "} ${one.read ? one.verdict.padEnd(12) : "unread      "} ${one.confidence.toFixed(2)}  ${one.where}  ${one.claim}\n`);
       }
     }
+    process.stderr.write(`jev: ${spent.input} input tokens\n`);
+    return;
+  }
+  if (rest[0] === "triage") {
+    const file = rest[1];
+    if (file === undefined) usage();
+    const pr = JSON.parse(fs.readFileSync(file, "utf8")) as { title: string; description: string; comments: Json };
+    const diff = fs.readFileSync(rest[2] ?? 0, "utf8");
+    const triaged = await triage(pr, diff);
+    process.stdout.write(json ? `${JSON.stringify(triaged)}\n` : `${triaged.eyeball ? "eyeball" : "review "} ${triaged.reason}\n`);
     process.stderr.write(`jev: ${spent.input} input tokens\n`);
     return;
   }
