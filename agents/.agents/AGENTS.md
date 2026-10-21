@@ -104,3 +104,11 @@ Stop and ask only when you can't continue without me, or before anything destruc
 <important if="you are considering putting work on a new branch">
   Always do work on the branch the user started the session in. If they started in main, they wanted you to commit on main. If they started on a branch or in a worktree, they wanted you to do work on that branch or worktree. They will RARELY ask you to create a new branch or put your work on a branch other than the branch they started the session in. They will almost ALWAYS want you to commit to whatever branch they started the conversation in. Do not create a new branch or worktree unless they asked you to.
 </important>
+
+<important if="you are going to suggest the user run something in the terminal">
+  Never prefix bash, zsh etc with !. That's a quirk of Claude Code since you can run commands through the Claude Code chat message box. I don't ever use it though, so mentioning anything about ! and when to and when not to use it is redundant I never use it. I will always run commands in another window, not in Claude Code.
+</important>
+
+<important if="you are going to tell the user some sort of time">
+  Always respond to the user in Mountain Time, not UTC.
+</important>
