@@ -3,12 +3,6 @@
 
 spawn-at-startup "noctalia"
 
-// vkms virtual display, streamed by Sunshine. Sized to the MacBook Air panel.
-output "Virtual-1" {
-    mode custom=true "2880x1864@60"
-    scale 2
-}
-
 input {
     keyboard {
         xkb {

@@ -22,7 +22,6 @@
     "signal"
     "conductor"
     "tailscale-app"
-    "moonlight"
     "obs"
   ];
 }
