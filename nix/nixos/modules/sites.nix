@@ -54,7 +54,11 @@ let
     } // sandbox name;
   } attrs;
 
+  # Nothing connects to these nodes, and distribution listens on every interface.
+  noDistribution = { RELEASE_DISTRIBUTION = "none"; };
+
   phoenix = name: release: mkService name {
+    environment = noDistribution;
     serviceConfig = {
       EnvironmentFile = "/etc/${name}/env";
       ExecStart = "/opt/${name}/_build/prod/rel/${release}/bin/${release} start";
@@ -321,6 +325,7 @@ in
     };
 
     corpus = mkService "corpus" {
+      environment = noDistribution;
       serviceConfig = {
         EnvironmentFile = "/etc/corpus/env";
         ExecStart = "/opt/corpus/web/_build/prod/rel/corpus/bin/corpus start";

@@ -74,6 +74,8 @@
     description = "Website for Hannah";
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
+    # Nothing connects to this node, and distribution listens on every interface.
+    environment.RELEASE_DISTRIBUTION = "none";
     serviceConfig = {
       Type = "simple";
       User = "ilovemywife";
