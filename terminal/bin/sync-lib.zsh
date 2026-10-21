@@ -47,7 +47,7 @@ extra_ignores() {
 }
 
 # One "name root" pair per line. The work MacBook Pro syncs only the surestake
-# and penguin trees (including penguin-v2), command, and dotfiles.
+# and penguin trees (including penguin-v2), command, aspen-grove, and dotfiles.
 sessions() {
   case "$(scutil --get LocalHostName 2>/dev/null | tr A-Z a-z)" in
     mikaels-macbook-pro)
@@ -57,6 +57,7 @@ sessions() {
       print -r -- "penguin-worktrees $HOME/.worktrees/penguin"
       print -r -- "penguin-v2 $HOME/code/penguin-v2"
       print -r -- "command $HOME/code/command"
+      print -r -- "aspen-grove $HOME/code/aspen-grove"
       print -r -- "dotfiles $HOME/code/dotfiles"
       ;;
     *)
