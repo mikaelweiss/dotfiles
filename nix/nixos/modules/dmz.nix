@@ -5,16 +5,18 @@
 { config, lib, ... }:
 
 let
-  privateV4 = [ "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16" "100.64.0.0/10" "169.254.0.0/16" ];
-  privateV6 = [ "fc00::/7" "fe80::/10" ];
+  privateV4 = map (net: "-d ${net}") [ "10.0.0.0/8" "172.16.0.0/12" "192.168.0.0/16" "100.64.0.0/10" "169.254.0.0/16" ];
+  # LAN devices hold global IPv6 addresses that no private range covers, so
+  # fenced processes get IPv6 loopback only.
+  allButLoopbackV6 = [ "! -d ::1/128" ];
 
-  fence = cmd: destinations: ''
+  fence = cmd: matches: ''
     ${cmd} -t mangle -D PREROUTING -i podman+ -j dmz 2>/dev/null || true
     ${cmd} -t mangle -D OUTPUT -j dmz-users 2>/dev/null || true
     ${cmd} -t mangle -F dmz 2>/dev/null || ${cmd} -t mangle -N dmz
     ${cmd} -t mangle -F dmz-users 2>/dev/null || ${cmd} -t mangle -N dmz-users
     ${cmd} -t mangle -A dmz -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
-    ${lib.concatMapStrings (d: "${cmd} -t mangle -A dmz -d ${d} -j DROP\n") destinations}
+    ${lib.concatMapStrings (m: "${cmd} -t mangle -A dmz ${m} -j DROP\n") matches}
     ${lib.concatMapStrings (u: "${cmd} -t mangle -A dmz-users -m owner --uid-owner ${u} -j dmz\n") config.dmz.users}
     ${cmd} -t mangle -A PREROUTING -i podman+ -j dmz
     ${cmd} -t mangle -A OUTPUT -j dmz-users
@@ -27,5 +29,5 @@ in
     description = "Users whose processes may not open connections to private networks. Containers are always fenced.";
   };
 
-  config.networking.firewall.extraCommands = fence "iptables" privateV4 + fence "ip6tables" privateV6;
+  config.networking.firewall.extraCommands = fence "iptables" privateV4 + fence "ip6tables" allButLoopbackV6;
 }
