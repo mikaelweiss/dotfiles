@@ -291,9 +291,19 @@ in
     });
   '';
 
+  # Password logins only reach each app's own database, so one site's
+  # process cannot guess its way into another's.
   services.postgresql = {
     enable = true;
     package = pkgs.postgresql_18;
+    authentication = lib.mkForce ''
+      local all       postgres            peer map=postgres
+      local all       all                 peer
+      host  asher     asher     127.0.0.1/32 scram-sha-256
+      host  asher     asher     ::1/128      scram-sha-256
+      host  portfolio portfolio 127.0.0.1/32 scram-sha-256
+      host  portfolio portfolio ::1/128      scram-sha-256
+    '';
   };
 
   systemd.services = {
