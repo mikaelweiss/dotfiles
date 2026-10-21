@@ -259,7 +259,6 @@ in
     group = name;
     home = "/opt/${name}";
     createHome = true;
-    shell = pkgs.bash;
   }) // {
     deploy = {
       isSystemUser = true;

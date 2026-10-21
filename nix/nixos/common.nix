@@ -77,6 +77,9 @@
       # Keyboard-interactive login still asks for the account password through PAM.
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
+      # Service accounts own their home folders, so a compromised service could
+      # authorize its own key and walk out of its sandbox over loopback SSH.
+      AllowGroups = [ "wheel" ];
       # A Mac that sleeps or changes networks never closes its connection, leaving mutagen agents rescanning forever.
       ClientAliveInterval = 30;
       ClientAliveCountMax = 3;
