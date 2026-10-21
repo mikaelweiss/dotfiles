@@ -13,6 +13,8 @@ Only two things authorize a spawn: the user asks for sub-agents in their own wor
 
 When sub-agents are warranted, spawn with `description` and `prompt` only, then read the final report from the tool result. Never pass `name`: it creates an addressable teammate with mailbox machinery. SendMessage back-and-forth is equally banned. Put every reporting requirement in the spawn prompt so the report stands alone. Use Opus or Sonnet, never Fable.
 Make sure to really think about if the task can be done with Sonnet or if Opus is needed. Pick accordingly.
+
+Copy the approval-prompt rules from the Bash block into every spawn prompt, reason included. Workers ignored a bare "never `cd`" and obeyed it once told it freezes the run. When agents run unattended, check each one's last tool call on a timer. One that sits past 30 minutes on a command that should take seconds is frozen: stop it and respawn it with resume notes.
 </important>
 
 <important if="you are about to survey, scout, triage logs, or run a wide search">
@@ -25,11 +27,14 @@ Re-reading accumulated context costs more than producing output, so keep the mai
 Never read one whole into context. Measure it with `wc -c` first. Over 10k characters, extract instead: a script that prints counts or summaries, a grep for the relevant lines, or a bounded slice (offset/limit, `head -c`). Reading a small slice to learn the format is fine. This covers `~/.claude/projects`, scratchpad output, and any generated artifact. It does not cover source code.
 </important>
 
-<important if="you are running a Bash command">
+<important if="you are running a Bash command, editing a file, or working unattended">
 
-Never `cd` inside a Bash command. Pass absolute paths to every argument.
-Give `rm` literal paths, never a variable like `$S/*.log`.
+A tool call that needs approval opens a prompt. When nobody is watching, the run freezes on it forever. Never trigger one:
 
+- Never `cd`, including `cd dir && ...`. Use `git -C`, `npm --prefix`, `gradlew -p`, and absolute paths.
+- Give `rm` literal absolute paths. No variables, globs, or `$(...)`.
+- Never delete a test file by any means. Rewrite it in place.
+- Never edit a file a repo hook guards (protected files, workflows, hooks). Skip that step, finish the rest, and report it.
 </important>
 
 <important if="the user asks for a plan, or you are considering plan mode">
