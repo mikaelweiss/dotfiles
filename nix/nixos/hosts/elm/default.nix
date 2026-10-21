@@ -37,10 +37,11 @@
     '';
   };
 
+  # Group-writable so Jellyfin, in the users group, can save metadata next to the media.
   fileSystems."/mnt/raid" = {
     device = "/dev/md0";
     fsType = "exfat";
-    options = [ "defaults" "nofail" "uid=1000" "gid=100" "umask=0022" ];
+    options = [ "defaults" "nofail" "uid=1000" "gid=100" "umask=0002" ];
   };
 
   fileSystems."/mnt/nvme" = {
@@ -88,7 +89,7 @@
     extraPackages = [ pkgs.intel-media-driver ];
   };
   services.jellyfin.enable = true;
-  services.jellyfin.user = "mikaelweiss";
+  users.users.jellyfin.extraGroups = [ "users" ];
   services.jellyfin.forceEncodingConfig = true;
   services.jellyfin.hardwareAcceleration = {
     enable = true;
