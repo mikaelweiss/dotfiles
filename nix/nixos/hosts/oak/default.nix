@@ -29,9 +29,24 @@
     { type = "ecdsa"; path = "/etc/ssh/ssh_host_ecdsa_key"; }
   ];
 
-  # pip pushes its Postgres dumps to ~/pg-backup over sftp.
-  users.users.mikaelweiss.openssh.authorizedKeys.keys = [
-    ''restrict,command="internal-sftp" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFQ1CCxRjR9eT2fh51oqbrV6lrcnaAhphAJBRkQC9Qy pg-backup@pip''
+  # pip pushes its Postgres dumps to /var/pip/pg-backup over sftp. The chroot
+  # keeps its unattended key away from every other file on oak.
+  users.users.pip = {
+    isSystemUser = true;
+    group = "pip";
+    home = "/var/empty";
+    openssh.authorizedKeys.keys = [ "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFQ1CCxRjR9eT2fh51oqbrV6lrcnaAhphAJBRkQC9Qy pg-backup@pip" ];
+  };
+  users.groups.pip = { };
+  services.openssh.settings.AllowGroups = [ "pip" ];
+  services.openssh.extraConfig = ''
+    Match User pip
+      ChrootDirectory /var/pip
+      ForceCommand internal-sftp
+  '';
+  systemd.tmpfiles.rules = [
+    "d /var/pip 0755 root root -"
+    "d /var/pip/pg-backup 0700 pip pip -"
   ];
 
   hardware.cpu.amd.updateMicrocode = true;

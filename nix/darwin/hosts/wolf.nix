@@ -32,6 +32,27 @@ in
     };
   };
 
+  # pip pushes its Postgres dumps to /private/var/pip/pg-backup over sftp. The
+  # chroot keeps its unattended key away from every other file on wolf.
+  users.knownUsers = [ "pip" ];
+  users.users.pip = {
+    uid = 550;
+    home = "/var/empty";
+    shell = "/usr/bin/false";
+    openssh.authorizedKeys.keys = [ "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFQ1CCxRjR9eT2fh51oqbrV6lrcnaAhphAJBRkQC9Qy pg-backup@pip" ];
+  };
+  # The included file ends inside this Match unless Match all closes it.
+  services.openssh.extraConfig = ''
+    Match User pip
+      ChrootDirectory /private/var/pip
+      ForceCommand internal-sftp
+    Match all
+  '';
+  system.activationScripts.postActivation.text = ''
+    install -d -m 0755 -o root -g wheel /private/var/pip
+    install -d -m 0700 -o pip -g staff /private/var/pip/pg-backup
+  '';
+
   programs.zsh.interactiveShellInit = ''
     # LM Studio CLI
     export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
