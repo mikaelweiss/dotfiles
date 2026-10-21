@@ -18,7 +18,7 @@ let
   names = lib.concatStringsSep " " (map packageName cfg.globalPackages);
   specs = lib.escapeShellArgs cfg.globalPackages;
 
-  sync = pkgs.writeShellScript "npm-globals" ''
+  sync = pkgs.writeShellScript "npm-globals" (''
     set -eu
     export PATH="${pkgs.nodejs}/bin:${pkgs.bash}/bin:$PATH"
     prefix="$HOME/.npm-global"
@@ -30,10 +30,12 @@ let
       exit 0
     fi
 
+  '' + lib.optionalString (cfg.globalPackages != [ ]) ''
     echo "npm globals: installing ${names}"
     ${pkgs.coreutils}/bin/timeout 10m \
       npm install -g --prefix "$prefix" --no-fund --no-audit --loglevel error ${specs} \
       || echo "npm globals: install failed or timed out, keeping what is there"
+  '' + ''
 
     for dir in "$modules"/*/ "$modules"/@*/*/; do
       dir="''${dir%/}"
@@ -47,7 +49,7 @@ let
       npm uninstall -g --prefix "$prefix" --loglevel error "$name" \
         || echo "npm globals: could not remove $name"
     done
-  '';
+  '');
 
   runAsUser =
     if isDarwin

@@ -17,6 +17,10 @@
 
   networking.hostName = "sparrow";
 
+  # Agents run on the Macs and elm. Every npm global is supply chain exposure
+  # on a server that never uses it.
+  npm.globalPackages = lib.mkForce [ ];
+
   # Static address: the port forwards on the gateway point here and must
   # survive the gateway losing its reservation table.
   networking.networkmanager.enable = false;

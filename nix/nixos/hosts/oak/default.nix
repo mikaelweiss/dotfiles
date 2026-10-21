@@ -10,6 +10,10 @@
   resticBackups.server = true;
 
   networking.hostName = "oak";
+
+  # Agents run on the Macs and elm. Every npm global is supply chain exposure
+  # on a server that never uses it.
+  npm.globalPackages = lib.mkForce [ ];
   networking.networkmanager.enable = false;
 
   # Tailscale on Linux sends to a peer's IPv6 link-local address without its
