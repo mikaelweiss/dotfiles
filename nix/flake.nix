@@ -8,14 +8,13 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs-stable";
-    noctalia.url = "github:noctalia-dev/noctalia/cachix";
     # Unregistered MakeMKV builds expire, so this input gets bumped on its own.
     nixpkgs-makemkv.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Tailscale security fixes land in unstable before this flake bumps it.
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, noctalia, ... }:
+  outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ... }:
   let
     mac = modules: nix-darwin.lib.darwinSystem {
       specialArgs = { inherit self; };
@@ -23,7 +22,7 @@
     };
     linux = modules: nixpkgs-stable.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit inputs noctalia; };
+      specialArgs = { inherit inputs; };
       modules = [ ./shared.nix ./nixos/common.nix ] ++ modules;
     };
   in

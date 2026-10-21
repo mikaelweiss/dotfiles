@@ -3,7 +3,6 @@
 {
   imports = [
     ./hardware.nix
-    ../../modules/desktop.nix
     ../../modules/minecraft.nix
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
@@ -84,7 +83,10 @@
     };
   };
 
-  hardware.graphics.extraPackages = [ pkgs.intel-media-driver ];
+  hardware.graphics = {
+    enable = true;
+    extraPackages = [ pkgs.intel-media-driver ];
+  };
   services.jellyfin.enable = true;
   services.jellyfin.user = "mikaelweiss";
   services.jellyfin.forceEncodingConfig = true;
