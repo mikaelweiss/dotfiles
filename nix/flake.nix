@@ -12,6 +12,8 @@
     nixpkgs-makemkv.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Tailscale security fixes land in unstable before this flake bumps it.
     nixpkgs-tailscale.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Node security fixes reach the release branch days before the channel.
+    nixpkgs-node.url = "github:NixOS/nixpkgs/release-26.05";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ... }:

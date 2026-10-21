@@ -1,9 +1,10 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 let
+  nodejs =inputs.nixpkgs-node.legacyPackages.${pkgs.stdenv.hostPlatform.system}.nodejs_22;
   siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" "orbit" "corpus" ];
 
-  buildTools = with pkgs; [ git openssh elixir_1_19 nodejs_22 pnpm coreutils bash gnused gawk gnutar gzip curl ];
+  buildTools = with pkgs; [ git openssh elixir_1_19 nodejs pnpm coreutils bash gnused gawk gnutar gzip curl ];
   # The nix-store sudo is not setuid; only the wrapper works.
   sudo = "/run/wrappers/bin/sudo";
 
@@ -66,7 +67,7 @@ let
   };
 
   static = name: port: mkService name {
-    serviceConfig.ExecStart = "${pkgs.serve}/bin/serve dist -l ${toString port}";
+    serviceConfig.ExecStart = "${nodejs}/bin/node ${pkgs.serve}/lib/node_modules/serve/build/main.js dist -l ${toString port}";
   };
 
   deployPhoenix = pkgs.writeShellApplication {
@@ -320,7 +321,7 @@ in
 
     pmgforrms = mkService "pmgforrms" {
       environment = { NODE_ENV = "production"; PORT = "4003"; };
-      serviceConfig.ExecStart = "${pkgs.nodejs_22}/bin/node build/index.js";
+      serviceConfig.ExecStart = "${nodejs}/bin/node build/index.js";
     };
 
     rachelportfolio = static "rachelportfolio" 4004;
@@ -399,5 +400,5 @@ in
 
   systemd.tmpfiles.rules = [ "d /opt/deploy 0755 deploy deploy -" ];
 
-  environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic deployCorpus pkgs.elixir_1_19 pkgs.nodejs_22 pkgs.bun ];
+  environment.systemPackages = [ deployPhoenix deployNode deployBun deployStatic deployCorpus pkgs.elixir_1_19 nodejs pkgs.bun ];
 }
