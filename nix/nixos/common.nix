@@ -8,6 +8,11 @@
   i18n.defaultLocale = "en_US.UTF-8";
 
   nix.gc.dates = "weekly";
+  # Builds yield to the services these machines run, and stay small enough not to exhaust memory.
+  nix.daemonCPUSchedPolicy = "idle";
+  nix.daemonIOSchedClass = "idle";
+  nix.settings.max-jobs = 2;
+  nix.settings.cores = 4;
 
   networking.nameservers = [ "1.1.1.1" ];
   services.resolved = {
