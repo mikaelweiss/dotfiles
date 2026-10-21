@@ -17,6 +17,11 @@
 
   networking.hostName = "sparrow";
 
+  # Elm pulls disc rips from sparrow.
+  users.users.mikaelweiss.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOblJ/RxhoeC0kmf1Q0WUK9AXoH9aY3ZMzGmaOctgy/S mikaelweiss@elm"
+  ];
+
   # Agents run on the Macs and elm. Every npm global is supply chain exposure
   # on a server that never uses it.
   npm.globalPackages = lib.mkForce [ ];
