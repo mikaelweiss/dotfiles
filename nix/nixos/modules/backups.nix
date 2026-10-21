@@ -78,8 +78,12 @@ in
       appendOnly = true;
       privateRepos = true;
     };
-    # One password per client host, named after its login.
-    systemd.tmpfiles.rules = [ "d /etc/restic/passwords 0700 restic restic -" ];
+    # One password per client host, named after its login. The prune runs as
+    # restic, which must pass through the root-owned /etc/restic.
+    systemd.tmpfiles.rules = [
+      "d /etc/restic 0711 root root -"
+      "d /etc/restic/passwords 0700 restic restic -"
+    ];
 
     systemd.services.restic-prune = {
       description = "Prune the append-only repos";
