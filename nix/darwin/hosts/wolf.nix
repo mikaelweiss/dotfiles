@@ -38,7 +38,9 @@ in
   users.users.pip = {
     uid = 550;
     home = "/var/empty";
-    shell = "/usr/bin/false";
+    # Login fails PAM's account check unless the shell is in /etc/shells. The
+    # chroot has no binaries and ForceCommand runs internal-sftp, so it never runs.
+    shell = "/bin/sh";
     openssh.authorizedKeys.keys = [ "restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFQ1CCxRjR9eT2fh51oqbrV6lrcnaAhphAJBRkQC9Qy pg-backup@pip" ];
   };
   # The included file ends inside this Match unless Match all closes it.
@@ -51,6 +53,8 @@ in
   system.activationScripts.postActivation.text = ''
     install -d -m 0755 -o root -g wheel /private/var/pip
     install -d -m 0700 -o pip -g staff /private/var/pip/pg-backup
+    # Remote Login admits admins only, so pip joins its access group.
+    dseditgroup -o edit -a pip -t user com.apple.access_ssh
   '';
 
   programs.zsh.interactiveShellInit = ''
