@@ -71,10 +71,15 @@ in
 
   config = lib.mkMerge [
   (lib.mkIf cfg.server {
+    # Each host reaches only the repos under its own login name, so elm can
+    # never read sparrow's secrets.
     services.restic.server = {
       enable = true;
       appendOnly = true;
+      privateRepos = true;
     };
+    # One password per client host, named after its login.
+    systemd.tmpfiles.rules = [ "d /etc/restic/passwords 0700 restic restic -" ];
 
     systemd.services.restic-prune = {
       description = "Prune the append-only repos";
@@ -83,14 +88,13 @@ in
         User = "restic";
         Nice = 19;
         IOSchedulingClass = "idle";
-        LoadCredential = "password:/etc/restic/password";
       };
       path = [ pkgs.restic ];
       script = ''
-        export RESTIC_PASSWORD_FILE=$CREDENTIALS_DIRECTORY/password
-        for repo in ${config.services.restic.server.dataDir}/*/; do
+        for repo in ${config.services.restic.server.dataDir}/*/*/; do
           if [ -f "$repo/config" ]; then
-            restic -r "$repo" --no-cache forget ${keep} --prune
+            host=$(basename "$(dirname "$repo")")
+            restic -r "$repo" --no-cache --password-file "/etc/restic/passwords/$host" forget ${keep} --prune
           fi
         done
       '';
@@ -110,7 +114,7 @@ in
           description = "Restic backup of all Minecraft server data";
           extraPath = [ pkgs.util-linux ];
           scriptBody = resticTo {
-            repo = "minecraft-all-backup";
+            repo = "${config.networking.hostName}/minecraft";
             path = cfg.minecraftPath;
             localRepo = "/mnt/backup/minecraft-all-backup";
           };
@@ -123,7 +127,7 @@ in
         sparrow-state-backup = baseService {
           description = "Restic backup of Postgres dump and site secrets";
           preStart = stageState;
-          scriptBody = resticTo { repo = "sparrow-state"; path = "${stateDir} /var/lib/asher/uploads"; };
+          scriptBody = resticTo { repo = "sparrow/state"; path = "${stateDir} /var/lib/asher/uploads"; };
         };
       })
     ];
