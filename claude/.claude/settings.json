@@ -234,7 +234,8 @@
     "telemetry@builtin": false,
     "revenuecat@claude-plugins-official": true,
     "linear@claude-plugins-official": true,
-    "skill-creator@anthropic-plugin-directory": true
+    "skill-creator@anthropic-plugin-directory": true,
+    "slack@anthropic-plugin-directory": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -267,7 +268,7 @@
     },
     "claude-opus-5-5": {
       "effortLevel": "high",
-      "autoCompactWindow": "auto"
+      "autoCompactWindow": 600000
     },
     "claude-sonnet-5-5": {
       "effortLevel": "high"
