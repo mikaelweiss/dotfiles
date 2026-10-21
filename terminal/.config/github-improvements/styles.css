@@ -137,3 +137,30 @@
   border: 0;
   background: var(--borderColor-muted);
 }
+
+.gi-file-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--fgColor-muted);
+  white-space: nowrap;
+}
+
+.gi-file-size button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.gi-file-size button:disabled {
+  cursor: progress;
+}
+
+.gi-file-size button:hover {
+  color: var(--fgColor-accent);
+}
