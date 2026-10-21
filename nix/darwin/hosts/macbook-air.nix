@@ -12,6 +12,7 @@
     "deno"
     "yt-dlp"
     "ffmpeg"
+    "flyctl"
   ];
 
   homebrew.casks = [
@@ -23,6 +24,5 @@
     "conductor"
     "tailscale-app"
     "obs"
-    "flyctl"
   ];
 }
