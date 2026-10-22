@@ -17,6 +17,9 @@
 
   networking.hostName = "sparrow";
 
+  # Sparrow faces the internet, so a foothold here must not become root for free.
+  security.sudo.wheelNeedsPassword = lib.mkForce true;
+
   # Elm pulls disc rips from sparrow.
   users.users.mikaelweiss.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOblJ/RxhoeC0kmf1Q0WUK9AXoH9aY3ZMzGmaOctgy/S mikaelweiss@elm"
