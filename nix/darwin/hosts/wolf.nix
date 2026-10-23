@@ -64,5 +64,6 @@ in
 
   homebrew.brews = [
     "tailscale"
+    "flyctl"
   ];
 }
