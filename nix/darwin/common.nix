@@ -143,12 +143,12 @@
       "pngpaste"
       "modem-dev/tap/hunk"
       "getsentry/xcodebuildmcp/mobilebuildmcp" # Lets agents build, run, and drive the iOS Simulator
+      "python@3.13" # gcloud-cli needs it. Without it, cleanup tries to remove mpdecimal and sqlite and fails.
     ];
 
     # GUI Applications
     casks = [
       # AI Tools
-      "codexbar"
       "codex"
       # "cursor"
       # Android Development

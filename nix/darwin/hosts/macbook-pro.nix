@@ -15,6 +15,7 @@
   ];
 
   homebrew.casks = [
+    "codexbar"
     "opencode-desktop"
     "docker-desktop"
     "harvest"
