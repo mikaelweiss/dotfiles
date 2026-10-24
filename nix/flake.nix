@@ -9,11 +9,9 @@
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs-stable";
     # Unregistered MakeMKV builds expire, so this input gets bumped on its own.
-    nixpkgs-makemkv.url = "github:NixOS/nixpkgs/nixos-unstable";
-    # Tailscale security fixes land in unstable before this flake bumps it.
-    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/nixos-unstable";
-    # Node security fixes reach the release branch days before the channel.
-    nixpkgs-node.url = "github:NixOS/nixpkgs/release-26.05";
+    nixpkgs-makemkv.url = "github:NixOS/nixpkgs/master";
+    # Tailscale security fixes land in master days before any channel.
+    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/master";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ... }:

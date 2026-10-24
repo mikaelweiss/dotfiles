@@ -59,43 +59,27 @@
     },
     "nixpkgs-makemkv": {
       "locked": {
-        "lastModified": 1792094642,
-        "narHash": "sha256-zp8ToDMnqZcu4o4IH9pdwXFXGp7yLm/M0dEnNWnyd7I=",
+        "lastModified": 1792836290,
+        "narHash": "sha256-gREwZ4s8P9JF0AmqIyp0X0RS+QtGHFzVx/hla7mwB0M=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "fe13242281a67641c0102cdb1087f0ebe586c7df",
+        "rev": "0e6a0d56962240ba9dced9c22da14ad656385d64",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs-node": {
-      "locked": {
-        "lastModified": 1792607230,
-        "narHash": "sha256-NsFEbLcATggM52gzQAadx5ksSgmFIBgJXct0HNs38xg=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "a0b2c7cf9f76ed9aef3ca83ab9d7e9fb45fd0b72",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "release-26.05",
+        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "nixpkgs-stable": {
       "locked": {
-        "lastModified": 1789998861,
-        "narHash": "sha256-62XMQD4WLdMAfdT0/8gJmPH2dKeTw908ryNloAplTr8=",
+        "lastModified": 1792615934,
+        "narHash": "sha256-MlvRfa1O5Cqc2/a+gG+l9TSuowEoCKCmrJ1d9oAVm0I=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "1e8bc658fc985ef27ccd66d107d767b32bb7ef98",
+        "rev": "da6dc0e7b26060f2f71ce3ef7088fb56ee44fa36",
         "type": "github"
       },
       "original": {
@@ -107,16 +91,16 @@
     },
     "nixpkgs-tailscale": {
       "locked": {
-        "lastModified": 1792210252,
-        "narHash": "sha256-Mh0PUaIv4nFY+8wAGonaEh8iBzwsmdNlwjVHmFg1Biw=",
+        "lastModified": 1792836290,
+        "narHash": "sha256-gREwZ4s8P9JF0AmqIyp0X0RS+QtGHFzVx/hla7mwB0M=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "09063bd1f2b36fd9fd793c36dfade7bd40a93dfc",
+        "rev": "0e6a0d56962240ba9dced9c22da14ad656385d64",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
+        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -127,7 +111,6 @@
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs",
         "nixpkgs-makemkv": "nixpkgs-makemkv",
-        "nixpkgs-node": "nixpkgs-node",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixpkgs-tailscale": "nixpkgs-tailscale"
       }

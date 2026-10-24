@@ -1,7 +1,7 @@
 { config, pkgs, lib, inputs, ... }:
 
 let
-  nodejs =inputs.nixpkgs-node.legacyPackages.${pkgs.stdenv.hostPlatform.system}.nodejs_22;
+  nodejs = pkgs.nodejs_22;
   siteUsers = [ "portfolio" "weisssolutions" "pmgforrms" "rachelportfolio" "lunchninja" "vault" "rubrix" "mikaelmc" "asher" "parlance" "orbit" "corpus" ];
 
   buildTools = with pkgs; [ git openssh elixir_1_19 nodejs pnpm coreutils bash gnused gawk gnutar gzip curl ];
