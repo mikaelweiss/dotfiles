@@ -236,6 +236,7 @@ alias cs='claude --model sonnet'
 alias ca='env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN claude'
 alias aspen="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
 alias a="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
+alias noveltty="/Users/mikaelweiss/code/noveltty/target/release/noveltty"
 alias p='$HOME/code/penguin-v2/bin/penguin'
 
 # Added by ma CLI installer
