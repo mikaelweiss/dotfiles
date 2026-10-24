@@ -73,12 +73,24 @@ alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
 alias venv='source .venv/bin/activate'
 alias xc='sh ~/code/dotfiles/resize-xcode.sh'
 alias :q='exit'
-if [[ "$OSTYPE" == darwin* ]]; then
-  alias nix-rebuild='sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName)'
-else
-  alias nix-rebuild='sudo nixos-rebuild switch --flake ~/code/dotfiles/nix'
-fi
-alias nix-update='(cd ~/code/dotfiles/nix && nix flake update) && nix-rebuild'
+# Every rebuild moves each flake input to the newest commit on its branch, so
+# nothing waits on a lock bump. The lock file stays untouched, which keeps the
+# git checkouts on sparrow and oak clean, and is the fallback when offline.
+_nix_latest_inputs() {
+  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r '
+    .locks.nodes as $n | $n.root.inputs | to_entries[]
+    | select(.value | type == "string") | .key as $k | $n[.value].original
+    | select(.type == "github")
+    | "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"'
+}
+nix-rebuild() {
+  local -a latest=(${(f)"$(_nix_latest_inputs)"})
+  if [[ "$OSTYPE" == darwin* ]]; then
+    sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName) --refresh --no-write-lock-file "${latest[@]}"
+  else
+    sudo nixos-rebuild switch --flake ~/code/dotfiles/nix --refresh --no-write-lock-file "${latest[@]}"
+  fi
+}
 alias nix-config='nvim ~/code/dotfiles/nix/shared.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
 if [[ "$OSTYPE" == darwin* ]]; then
