@@ -84,12 +84,71 @@ _nix_latest_inputs() {
     | "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"'
 }
 nix-rebuild() {
+  if [[ $(hostname -s) == oak ]]; then
+    echo "Use nix-rebuild-oak on oak."
+    return 1
+  fi
   local -a latest=(${(f)"$(_nix_latest_inputs)"})
   if [[ "$OSTYPE" == darwin* ]]; then
     sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName) --refresh --no-write-lock-file "${latest[@]}"
   else
     sudo nixos-rebuild switch --flake ~/code/dotfiles/nix --refresh --no-write-lock-file "${latest[@]}"
   fi
+}
+
+# Nobody can reach oak's console, so a bad switch must undo itself. A timer
+# switches back to the previous system unless a fresh SSH session proves the
+# new one still lets people in.
+_nix_rebuild_with_revert() {
+  local revert=nix-rebuild-revert profile=/nix/var/nix/profiles/system
+  if [[ $1 == keep ]]; then
+    if ! systemctl is-active -q $revert.timer; then
+      echo "No revert is pending. Running: $(readlink -f /run/current-system)"
+      return 1
+    fi
+    sudo systemctl stop $revert.timer && echo "Kept $(readlink -f $profile)."
+    return
+  fi
+  if systemctl is-active -q $revert.timer; then
+    echo "A revert is pending. Run 'nix-rebuild-oak keep' from a new SSH session, or let it revert."
+    return 1
+  fi
+
+  local -a latest=(${(f)"$(_nix_latest_inputs)"})
+  local old=$(readlink -f $profile) new
+  new=$(nix build --no-link --print-out-paths --refresh --no-write-lock-file "${latest[@]}" \
+    ~/code/dotfiles/nix#nixosConfigurations.$(hostname -s).config.system.build.toplevel) || return 1
+  if [[ $new == $old ]]; then
+    echo "Already up to date."
+    return
+  fi
+
+  sudo systemd-run --quiet --collect --on-active=10min --unit=$revert -p Type=oneshot \
+    /bin/sh -c "$old/sw/bin/nix-env -p $profile --set $old && $old/bin/switch-to-configuration switch" || return 1
+  # A transient unit keeps switching even if this SSH session drops mid-activation.
+  if ! sudo systemd-run --quiet --collect --wait --pipe --unit=nix-rebuild-switch \
+    /bin/sh -c "$old/sw/bin/nix-env -p $profile --set $new && $new/bin/switch-to-configuration switch"; then
+    echo "Switch failed. Reverting now."
+    sudo systemctl start $revert.service; sudo systemctl stop $revert.timer
+    return 1
+  fi
+
+  local failed=$(systemctl --failed --no-legend | wc -l)
+  if ! systemctl is-active -q sshd || ! systemctl is-active -q tailscaled || (( failed > 0 )) \
+    || ! tailscale ping --tsmp -c 1 --timeout 10s elm >/dev/null 2>&1; then
+    echo "Health check failed (failed units: $failed). Reverting now."
+    sudo systemctl start $revert.service; sudo systemctl stop $revert.timer
+    return 1
+  fi
+  echo "Switched to $new."
+  echo "Open a new SSH session and run 'nix-rebuild-oak keep' within 10 minutes, or it reverts."
+}
+nix-rebuild-oak() {
+  if [[ $(hostname -s) != oak ]]; then
+    echo "nix-rebuild-oak only runs on oak."
+    return 1
+  fi
+  _nix_rebuild_with_revert "$@"
 }
 alias nix-config='nvim ~/code/dotfiles/nix/shared.nix'
 alias nix-clean='nix-collect-garbage --delete-older-than 7d && sudo nix-collect-garbage --delete-older-than 7d && nix-store --optimise'
