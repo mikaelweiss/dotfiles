@@ -66,4 +66,8 @@ in
     "tailscale"
     "flyctl"
   ];
+
+  homebrew.casks = [
+    "docker-desktop"
+  ];
 }
