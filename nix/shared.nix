@@ -1,6 +1,6 @@
 # Everything in here lands on every machine, Mac and Linux alike.
 # Only options that exist in both nix-darwin and NixOS belong here.
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 
 {
   imports = [ ./modules/node.nix ./modules/npm-globals.nix ];
@@ -36,6 +36,12 @@
     EDITOR = "nvim";
     VISUAL = "nvim";
   };
+
+  nixpkgs.overlays = [
+    (final: prev: {
+      cloudflared = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.cloudflared;
+    })
+  ];
 
   programs.zsh.enable = true;
 

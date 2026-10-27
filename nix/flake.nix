@@ -10,14 +10,14 @@
     disko.inputs.nixpkgs.follows = "nixpkgs-stable";
     # Unregistered MakeMKV builds expire, so this input gets bumped on its own.
     nixpkgs-makemkv.url = "github:NixOS/nixpkgs/master";
-    # Tailscale security fixes land in master days before any channel.
-    nixpkgs-tailscale.url = "github:NixOS/nixpkgs/master";
+    # Security fixes land in master days before any channel.
+    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ... }:
   let
     mac = modules: nix-darwin.lib.darwinSystem {
-      specialArgs = { inherit self; };
+      specialArgs = { inherit self inputs; };
       modules = [ ./shared.nix ./darwin/common.nix ] ++ modules;
     };
     linux = modules: nixpkgs-stable.lib.nixosSystem {
