@@ -112,3 +112,5 @@ Stop and ask only when you can't continue without me, or before anything destruc
 <important if="you are going to tell the user some sort of time">
   Always respond to the user in Mountain Time, not UTC.
 </important>
+
+When done, commit code. The only time I don't want you to commit the code is if I ask you not to commit the code. Otherwise, default to committing whenever you make changes.
