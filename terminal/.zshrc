@@ -83,12 +83,18 @@ _nix_latest_inputs() {
     | select(.type == "github")
     | "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"'
 }
+# Unauthenticated GitHub API calls hit a 60 per hour limit.
+_nix_github_auth() {
+  local token
+  token=$(gh auth token 2>/dev/null) || return
+  print -l -- --option access-tokens "github.com=$token"
+}
 nix-rebuild() {
   if [[ $(hostname -s) == oak ]]; then
     echo "Use nix-rebuild-oak on oak."
     return 1
   fi
-  local -a latest=(${(f)"$(_nix_latest_inputs)"})
+  local -a latest=(${(f)"$(_nix_latest_inputs)"} ${(f)"$(_nix_github_auth)"})
   if [[ "$OSTYPE" == darwin* ]]; then
     sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName) --refresh --no-write-lock-file "${latest[@]}"
   else
@@ -114,7 +120,7 @@ _nix_rebuild_with_revert() {
     return 1
   fi
 
-  local -a latest=(${(f)"$(_nix_latest_inputs)"})
+  local -a latest=(${(f)"$(_nix_latest_inputs)"} ${(f)"$(_nix_github_auth)"})
   local old=$(readlink -f $profile) new
   new=$(nix build --no-link --print-out-paths --refresh --no-write-lock-file "${latest[@]}" \
     ~/code/dotfiles/nix#nixosConfigurations.$(hostname -s).config.system.build.toplevel) || return 1
