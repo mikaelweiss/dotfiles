@@ -86,6 +86,7 @@ codex/.codex/cache/
 codex/.codex/plugins/
 codex/.codex/.tmp/
 codex/.codex/tmp/
+codex/.codex/.sqlite-maintenance.lock
 
 # Herdr runtime/state (keep config.toml)
 terminal/.config/herdr/*
