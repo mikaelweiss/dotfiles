@@ -155,7 +155,7 @@
       "gcloud-cli" # Play Developer API tokens without key files
       # "openmtp" # Android file transfer
       # Apps
-      "arc"
+      "thebrowsercompany-dia"
       # "chatgpt"
       # "grandperspective"
       # "obs"

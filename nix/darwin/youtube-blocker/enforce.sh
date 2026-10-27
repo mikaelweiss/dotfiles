@@ -42,7 +42,7 @@ fi
 # Tamper detection: if the counting agent stops heartbeating while a browser
 # is running, ALL browser time counts as YouTube time.
 tampered=0
-if pgrep -xq Arc || pgrep -xq Safari; then
+if pgrep -xq Dia || pgrep -xq Safari; then
   [ $((NOW - YT_HEARTBEAT)) -gt 120 ] && tampered=1
 fi
 [ "$tampered" -eq 1 ] && ST_SECONDS=$((ST_SECONDS + TICK))

@@ -38,19 +38,37 @@ write_usage
 # YouTube counts while a video plays. Social sites count whenever the tab is in front.
 TRACKED_JS="(() => { const host = location.hostname.toLowerCase(); const on = domain => host === domain || host.endsWith('.' + domain); const onYouTube = on('youtube.com') || on('youtube-nocookie.com') || host === 'youtu.be'; const onSocial = ['facebook.com', 'instagram.com', 'twitter.com', 'x.com'].some(on); return onSocial || (onYouTube && Array.from(document.querySelectorAll('video')).some(video => !video.paused && !video.ended && video.readyState >= 2)); })()"
 
+# Dia runs JavaScript from AppleScript only when launched with
+# --enable-applescript-javascript, so it reads the tab URL and Chromium's
+# video wake lock instead.
+dia_url_is_watching() {
+  local host
+  host=$(printf '%s' "$1" | sed -E 's#^[A-Za-z]+://([^/:]+).*#\1#' | tr '[:upper:]' '[:lower:]')
+  case "$host" in
+    facebook.com|*.facebook.com|instagram.com|*.instagram.com|twitter.com|*.twitter.com|x.com|*.x.com)
+      return 0 ;;
+    youtube.com|*.youtube.com|youtube-nocookie.com|*.youtube-nocookie.com|youtu.be)
+      pmset -g assertions | grep -q '(Dia):.*"Video Wake Lock"' ;;
+    *)
+      return 1 ;;
+  esac
+}
+
 browser_is_watching() {
   local app="$1" result
   pgrep -xq "$app" || return 1
 
   case "$app" in
-    Arc)
+    Dia)
       result=$(osascript <<APPLESCRIPT
-tell application "Arc"
-  if not frontmost or (count of windows) = 0 then return false
-  return execute active tab of front window javascript "$TRACKED_JS"
+tell application "Dia"
+  if not frontmost or (count of windows) = 0 then return ""
+  return URL of active tab of front window
 end tell
 APPLESCRIPT
       ) || return 2
+      dia_url_is_watching "$result"
+      return
       ;;
     Safari)
       result=$(osascript <<APPLESCRIPT
@@ -68,7 +86,7 @@ APPLESCRIPT
 }
 
 watching=0
-for browser in Arc Safari; do
+for browser in Dia Safari; do
   browser_is_watching "$browser"
   status=$?
   [ "$status" -eq 0 ] && watching=1 && break
