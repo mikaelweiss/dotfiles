@@ -46,6 +46,8 @@ workspace_picker = "prefix+o"
 switch_workspace = ["ctrl+1..9", "prefix+shift+1..9"]
 previous_workspace = ["ctrl+p", "prefix+ctrl+p"]
 next_workspace = ["ctrl+n", "prefix+ctrl+n"]
+previous_agent = "ctrl+k"
+next_agent = "ctrl+j"
 # tmux: bind S choose-session
 goto = "prefix+shift+s"
 # settings moves off prefix+s (taken by split); comma matches macOS Cmd+,
