@@ -8,9 +8,12 @@ user-invocable: true
 
 ## Create the PR
 
-- Leave the pr body empty
+- Write the body to follow the repo's PR conventions. Find them in the PR template (`.github/PULL_REQUEST_TEMPLATE.md`, `.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE/`, `docs/`, or the repo root) and in any docs the template or `AGENTS.md`/`CLAUDE.md` cite for PR bodies.
+- Fill every template section. Keep each one short and plain. Use the template's own "none" / "n/a" when a section does not apply. Drop the template's HTML comments.
+- When the repo has no template, write a short body: what changed and why.
+- Write the body to a file in the scratchpad and pass it with `--body-file`.
 - push the code and create a PR
-- If the branch is based off of a Jira ticket, then start the ticket with the jira number (ex: "SS-134" etc)
+- Put Jira keys where the repo's conventions say. When they say nothing, start the title with the ticket number (ex: "SS-134 feat: ...").
 - No attribution anywhere in the title or body: no `Co-Authored-By`, no generated-with footer, no session URL.
 
 ## Watch for reviews
