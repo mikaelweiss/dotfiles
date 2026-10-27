@@ -235,7 +235,8 @@
     "revenuecat@claude-plugins-official": true,
     "linear@claude-plugins-official": true,
     "skill-creator@anthropic-plugin-directory": true,
-    "slack@anthropic-plugin-directory": true
+    "slack@anthropic-plugin-directory": true,
+    "rust-analyzer-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
