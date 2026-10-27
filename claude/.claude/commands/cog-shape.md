@@ -50,7 +50,7 @@ Don't prematurely end the conversation. If the user says "okay just file somethi
 
 When the scope is clear, break the work into ordered GitHub issues. Rules:
 
-- **Each issue must be self-contained** — cog's `build` phase will implement it in isolation, starting from `main`. An issue that depends on a not-yet-merged issue is a broken issue.
+- **Each issue must be self-contained.** cog's `build` phase will implement it in isolation, starting from `main` once its blockers have merged. An issue that needs an unmerged sibling's code without a blocked-by link is a broken issue.
 - **Order by dependency.** List blocking issues first.
 - **Each issue must be implementable.** If an issue reduces to "think about X," it's not an issue — it's a conversation you need to have now.
 
@@ -60,13 +60,14 @@ For each issue, draft:
 - **Acceptance criteria** — bulleted, concrete, testable.
 - **Affected components** — paths.
 - **Technical context** — constraints, patterns to follow, gotchas from the codebase investigation.
+- **Blocked by**: issues in this set, or existing issues, that must merge first. Empty when none.
 
 ### 4. Present for approval, then file
 
-Show the user the full issue list with titles and one-line summaries. For any issue the user wants to drop, edit, or merge with another, iterate until they're satisfied. Then file all approved issues in order:
+Show the user the full issue list with titles, one-line summaries, and what each is blocked by. For any issue the user wants to drop, edit, or merge with another, iterate until they're satisfied. Then file all approved issues in dependency order, so every blocker has a number before the issues it blocks. Record dependencies with GitHub's native blocked-by links, never as "depends on" prose in the body. Drop the flag when the issue has no blockers:
 
 ```bash
-gh issue create --title "<title>" --body "<body>"
+gh issue create --title "<title>" --body "<body>" --blocked-by <n,n>
 ```
 
 Report the URLs in the order filed.

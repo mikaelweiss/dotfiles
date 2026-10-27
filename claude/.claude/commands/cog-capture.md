@@ -73,6 +73,9 @@ Before filing, show the user a summary using this skeleton. Sections marked `(bu
 
 **Additional Context:**
 - [Error messages, stack traces, etc.]
+
+**Blocked by:** [Existing issue numbers that must merge first. Omit if none.]
+**Blocking:** [Existing issue numbers that need this one first. Omit if none.]
 ```
 
 Ask the user to approve, edit, or abandon. Wait for a response. Do not proceed without one.
@@ -114,10 +117,10 @@ If the user approved a new issue, build the body from this skeleton (parallel to
 [Error messages, screenshots if provided, etc.]
 ```
 
-Then file it:
+Then file it. Record dependencies with GitHub's native blocked-by and blocking links, never as "depends on" prose in the body. Drop either flag when its list is empty:
 
 ```bash
-gh issue create --title "<title>" --body "<body>"
+gh issue create --title "<title>" --body "<body>" --blocked-by <n,n> --blocking <n,n>
 ```
 
 If they chose to comment on a duplicate, build the comment body from this skeleton — it's narrower because the original issue already carries the title, description, and reproduction shape:
@@ -136,7 +139,10 @@ Then post it:
 
 ```bash
 gh issue comment <number> --body "<added context>"
+gh issue edit <number> --add-blocked-by <n,n> --add-blocking <n,n>
 ```
+
+Run the `gh issue edit` only when the approved summary names new dependencies.
 
 Report the resulting URL.
 
