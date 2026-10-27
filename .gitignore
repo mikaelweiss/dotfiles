@@ -162,6 +162,7 @@ terminal/.pi/agent/skills/turnstile-spin/
 terminal/.pi/agent/skills/web-perf/
 terminal/.pi/agent/skills/workers-best-practices/
 terminal/.pi/agent/skills/wrangler/
+terminal/.gradle/*
 
 # Xcode runtime/state (keep themes and key bindings)
 xcode/Library/Developer/CoreSimulator/
