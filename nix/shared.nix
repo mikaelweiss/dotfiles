@@ -23,6 +23,7 @@
     yazi
     git
     git-lfs
+    gh
     lazygit
     tmux
     tldr

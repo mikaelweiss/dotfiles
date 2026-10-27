@@ -12,7 +12,6 @@
     # bruno-cli
     llvm
     sqlite
-    gh # GitHub CLI
     rsync # GNU rsync
     pass # Password manager, on PATH so GUI apps (Raycast) find it
     gnupg # GPG key manager (pass dependency)
