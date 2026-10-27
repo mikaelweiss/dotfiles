@@ -4,7 +4,13 @@
 
 -- Toggle file explorer with cmd+s or leader+e
 vim.keymap.set("n", "<D-s>", ":Neotree toggle last<CR>", { desc = "Toggle file explorer" })
-vim.keymap.set("n", "<leader>e", ":Neotree toggle last<CR>", { desc = "Toggle file explorer" })
+vim.keymap.set("n", "<leader>e", function()
+  if vim.bo.filetype == "neo-tree" then
+    vim.cmd("Neotree close")
+  else
+    vim.cmd("Neotree focus last")
+  end
+end, { desc = "Focus file explorer" })
 
 -- Open file search with shift+cmd+o
 vim.keymap.set("n", "<D-S-o>", "<cmd>Telescope find_files<cr>", { desc = "Find Files" })
