@@ -31,7 +31,7 @@ Never read one whole into context. Measure it with `wc -c` first. Over 10k chara
 
 A tool call that needs approval opens a prompt. When nobody is watching, the run freezes on it forever. Never trigger one:
 
-- Never `cd`, including `cd dir && ...`. Use `git -C`, `npm --prefix`, `gradlew -p`, and absolute paths.
+- `cd` is fine on its own into a directory inside the working directories. `cd dir && ...` triggers a prompt, so there use `git -C`, `npm --prefix`, `gradlew -p`, or absolute paths.
 - Give `rm` literal absolute paths. No variables, globs, or `$(...)`.
 - Never delete a test file by any means. Rewrite it in place.
 - Never edit a file a repo hook guards (protected files, workflows, hooks). Skip that step, finish the rest, and report it.
