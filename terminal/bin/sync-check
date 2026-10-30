@@ -13,7 +13,7 @@ sessions | while read -r name root; do
     continue
   fi
   local -a want live missing
-  want=( ${(f)"$(gitignored "$root")"} ${(f)"$(extra_ignores "$name")"} )
+  want=( ${(f)"$(gitignored "$root")"} )
   live=( ${(f)"$(session_ignores "$name")"} )
   missing=( ${want:|live} )
   if (( ${#missing} )); then

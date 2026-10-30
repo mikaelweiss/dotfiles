@@ -6,13 +6,6 @@ hub=elm
 # every machine, and so a brief rendered over ssh opens on the laptop.
 keep='/(claude/\.claude/(projects|plugins|briefs)|codex/\.codex/plugins)$'
 
-# ~/.mutagen.yml anchors its dotfiles ignores to a ~/code root, so a tree
-# synced as its own session root needs them re-anchored. They also cover files
-# that exist only on elm, which git here cannot see.
-reanchor() {
-  sed -n "s|^ *- \"/$1\(/[^\"]*\)\"\$|--ignore=\1|p" "$HOME/.mutagen.yml"
-}
-
 # Descends until it finds a repo, then stops.
 repos_under() {
   setopt local_options null_glob
@@ -39,32 +32,10 @@ gitignored() {
   done | grep -vE "$keep" | sed 's|^|--ignore=|'
 }
 
-extra_ignores() {
-  case $1 in
-    dotfiles|penguin-v2) reanchor $1 ;;
-  esac
-  return 0
-}
-
-# One "name root" pair per line. The work MacBook Pro syncs only the surestake
-# and penguin trees (including penguin-v2), command, aspen-grove, and dotfiles.
+# One "name root" pair per line.
 sessions() {
-  case "$(scutil --get LocalHostName 2>/dev/null | tr A-Z a-z)" in
-    mikaels-macbook-pro)
-      print -r -- "surestake $HOME/code/surestake"
-      print -r -- "surestake-worktrees $HOME/.worktrees/surestake"
-      print -r -- "penguin $HOME/code/penguin"
-      print -r -- "penguin-worktrees $HOME/.worktrees/penguin"
-      print -r -- "penguin-v2 $HOME/code/penguin-v2"
-      print -r -- "command $HOME/code/command"
-      print -r -- "aspen-grove $HOME/code/aspen-grove"
-      print -r -- "dotfiles $HOME/code/dotfiles"
-      ;;
-    *)
-      print -r -- "code $HOME/code"
-      print -r -- "worktrees $HOME/.worktrees"
-      ;;
-  esac
+  print -r -- "code $HOME/code"
+  print -r -- "worktrees $HOME/.worktrees"
 }
 
 session_ignores() {

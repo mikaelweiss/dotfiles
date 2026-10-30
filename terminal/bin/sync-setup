@@ -24,9 +24,9 @@ done
 
 stale_worktrees() {
   local name=$1 root=$2 pattern
-  [[ $name == *worktrees ]] || return 0
-  # ~/.worktrees holds <repo>/<branch>, a per-repo root holds <branch>
-  [[ $root == $HOME/.worktrees ]] && pattern="$root/*/*" || pattern="$root/*"
+  [[ $name == worktrees ]] || return 0
+  # ~/.worktrees holds <repo>/<branch>
+  pattern="$root/*/*"
   sh -c "$list_stale" _ "$pattern" | sed 's|^|  |'
   ssh -o BatchMode=yes "$hub" sh -s -- ${(q)pattern} <<< "$list_stale" | sed "s|^|  $hub:|"
 }
@@ -44,7 +44,7 @@ create() {
     print -r -- "$stale"
   else
     local -a ig
-    ig=( ${(f)"$(gitignored "$root")"} ${(f)"$(extra_ignores "$name")"} )
+    ig=( ${(f)"$(gitignored "$root")"} )
     mutagen sync create --name="$name" \
       --sync-mode=two-way-resolved \
       --symlink-mode=posix-raw \
