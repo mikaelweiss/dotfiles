@@ -12,6 +12,7 @@
       link = true;
     }
     "tailscale"
+    "flyctl"
   ];
 
   homebrew.casks = [
