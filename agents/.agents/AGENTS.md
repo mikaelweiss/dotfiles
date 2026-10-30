@@ -33,8 +33,6 @@ A tool call that needs approval opens a prompt. When nobody is watching, the run
 
 - `cd` is fine on its own into a directory inside the working directories. `cd dir && ...` triggers a prompt, so there use `git -C`, `npm --prefix`, `gradlew -p`, or absolute paths.
 - Give `rm` literal absolute paths. No variables, globs, or `$(...)`.
-- Never delete a test file by any means. Rewrite it in place.
-- Never edit a file a repo hook guards (protected files, workflows, hooks). Skip that step, finish the rest, and report it.
 </important>
 
 <important if="the user asks for a plan, or you are considering plan mode">
