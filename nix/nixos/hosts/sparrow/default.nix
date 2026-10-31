@@ -29,15 +29,9 @@
   # on a server that never uses it.
   npm.globalPackages = lib.mkForce [ ];
 
-  # Static address: the port forwards on the gateway point here and must
-  # survive the gateway losing its reservation table.
+  # The router's port forwards point here, so reserve this address on it.
   networking.networkmanager.enable = false;
-  networking.useDHCP = false;
-  networking.interfaces.eno1.ipv4.addresses = [{
-    address = "10.0.0.215";
-    prefixLength = 24;
-  }];
-  networking.defaultGateway = "10.0.0.1";
+  networking.useDHCP = true;
 
   # Tailscale on Linux sends to a peer's IPv6 link-local address without its
   # interface zone, so replies to LAN peers never arrive. Without IPv6 on eno1
