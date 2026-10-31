@@ -113,5 +113,7 @@
   };
   networking.firewall.allowedTCPPorts = [ 8096 ];
 
+  zramSwap.enable = true;
+
   system.stateVersion = "25.11";
 }
