@@ -167,7 +167,7 @@ in
     (lib.mkIf cfg.shire {
     the-shire = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.the-shire}:25565" "19134:19132/udp" "24455:24454/udp" ];
+      ports = [ "127.0.0.1:${toString internalPort.the-shire}:25565" "19134:19132/udp" "24455:24455/udp" ];
       volumes = [ "${dataRoot}/the-shire/data:/data" ];
       autoStart = false;
       user = "${toString uid}:${toString uid}";
@@ -227,11 +227,13 @@ in
     };
   }) names))
   # rexburg-friends holds voice chat's 24454, so the others need their own.
+  # Without a voice_host, clients reach voice chat at whatever address they
+  # joined by, which keeps the router's LAN-only name for sparrow working.
   (lib.mkIf cfg.private {
     podman-minecraft-server.preStart = setVoiceChat "minecraft-server" "s/^port=.*/port=24456/";
   })
   (lib.mkIf cfg.shire {
-    podman-the-shire.preStart = setVoiceChat "the-shire" "s/^voice_host=.*/voice_host=shire.mikaelmc.com:24455/";
+    podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/";
   })
   ];
 
