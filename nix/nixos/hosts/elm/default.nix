@@ -6,6 +6,7 @@
     ../../modules/minecraft.nix
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
+    ../../modules/aspen-runner.nix
   ];
 
   minecraft.private = true;
