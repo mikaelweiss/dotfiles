@@ -3,16 +3,10 @@
 {
   imports = [
     ./hardware.nix
-    ../../modules/minecraft.nix
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
     ../../modules/aspen-runner.nix
   ];
-
-  minecraft.private = true;
-  minecraft.shire = true;
-  minecraft.dataRoot = "/mnt/nvme/minecraft";
-  resticBackups.minecraftPath = "/mnt/nvme/minecraft";
 
   networking.hostName = "elm";
   networking.networkmanager.enable = true;

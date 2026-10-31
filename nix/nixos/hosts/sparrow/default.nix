@@ -13,6 +13,8 @@
 
   resticBackups.sparrowState = true;
   minecraft.public = true;
+  minecraft.private = true;
+  minecraft.shire = true;
   resticBackups.minecraftPath = "/var/lib/minecraft";
 
   networking.hostName = "sparrow";

@@ -9,10 +9,18 @@ let
 
   version = "26.1.2";
   protocol = 775;
-  publicPort = { minecraft-server = 25565; rexburg-friends = cfg.rexburgPort; skyblock = 25566; the-shire = 25567; };
+  publicPort = { minecraft-server = 25568; rexburg-friends = cfg.rexburgPort; skyblock = 25566; the-shire = 25567; };
   internalPort = { minecraft-server = 35565; rexburg-friends = 35566; skyblock = 35567; the-shire = 35568; };
   uid = 25565;
   units = map (n: "podman-${n}.service") names;
+
+  # The mod rewrites its config on every start, so the overrides do too.
+  setVoiceChat = n: expr: ''
+    conf=${dataRoot}/${n}/data/config/voicechat/voicechat-server.properties
+    if [ -f "$conf" ]; then
+      ${pkgs.gnused}/bin/sed -i '${expr}' "$conf"
+    fi
+  '';
 
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
@@ -93,7 +101,7 @@ in
     # Tailnet-only. Not port-forwarded on purpose.
     minecraft-server = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.minecraft-server}:25565" "24454:24454/udp" ];
+      ports = [ "127.0.0.1:${toString internalPort.minecraft-server}:25565" "24456:24456/udp" ];
       volumes = [ "${dataRoot}/minecraft-server/data:/data" ];
       autoStart = false;
       user = "${toString uid}:${toString uid}";
@@ -218,15 +226,12 @@ in
       SystemCallFilter = [ "@system-service" ];
     };
   }) names))
-  # elm's private server holds voice chat's 24454, so clients must be told the
-  # forwarded port. The mod rewrites its config, so this sets it on every start.
+  # rexburg-friends holds voice chat's 24454, so the others need their own.
+  (lib.mkIf cfg.private {
+    podman-minecraft-server.preStart = setVoiceChat "minecraft-server" "s/^port=.*/port=24456/";
+  })
   (lib.mkIf cfg.shire {
-    podman-the-shire.preStart = ''
-      conf=${dataRoot}/the-shire/data/config/voicechat/voicechat-server.properties
-      if [ -f "$conf" ]; then
-        ${pkgs.gnused}/bin/sed -i 's/^voice_host=.*/voice_host=shire.mikaelmc.com:24455/' "$conf"
-      fi
-    '';
+    podman-the-shire.preStart = setVoiceChat "the-shire" "s/^voice_host=.*/voice_host=shire.mikaelmc.com:24455/";
   })
   ];
 
