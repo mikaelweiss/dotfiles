@@ -24,7 +24,7 @@ let
     extraLabels = [ "aspen-linux" ];
     replace = true;
     workDir = "${home}/${name}";
-    extraPackages = with pkgs; [ docker nix curl jq openssl gnutar gzip ];
+    extraPackages = with pkgs; [ docker awscli2 jq openssl ];
     # Docker's socket belongs to the docker group, which PrivateUsers hides.
     serviceOverrides.PrivateUsers = false;
   };
