@@ -2,8 +2,8 @@
 # that ask for the aspen-linux label run here: without the default labels,
 # the Mac runners' `runs-on: self-hosted` jobs never land on this machine.
 # Two runners let the x86_64 and aarch64 builds run side by side. The
-# aarch64 build runs in an emulated container, since Tauri can't
-# cross-compile an ARM AppImage.
+# aarch64 build bundles its AppImage in an emulated container, since Tauri
+# can't cross-compile one.
 #
 # A runner registers with the token in tokenFile when its settings change.
 # Registration tokens last an hour, so write a fresh one before changing them:
