@@ -68,6 +68,8 @@ in
       };
     };
   };
+  # Replies to LAN hosts route out ethernet, so the strict check drops every query sent to the Wi-Fi address.
+  networking.firewall.checkReversePath = "loose";
   # The Wi-Fi password stays out of this public repo. The "-" lets ethernet come up before the file exists.
   systemd.services.NetworkManager-ensure-profiles.serviceConfig.EnvironmentFile =
     lib.mkForce "-/etc/pika/wifi.env";
