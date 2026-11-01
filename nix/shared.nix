@@ -41,6 +41,7 @@
   nixpkgs.overlays = [
     (final: prev: {
       cloudflared = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.cloudflared;
+      worktrunk = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.worktrunk;
     })
   ];
 

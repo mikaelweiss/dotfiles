@@ -315,8 +315,12 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
     local nvmrc_dir
     nvmrc_dir="$(nvm_find_up .nvmrc)"
     if [[ -z "$nvmrc_dir" ]]; then
-      [[ "$(nvm current)" != "$(nvm version default)" ]] && NPM_CONFIG_PREFIX= nvm use --silent default
-      return
+      local default
+      default="$(nvm version default)"
+      if [[ "$default" != "N/A" && "$(nvm current)" != "$default" ]]; then
+        NPM_CONFIG_PREFIX= nvm use --silent default
+      fi
+      return 0
     fi
     local wanted
     wanted="$(nvm version "$(<"$nvmrc_dir/.nvmrc")")"
