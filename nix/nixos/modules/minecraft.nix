@@ -7,8 +7,8 @@ let
     ++ lib.optionals cfg.public [ "rexburg-friends" "skyblock" ]
     ++ lib.optional cfg.shire "the-shire";
 
-  version = "26.1.2";
-  protocol = 775;
+  version = "26.3";
+  protocol = 777;
   publicPort = { minecraft-server = 25568; rexburg-friends = cfg.rexburgPort; skyblock = 25566; the-shire = 25567; };
   internalPort = { minecraft-server = 35565; rexburg-friends = 35566; skyblock = 35567; the-shire = 35568; };
   uid = 25565;
