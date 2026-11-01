@@ -110,7 +110,17 @@ in
       # The default answers only directly connected subnets, which shuts out tailnet peers.
       listeningMode = "ALL";
       # The Q1000K drops LAN connections to its own WAN address, so the house reaches sparrow directly.
-      hosts = lib.concatMap (domain: map (name: "192.168.0.11 ${name}.${domain}") [ "play" "skyblock" "shire" ])
+      # Device names come from these records, since the router keeps its DHCP hostnames to itself.
+      hosts = [
+        "192.168.0.5 mikaels-iphone"
+        "192.168.0.7 mikaels-macbook-pro"
+        "192.168.0.9 mikaels-macbook-air"
+        "192.168.0.13 wolf"
+        "192.168.0.14 hannahs-iphone"
+        "192.168.0.16 epson-printer"
+        "192.168.0.23 roku"
+      ]
+      ++ lib.concatMap (domain: map (name: "192.168.0.11 ${name}.${domain}") [ "play" "skyblock" "shire" ])
         [ "mikaelmc.com" "mikaelmc.net" ];
     };
   };
