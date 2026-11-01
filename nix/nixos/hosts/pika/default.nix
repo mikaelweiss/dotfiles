@@ -1,4 +1,4 @@
-{ lib, nixos-raspberrypi, ... }:
+{ lib, inputs, nixos-raspberrypi, ... }:
 
 let
   router = "192.168.0.1";
@@ -10,7 +10,10 @@ in
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-5.base
     sd-image
+    # 26.05's list setup fails on every run after the first, so reboots and weekly refreshes report failure.
+    "${inputs.nixpkgs-master}/nixos/modules/services/networking/pihole-ftl.nix"
   ];
+  disabledModules = [ "services/networking/pihole-ftl.nix" ];
 
   networking.hostName = "pika";
 
@@ -26,6 +29,7 @@ in
   npm.globalPackages = lib.mkForce [ ];
 
   networking.networkmanager.enable = true;
+  networking.networkmanager.settings.main.no-auto-default = "*";
   # brcmfmac power saving drops the Pi's Wi-Fi link when idle.
   networking.networkmanager.wifi.powersave = false;
   # Both links stay up. The lower route metric keeps traffic on ethernet while it is plugged in.
@@ -104,6 +108,15 @@ in
       # The default answers only directly connected subnets, which shuts out tailnet peers.
       listeningMode = "ALL";
     };
+  };
+
+  # The Pi has no RTC battery and boots with a stale clock, so list downloads fail TLS until NTP syncs.
+  systemd.additionalUpstreamSystemUnits = [ "systemd-time-wait-sync.service" ];
+  systemd.services.systemd-time-wait-sync.wantedBy = [ "sysinit.target" ];
+  systemd.services.pihole-ftl-setup = {
+    after = [ "time-sync.target" ];
+    wants = [ "time-sync.target" ];
+    startAt = "weekly";
   };
 
   # The dashboard has no password, so it is reached over Tailscale only.
