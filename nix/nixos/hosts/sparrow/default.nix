@@ -15,6 +15,8 @@
   minecraft.public = true;
   minecraft.private = true;
   minecraft.shire = true;
+  # Bedrock players cannot wake a sleeping server.
+  minecraft.alwaysOn = [ "the-shire" ];
   resticBackups.minecraftPath = "/var/lib/minecraft";
 
   networking.hostName = "sparrow";

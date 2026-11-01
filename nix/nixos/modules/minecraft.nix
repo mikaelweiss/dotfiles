@@ -12,7 +12,13 @@ let
   publicPort = { minecraft-server = 25568; rexburg-friends = cfg.rexburgPort; skyblock = 25566; the-shire = 25567; };
   internalPort = { minecraft-server = 35565; rexburg-friends = 35566; skyblock = 35567; the-shire = 35568; };
   uid = 25565;
-  units = map (n: "podman-${n}.service") names;
+  lazyNames = lib.subtractLists cfg.alwaysOn names;
+  units = map (n: "podman-${n}.service") lazyNames;
+
+  # lazymc holds the public port of a lazy server. An always-on server holds it itself.
+  gamePort = n: if lib.elem n cfg.alwaysOn
+    then "${toString publicPort.${n}}:25565"
+    else "127.0.0.1:${toString internalPort.${n}}:25565";
 
   # The mod rewrites its config on every start, so the overrides do too.
   setVoiceChat = n: expr: ''
@@ -61,6 +67,11 @@ in
     private = lib.mkEnableOption "the tailnet-only minecraft-server";
     public = lib.mkEnableOption "the port-forwarded rexburg-friends and skyblock servers";
     shire = lib.mkEnableOption "the port-forwarded the-shire server";
+    alwaysOn = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum [ "minecraft-server" "rexburg-friends" "skyblock" "the-shire" ]);
+      default = [ ];
+      description = "Servers that run all the time instead of sleeping until a Java player joins.";
+    };
   };
 
   imports = [ ./dmz.nix ];
@@ -101,9 +112,9 @@ in
     # Tailnet-only. Not port-forwarded on purpose.
     minecraft-server = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.minecraft-server}:25565" "24456:24456/udp" ];
+      ports = [ (gamePort "minecraft-server") "24456:24456/udp" ];
       volumes = [ "${dataRoot}/minecraft-server/data:/data" ];
-      autoStart = false;
+      autoStart = lib.elem "minecraft-server" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
       extraOptions = containerOptions;
       environment = {
@@ -121,9 +132,9 @@ in
     # Public, on the default Java and Bedrock ports so players need no port.
     rexburg-friends = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.rexburg-friends}:25565" "19132:19132/udp" "24454:24454/udp" ];
+      ports = [ (gamePort "rexburg-friends") "19132:19132/udp" "24454:24454/udp" ];
       volumes = [ "${dataRoot}/rexburg-friends/data:/data" ];
-      autoStart = false;
+      autoStart = lib.elem "rexburg-friends" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
       extraOptions = containerOptions;
       environment = {
@@ -142,9 +153,9 @@ in
 
     skyblock = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.skyblock}:25565" "19133:19132/udp" ];
+      ports = [ (gamePort "skyblock") "19133:19132/udp" ];
       volumes = [ "${dataRoot}/skyblock/data:/data" ];
-      autoStart = false;
+      autoStart = lib.elem "skyblock" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
       extraOptions = containerOptions;
       environment = {
@@ -167,9 +178,9 @@ in
     (lib.mkIf cfg.shire {
     the-shire = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ "127.0.0.1:${toString internalPort.the-shire}:25565" "19134:19132/udp" "24455:24455/udp" ];
+      ports = [ (gamePort "the-shire") "19134:19132/udp" "24455:24455/udp" ];
       volumes = [ "${dataRoot}/the-shire/data:/data" ];
-      autoStart = false;
+      autoStart = lib.elem "the-shire" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
       extraOptions = containerOptions;
       environment = {
@@ -225,7 +236,7 @@ in
       SystemCallArchitectures = "native";
       SystemCallFilter = [ "@system-service" ];
     };
-  }) names))
+  }) lazyNames))
   # rexburg-friends holds voice chat's 24454, so the others need their own.
   # Without a voice_host, clients reach voice chat at whatever address they
   # joined by, which keeps the router's LAN-only name for sparrow working.
