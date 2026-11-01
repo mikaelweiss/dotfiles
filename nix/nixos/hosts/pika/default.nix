@@ -127,6 +127,14 @@ in
     ports = [ 80 ];
   };
 
+  # The Q1000K modem's firmware hides its Dynamic DNS page, so pika tracks the dynamic WAN address.
+  # The token stays out of this public repo.
+  services.cloudflare-dyndns = {
+    enable = true;
+    apiTokenFile = "/etc/pika/cloudflare-token";
+    domains = [ "home.mikaelweiss.dev" ];
+  };
+
   zramSwap.enable = true;
 
   system.stateVersion = "26.05";
