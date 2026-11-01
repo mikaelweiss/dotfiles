@@ -1,0 +1,118 @@
+{ lib, nixos-raspberrypi, ... }:
+
+let
+  router = "192.168.0.1";
+  # The router hands out both as DNS servers, so the house keeps resolving on Wi-Fi alone.
+  ethernetAddress = "192.168.0.53";
+  wifiAddress = "192.168.0.54";
+in
+{
+  imports = with nixos-raspberrypi.nixosModules; [
+    raspberry-pi-5.base
+    sd-image
+  ];
+
+  networking.hostName = "pika";
+
+  boot.loader.systemd-boot.enable = lib.mkForce false;
+  boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
+
+  # The SD image's base profile pulls in ZFS, which would compile against the vendor kernel.
+  boot.supportedFilesystems.zfs = lib.mkForce false;
+
+  sdImage.firmwarePartitionName = "PIKA";
+  sdImage.rootVolumeLabel = "pika";
+
+  npm.globalPackages = lib.mkForce [ ];
+
+  networking.networkmanager.enable = true;
+  # brcmfmac power saving drops the Pi's Wi-Fi link when idle.
+  networking.networkmanager.wifi.powersave = false;
+  # Both links stay up. The lower route metric keeps traffic on ethernet while it is plugged in.
+  networking.networkmanager.ensureProfiles = {
+    environmentFiles = [ "/etc/pika/wifi.env" ];
+    profiles = {
+      ethernet = {
+        connection = {
+          id = "ethernet";
+          type = "ethernet";
+        };
+        ipv4 = {
+          method = "manual";
+          address1 = "${ethernetAddress}/24,${router}";
+          route-metric = 100;
+        };
+      };
+      wifi = {
+        connection = {
+          id = "wifi";
+          type = "wifi";
+        };
+        wifi = {
+          mode = "infrastructure";
+          ssid = "$WIFI_SSID";
+        };
+        wifi-security = {
+          key-mgmt = "wpa-psk";
+          psk = "$WIFI_PSK";
+        };
+        ipv4 = {
+          method = "manual";
+          address1 = "${wifiAddress}/24,${router}";
+          route-metric = 600;
+        };
+      };
+    };
+  };
+  # The Wi-Fi password stays out of this public repo. The "-" lets ethernet come up before the file exists.
+  systemd.services.NetworkManager-ensure-profiles.serviceConfig.EnvironmentFile =
+    lib.mkForce "-/etc/pika/wifi.env";
+
+  # Pi-hole owns port 53, so resolved's stub listener cannot run here.
+  # Pika resolves through its own Pi-hole and falls back to Cloudflare when FTL is down.
+  services.resolved.enable = lib.mkForce false;
+  networking.nameservers = lib.mkBefore [ "127.0.0.1" ];
+  services.tailscale.extraSetFlags = [ "--accept-dns=false" ];
+
+  services.pihole-ftl = {
+    enable = true;
+    openFirewallDNS = true;
+    queryLogDeleter.enable = true;
+    lists = [
+      {
+        url = "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts";
+        description = "Steven Black: ads, malware, porn";
+      }
+    ]
+    ++ map (name: {
+      url = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/${name}.txt";
+      description = "HaGeZi ${name}";
+    }) [
+      "pro"
+      "tif"
+      # Without it, browsers with their own encrypted DNS route around every list here.
+      "doh-vpn-proxy-bypass"
+      "gambling"
+      "native.apple"
+      "native.amazon"
+      "native.samsung"
+      "native.tiktok"
+      "native.winoffice"
+    ];
+    settings.dns = {
+      upstreams = [ "1.1.1.1" "1.0.0.1" ];
+      # The default answers only directly connected subnets, which shuts out tailnet peers.
+      listeningMode = "ALL";
+    };
+  };
+
+  # The dashboard has no password, so it is reached over Tailscale only.
+  services.pihole-web = {
+    enable = true;
+    ports = [ 80 ];
+  };
+
+  zramSwap.enable = true;
+
+  system.stateVersion = "26.05";
+}

@@ -1,5 +1,5 @@
 {
-  description = "Every machine: Macs via nix-darwin, elm, sparrow and oak via NixOS";
+  description = "Every machine: Macs via nix-darwin, elm, sparrow, oak and pika via NixOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -12,9 +12,11 @@
     nixpkgs-makemkv.url = "github:NixOS/nixpkgs/master";
     # Security fixes land in master days before any channel.
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
+    # Pi 5 kernel and firmware. Its own nixpkgs pin matches its binary cache, so nothing follows ours.
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
   };
 
-  outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ... }:
+  outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, nixos-raspberrypi, ... }:
   let
     mac = modules: nix-darwin.lib.darwinSystem {
       specialArgs = { inherit self inputs; };
@@ -37,6 +39,12 @@
       elm = linux [ ./nixos/hosts/elm ];
       sparrow = linux [ disko.nixosModules.disko ./nixos/hosts/sparrow ];
       oak = linux [ disko.nixosModules.disko ./nixos/hosts/oak ];
+      pika = nixos-raspberrypi.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [ ./shared.nix ./nixos/common.nix ./nixos/hosts/pika ];
+      };
     };
+
+    images.pika = self.nixosConfigurations.pika.config.system.build.sdImage;
   };
 }
