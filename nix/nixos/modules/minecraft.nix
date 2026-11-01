@@ -202,6 +202,8 @@ in
         PAUSE_WHEN_EMPTY_SECONDS = "0";
         ENABLE_WHITELIST = "TRUE";
         WHITELIST = "Moroni56,hogtide";
+        # Keeps players added in game, such as Bedrock players added with /fwhitelist.
+        EXISTING_WHITELIST_FILE = "MERGE";
         OPS = "Moroni56";
       };
     };
