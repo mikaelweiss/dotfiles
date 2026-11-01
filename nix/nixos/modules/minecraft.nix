@@ -20,13 +20,20 @@ let
     then "${toString publicPort.${n}}:25565"
     else "127.0.0.1:${toString internalPort.${n}}:25565";
 
-  # The mod rewrites its config on every start, so the overrides do too.
-  setVoiceChat = n: expr: ''
-    conf=${dataRoot}/${n}/data/config/voicechat/voicechat-server.properties
+  # NetherNet signaling runs over TCP on Geyser's port, and STUN advertises
+  # that port to players, so Geyser listens on its public port.
+  bedrockPort = { rexburg-friends = 19132; skyblock = 19133; the-shire = 19134; };
+  bedrockPorts = n: let p = toString bedrockPort.${n}; in [ "${p}:${p}/udp" "${p}:${p}/tcp" ];
+
+  # Mods rewrite their configs on every start, so the overrides do too.
+  setConfig = n: file: expr: ''
+    conf=${dataRoot}/${n}/data/${file}
     if [ -f "$conf" ]; then
       ${pkgs.gnused}/bin/sed -i '${expr}' "$conf"
     fi
   '';
+  setVoiceChat = n: setConfig n "config/voicechat/voicechat-server.properties";
+  setGeyserPort = n: file: setConfig n file "s/^  port: 19132$/  port: ${toString bedrockPort.${n}}/";
 
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
@@ -132,7 +139,7 @@ in
     # Public, on the default Java and Bedrock ports so players need no port.
     rexburg-friends = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ (gamePort "rexburg-friends") "19132:19132/udp" "24454:24454/udp" ];
+      ports = [ (gamePort "rexburg-friends") "24454:24454/udp" ] ++ bedrockPorts "rexburg-friends";
       volumes = [ "${dataRoot}/rexburg-friends/data:/data" ];
       autoStart = lib.elem "rexburg-friends" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
@@ -153,7 +160,7 @@ in
 
     skyblock = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ (gamePort "skyblock") "19133:19132/udp" ];
+      ports = [ (gamePort "skyblock") ] ++ bedrockPorts "skyblock";
       volumes = [ "${dataRoot}/skyblock/data:/data" ];
       autoStart = lib.elem "skyblock" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
@@ -178,7 +185,7 @@ in
     (lib.mkIf cfg.shire {
     the-shire = {
       image = "docker.io/itzg/minecraft-server:java25";
-      ports = [ (gamePort "the-shire") "19134:19132/udp" "24455:24455/udp" ];
+      ports = [ (gamePort "the-shire") "24455:24455/udp" ] ++ bedrockPorts "the-shire";
       volumes = [ "${dataRoot}/the-shire/data:/data" ];
       autoStart = lib.elem "the-shire" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
@@ -243,15 +250,19 @@ in
   (lib.mkIf cfg.private {
     podman-minecraft-server.preStart = setVoiceChat "minecraft-server" "s/^port=.*/port=24456/";
   })
+  (lib.mkIf cfg.public {
+    podman-skyblock.preStart = setGeyserPort "skyblock" "plugins/Geyser-Spigot/config.yml";
+  })
   (lib.mkIf cfg.shire {
-    podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/";
+    podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/"
+      + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml";
   })
   ];
 
   systemd.tmpfiles.rules = map (n: "d ${dataRoot}/${n}/data 0770 minecraft minecraft -") names;
 
-  networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 ]
-    ++ lib.optional cfg.shire 25567;
+  networking.firewall.allowedTCPPorts = lib.optionals cfg.public [ cfg.rexburgPort 25566 19132 19133 ]
+    ++ lib.optionals cfg.shire [ 25567 19134 ];
   networking.firewall.allowedUDPPorts = lib.optionals cfg.public [ 19132 19133 24454 ]
     ++ lib.optionals cfg.shire [ 19134 24455 ];
   };
