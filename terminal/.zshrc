@@ -308,24 +308,26 @@ unsetopt autocd
 
 # >>> command-nvm-directory-switch >>>
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
-# nvm refuses to switch while NPM_CONFIG_PREFIX is set, and Nix exports it for npm globals.
-use_nvmrc_node() {
-  local nvmrc_dir
-  nvmrc_dir="$(nvm_find_up .nvmrc)"
-  if [[ -z "$nvmrc_dir" ]]; then
-    [[ "$(nvm current)" != "$(nvm version default)" ]] && NPM_CONFIG_PREFIX= nvm use --silent default
-    return
-  fi
-  local wanted
-  wanted="$(nvm version "$(<"$nvmrc_dir/.nvmrc")")"
-  if [[ "$wanted" == "N/A" ]]; then
-    NPM_CONFIG_PREFIX= nvm install
-  elif [[ "$(nvm current)" != "$wanted" ]]; then
-    NPM_CONFIG_PREFIX= nvm use --silent "$wanted"
-  fi
-}
-autoload -U add-zsh-hook
-add-zsh-hook chpwd use_nvmrc_node
-use_nvmrc_node
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh" --no-use
+  # nvm refuses to switch while NPM_CONFIG_PREFIX is set, and Nix exports it for npm globals.
+  use_nvmrc_node() {
+    local nvmrc_dir
+    nvmrc_dir="$(nvm_find_up .nvmrc)"
+    if [[ -z "$nvmrc_dir" ]]; then
+      [[ "$(nvm current)" != "$(nvm version default)" ]] && NPM_CONFIG_PREFIX= nvm use --silent default
+      return
+    fi
+    local wanted
+    wanted="$(nvm version "$(<"$nvmrc_dir/.nvmrc")")"
+    if [[ "$wanted" == "N/A" ]]; then
+      NPM_CONFIG_PREFIX= nvm install
+    elif [[ "$(nvm current)" != "$wanted" ]]; then
+      NPM_CONFIG_PREFIX= nvm use --silent "$wanted"
+    fi
+  }
+  autoload -U add-zsh-hook
+  add-zsh-hook chpwd use_nvmrc_node
+  use_nvmrc_node
+fi
 # <<< command-nvm-directory-switch <<<
