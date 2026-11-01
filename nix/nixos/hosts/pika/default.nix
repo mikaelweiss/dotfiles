@@ -132,7 +132,7 @@ in
   services.cloudflare-dyndns = {
     enable = true;
     apiTokenFile = "/etc/pika/cloudflare-token";
-    domains = [ "home.mikaelweiss.dev" ];
+    domains = [ "home.weissfamily.us" ];
   };
 
   zramSwap.enable = true;
