@@ -23,6 +23,7 @@ in
         "rubrixai.org" = "http://localhost:4007";
         "deploy.mikaelweiss.dev" = "http://localhost:9000";
         "mikaelmc.com" = "http://localhost:4008";
+        "mikaelmc.net" = "http://localhost:4008";
         "parlance.weisssolutions.org" = "http://localhost:4010";
         "orbit.weisssolutions.org" = "http://localhost:4011";
         "standardworkscorpus.org" = "http://localhost:4012";
