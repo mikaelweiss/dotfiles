@@ -2,7 +2,7 @@
 
 let
   router = "192.168.0.1";
-  # The router hands out both as DNS servers, so the house keeps resolving on Wi-Fi alone.
+  # Reserved on the router, which hands the ethernet address out as the house's DNS server.
   ethernetAddress = "192.168.0.53";
   wifiAddress = "192.168.0.54";
 in
