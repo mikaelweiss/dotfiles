@@ -35,6 +35,13 @@ let
   setVoiceChat = n: setConfig n "config/voicechat/voicechat-server.properties";
   setGeyserPort = n: file: setConfig n file "s/^  port: 19132$/  port: ${toString bedrockPort.${n}}/";
 
+  # Lists the Shire as a joinable world on a broadcaster Xbox account, so
+  # console players, who cannot add servers, join it from their Friends tab.
+  xboxBroadcast = pkgs.fetchurl {
+    url = "https://github.com/MCXboxBroadcast/Broadcaster/releases/download/162/MCXboxBroadcastExtension.jar";
+    hash = "sha256-cSN9YR3oGlVj7l7MSttROeDe6EHmTdDlsbOi8p/Tavg=";
+  };
+
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
     trap 'systemctl stop podman-${n}.service' TERM INT
@@ -257,7 +264,11 @@ in
   })
   (lib.mkIf cfg.shire {
     podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/"
-      + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml";
+      + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml"
+      + ''
+        install -D -m 0644 -o minecraft -g minecraft ${xboxBroadcast} \
+          ${dataRoot}/the-shire/data/config/Geyser-Fabric/extensions/MCXboxBroadcastExtension.jar
+      '';
   })
   ];
 
