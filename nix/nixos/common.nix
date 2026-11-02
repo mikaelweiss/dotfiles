@@ -43,6 +43,7 @@
   security.sudo.wheelNeedsPassword = false;
 
   environment.systemPackages = with pkgs; [
+    atuin
     gcc
     git
     restic
@@ -91,10 +92,10 @@
     };
   };
 
-  # Tailscale tracks upstream faster than the stable channel; pull it from unstable.
+  # 26.05 ships worktrunk 0.50, which rejects template-append.
   nixpkgs.overlays = [
     (final: prev: {
-      tailscale = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.tailscale;
+      worktrunk = inputs.nixpkgs.legacyPackages.${prev.stdenv.hostPlatform.system}.worktrunk;
     })
   ];
   services.tailscale.enable = true;

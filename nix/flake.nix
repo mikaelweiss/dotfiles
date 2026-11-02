@@ -10,7 +10,7 @@
     disko.inputs.nixpkgs.follows = "nixpkgs-stable";
     # Unregistered MakeMKV builds expire, so this input gets bumped on its own.
     nixpkgs-makemkv.url = "github:NixOS/nixpkgs/master";
-    # Security fixes land in master days before any channel.
+    # Pika's Pi-hole module, which 26.05 ships broken.
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
     # Pi 5 kernel and firmware. Its own nixpkgs pin matches its binary cache, so nothing follows ours.
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";

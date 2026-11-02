@@ -1,11 +1,11 @@
-# The node on PATH for every machine. A host pins another major with node.package.
+# Node and pnpm for every machine, taken from one package set.
 { config, lib, pkgs, ... }:
 
 {
-  options.node.package = lib.mkOption {
-    type = lib.types.package;
-    default = pkgs.nodejs_24;
+  options.node.pkgs = lib.mkOption {
+    type = lib.types.raw;
+    default = pkgs;
   };
 
-  config.environment.systemPackages = [ config.node.package pkgs.pnpm ];
+  config.environment.systemPackages = [ config.node.pkgs.nodejs_24 config.node.pkgs.pnpm ];
 }

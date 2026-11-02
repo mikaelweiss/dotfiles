@@ -1,8 +1,14 @@
 # Every Mac. Machine-wide shared config lives in ../shared.nix.
-{ pkgs, self, ... }:
+{ pkgs, self, inputs, ... }:
 
+let
+  stable = inputs.nixpkgs-stable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in
 {
   nixpkgs.hostPlatform = "aarch64-darwin";
+
+  # 26.05 carries Node security releases ahead of unstable.
+  node.pkgs = stable;
 
   environment.systemPackages = with pkgs; [
     mutagen
@@ -17,8 +23,8 @@
     gnupg # GPG key manager (pass dependency)
     pandoc # Change files to other file types
     # For typescriptLSP Claude Code plugin
-    typescript
-    typescript-language-server
+    stable.typescript
+    stable.typescript-language-server
     ffmpeg
     dust # Du, but better
     tree # See the directories
@@ -131,6 +137,7 @@
 
     # CLI tools
     brews = [
+      "atuin" # nixpkgs atuin 18.24.4 fails to build for aarch64-darwin on Hydra, so it compiles locally.
       "elixir"
       "erlang@28" # Pin OTP 28; OTP 29 crashes reading macOS CA certs (no_cacerts_found). Keg-only; .zshrc puts it ahead of unversioned erlang.
       "postgresql@18"

@@ -20,7 +20,7 @@ let
 
   sync = pkgs.writeShellScript "npm-globals" (''
     set -eu
-    export PATH="${pkgs.nodejs}/bin:${pkgs.bash}/bin:$PATH"
+    export PATH="${config.node.pkgs.nodejs_24}/bin:${pkgs.bash}/bin:$PATH"
     prefix="$HOME/.npm-global"
     modules="$prefix/lib/node_modules"
     mkdir -p "$modules" "$prefix/bin"
@@ -76,7 +76,8 @@ in
     '';
 
     system.activationScripts = lib.mkMerge [
-      (lib.mkIf isDarwin { postActivation.text = runAsUser; })
+      # Before Homebrew, so a failed cask cannot skip it.
+      (lib.mkIf isDarwin { preActivation.text = runAsUser; })
       (lib.mkIf (!isDarwin) { npmGlobals = { deps = [ "users" ]; text = runAsUser; }; })
     ];
   };

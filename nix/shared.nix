@@ -1,6 +1,6 @@
 # Everything in here lands on every machine, Mac and Linux alike.
 # Only options that exist in both nix-darwin and NixOS belong here.
-{ pkgs, inputs, ... }:
+{ pkgs, ... }:
 
 {
   imports = [ ./modules/node.nix ./modules/npm-globals.nix ];
@@ -18,7 +18,6 @@
     ast-grep
     fzf
     zoxide
-    atuin
     btop
     yazi
     git
@@ -37,13 +36,6 @@
     EDITOR = "nvim";
     VISUAL = "nvim";
   };
-
-  nixpkgs.overlays = [
-    (final: prev: {
-      cloudflared = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.cloudflared;
-      worktrunk = inputs.nixpkgs-master.legacyPackages.${prev.stdenv.hostPlatform.system}.worktrunk;
-    })
-  ];
 
   programs.zsh.enable = true;
 
