@@ -139,9 +139,14 @@ _nix_rebuild_with_revert() {
     return 1
   fi
 
+  # The switch restarts tailscaled, which takes a few seconds to rejoin the tailnet.
+  local tailnet=0 attempt
+  for attempt in {1..12}; do
+    tailscale ping --tsmp -c 1 --timeout 5s elm >/dev/null 2>&1 && { tailnet=1; break }
+    sleep 5
+  done
   local failed=$(systemctl --failed --no-legend | wc -l)
-  if ! systemctl is-active -q sshd || ! systemctl is-active -q tailscaled || (( failed > 0 )) \
-    || ! tailscale ping --tsmp -c 1 --timeout 10s elm >/dev/null 2>&1; then
+  if ! systemctl is-active -q sshd || ! systemctl is-active -q tailscaled || (( failed > 0 )) || (( ! tailnet )); then
     echo "Health check failed (failed units: $failed). Reverting now."
     sudo systemctl start $revert.service; sudo systemctl stop $revert.timer
     return 1
