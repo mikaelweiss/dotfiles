@@ -267,10 +267,9 @@ in
   (lib.mkIf cfg.shire {
     podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/"
       + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml"
-      # The broadcaster runs on a throwaway account, so it accepts every friend request
-      # and keeps idle players, who would otherwise have to re-add it after a break.
+      # Mikael accepts the bot's friend requests himself, and friends stay through breaks.
       + setConfig "the-shire" "config/Geyser-Fabric/extensions/mcxboxbroadcast/config.yml"
-        "s/^  auto-friend: false$/  auto-friend: true/; s/^    enabled: true$/    enabled: false/"
+        "s/^  auto-friend: true$/  auto-friend: false/; s/^    enabled: true$/    enabled: false/"
       + ''
         install -D -m 0644 -o minecraft -g minecraft ${xboxBroadcast} \
           ${dataRoot}/the-shire/data/config/Geyser-Fabric/extensions/MCXboxBroadcastExtension.jar
