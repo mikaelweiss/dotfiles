@@ -202,11 +202,13 @@ in
         TYPE = "FABRIC";
         MEMORY = "4G";
         VERSION = version;
-        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
+        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         MOTD = "The Shire";
         PAUSE_WHEN_EMPTY_SECONDS = "0";
+        # Bedrock and Java disagree on some collision shapes, so Bedrock players get kicked for floating.
+        ALLOW_FLIGHT = "TRUE";
         ENABLE_WHITELIST = "TRUE";
         WHITELIST = "Moroni56,hogtide";
         # Keeps players added in game, such as Bedrock players added with /fwhitelist.
