@@ -241,3 +241,6 @@ terminal/.config/codexbar/config.json.lock
 
 # Types Claude Code writes beside a loaded mod
 claude/.claude/mods/*/.claude-plugin/types/
+
+# Built on wolf from its source. The Full Disk Access grant follows the build.
+actions-runner/actions-runner-hooks/mount-runner-cache
