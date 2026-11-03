@@ -78,6 +78,7 @@ rex.bind("ctrl+f>ctrl+p", "session.previous")
 rex.bind("ctrl+f>ctrl+n", "session.next")
 rex.bind("ctrl+j", "client.tab.next")
 rex.bind("ctrl+k", "client.tab.previous")
+rex.bind("cmd+s", "client.tab_style.toggle")
 rex.bind("ctrl+f>shift+s", "session.switch")
 rex.bind("ctrl+f>,", "client.settings")
 
