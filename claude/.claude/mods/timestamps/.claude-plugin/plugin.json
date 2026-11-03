@@ -1,0 +1,6 @@
+{
+  "name": "timestamps",
+  "version": "0.1.0",
+  "description": "Show the time each prompt was sent and each reply arrived",
+  "types": "./types/index.d.ts"
+}

@@ -2,7 +2,8 @@
   "syncClaudeAiSkills": false,
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CONTEXT7_API_KEY": "ctx7sk-676a75cb-db5c-4f8d-91ff-c5a0a2476723"
+    "CONTEXT7_API_KEY": "ctx7sk-676a75cb-db5c-4f8d-91ff-c5a0a2476723",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/timestamps"
   },
   "attribution": {
     "commit": "",

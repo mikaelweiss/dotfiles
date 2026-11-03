@@ -238,3 +238,6 @@ codex/.codex/log/
 
 # CodexBar lock
 terminal/.config/codexbar/config.json.lock
+
+# Types Claude Code writes beside a loaded mod
+claude/.claude/mods/*/.claude-plugin/types/
