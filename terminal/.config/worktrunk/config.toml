@@ -323,9 +323,10 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
 
-# Each worktree lives in a dedicated tmux window / herdr tab named after its
-# branch: switch to it if it exists, otherwise open one at the worktree path.
-# When herdr runs inside tmux, HERDR_ENV wins so only the inner mux reacts.
+# Each worktree lives in a dedicated tmux window / herdr tab / rex tab named
+# after its branch: switch to it if it exists, otherwise open one at the
+# worktree path. Only the innermost mux reacts: herdr beats tmux, and both
+# beat rex, which is a GUI app and so always the outermost.
 # Step two runs only on the MacBook Air: it splits the tab and attaches the
 # worktree's agent session on wolf via wolf-attach, which reconnects on its
 # own when the link drops (lid close); mutagen keeps the two copies
@@ -346,6 +347,14 @@ err=$(printf '%s' "$tabs" | jq -r '.error.message // empty')
 tab_id=$(printf '%s' "$tabs" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] && herdr tab focus "$tab_id" && exit 0
 herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{ worktree_path }} --focus
+'''
+rex-tab = '''
+[ -n "${REX_SESSION:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
+rex="$REX_BIN_DIR/rex"
+windows=$("$rex" window ls -s "$REX_SESSION" --json) || exit 1
+win=$(printf '%s' "$windows" | jq -r --arg b {{ branch }} '.windows[] | select(.label == $b) | .window_id' | head -n1)
+[ -n "$win" ] && exec "$rex" focus -s "$REX_SESSION" "$win"
+"$rex" window new -s "$REX_SESSION" {{ branch }} -c {{ worktree_path }} >/dev/null
 '''
 
 [[post-switch]]
@@ -373,10 +382,23 @@ new=$(herdr pane split "$root" --direction right --cwd {{ worktree_path }} --foc
 herdr pane rename "$new" wolf
 herdr pane run "$new" "~/code/dotfiles/terminal/bin/wolf-attach {{ worktree_path }} {{ branch | sanitize }}"
 '''
+wolf-pane-rex = '''
+[ -n "${REX_SESSION:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
+[ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
+rex="$REX_BIN_DIR/rex"
+windows=$("$rex" window ls -s "$REX_SESSION" --json) || exit 1
+tab=$(printf '%s' "$windows" | jq -c --arg b {{ branch }} '[.windows[] | select(.label == $b)][0] // empty')
+[ -n "$tab" ] || exit 0
+printf '%s' "$tab" | jq -e '.layers[].blocks[] | select(.label == "wolf")' >/dev/null && exit 0
+root=$(printf '%s' "$tab" | jq -r '.layers[0].blocks[0].block_id')
+"$rex" split -s "$REX_SESSION" -b "$root" --split=right --label wolf -c {{ worktree_path }} --json -- \
+  "$HOME/code/dotfiles/terminal/bin/wolf-attach" {{ worktree_path }} {{ branch | sanitize }} >/dev/null
+'''
 
 # Once a worktree is gone (wt remove, or wt merge with removal), kill its
 # wolf keeper session, clear wolf's leftover copy, and close its local
-# tmux window / herdr tab. The script no-ops while the worktree still
+# tmux window / herdr tab / rex tab. The script no-ops while the worktree still
 # exists locally, so merges with --no-remove leave everything open.
 [post-remove]
 cleanup = '''

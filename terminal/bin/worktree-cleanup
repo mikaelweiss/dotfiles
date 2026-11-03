@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Cleans up after a worktree is gone (wt remove, or wt merge with removal):
-# closes the local tmux window / herdr tab first so it doesn't linger, then
+# closes the local tmux window / herdr tab / rex tab first so it doesn't linger, then
 # kills the wolf keeper session and clears wolf's copy of the worktree (sync
 # can't delete ignored files like node_modules). The wolf cleanup is detached
 # because closing the tab tears down the pane this script runs in. Idempotent
@@ -33,6 +33,10 @@ if [ -n "${HERDR_ENV:-}" ]; then
   [ -n "$tab_id" ] && nohup sh -c "herdr tab close $tab_id" >/dev/null 2>&1 &
 elif [ -n "${TMUX:-}" ]; then
   nohup sh -c "tmux kill-window -t '=$branch'" >/dev/null 2>&1 &
+elif [ -n "${REX_SESSION:-}" ]; then
+  rex="$REX_BIN_DIR/rex"
+  win=$("$rex" window ls -s "$REX_SESSION" --json | jq -r --arg b "$branch" '.windows[] | select(.label == $b) | .window_id' | head -n1)
+  [ -n "$win" ] && nohup "$rex" window close -s "$REX_SESSION" "$win" >/dev/null 2>&1 &
 fi
 
 nohup sh -c '
