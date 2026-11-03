@@ -78,6 +78,8 @@ rex.bind("ctrl+p", "session.previous")
 rex.bind("ctrl+f>ctrl+p", "session.previous")
 rex.bind("ctrl+n", "session.next")
 rex.bind("ctrl+f>ctrl+n", "session.next")
+rex.bind("ctrl+j", "pane.focus_next")
+rex.bind("ctrl+k", "pane.focus_previous")
 rex.bind("ctrl+f>shift+s", "session.switch")
 rex.bind("ctrl+f>,", "client.settings")
 
