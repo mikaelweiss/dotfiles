@@ -78,6 +78,9 @@ in
   # Pika resolves through its own Pi-hole and falls back to Cloudflare when FTL is down.
   services.resolved.enable = lib.mkForce false;
   networking.nameservers = lib.mkBefore [ "127.0.0.1" ];
+  # openresolv drops every other server when a local one is listed. Without the fallback, a boot
+  # deadlocks: NTP needs DNS to find its servers, and FTL waits on time sync.
+  networking.resolvconf.extraConfig = "resolv_conf_local_only=NO";
   services.tailscale.extraSetFlags = [ "--accept-dns=false" ];
 
   services.pihole-ftl = {
