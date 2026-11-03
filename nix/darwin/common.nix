@@ -91,7 +91,7 @@ in
 
   # Activation runs as root, and Rex's settings live in the user's preferences.
   system.activationScripts.postActivation.text = ''
-    launchctl asuser "$(id -u mikaelweiss)" sudo --user=mikaelweiss -- \
+    launchctl asuser "$(id -u mikaelweiss)" sudo --set-home --user=mikaelweiss -- \
       ${pkgs.python3}/bin/python3 /Users/mikaelweiss/code/dotfiles/terminal/bin/rex-settings load \
       || echo "rex-settings load failed"
   '';
