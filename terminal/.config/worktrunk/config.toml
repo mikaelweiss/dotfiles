@@ -333,6 +333,8 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 # identical. Every other machine stops at the tab.
 # The herdr CLI reports failures as JSON on stderr and still exits 0, so both
 # steps read stderr and abort loudly instead of quietly opening nothing.
+# Rex shows a tab only when the app that owns the calling pane selects it,
+# which needs Remote Control on in Rex.app's Settings under Rex Server.
 [[post-switch]]
 tmux-tab = '''
 [ -n "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
@@ -353,8 +355,11 @@ rex-tab = '''
 rex="$REX_BIN_DIR/rex"
 windows=$("$rex" window ls -s "$REX_SESSION" --json) || exit 1
 win=$(printf '%s' "$windows" | jq -r --arg b {{ branch }} '.windows[] | select(.label == $b) | .window_id' | head -n1)
-[ -n "$win" ] && exec "$rex" focus -s "$REX_SESSION" "$win"
-"$rex" window new -s "$REX_SESSION" {{ branch }} -c {{ worktree_path }} >/dev/null
+[ -n "$win" ] || win=$("$rex" window new -s "$REX_SESSION" {{ branch }} -c {{ worktree_path }} --json | jq -r '.window_id // empty')
+[ -n "$win" ] || { echo 'rex window new failed' >&2; exit 1; }
+"$rex" focus -s "$REX_SESSION" "$win"
+app=$("$rex" block inspect "$REX_BLOCK" --json | jq -r '.block.owner')
+"$rex" -C "$app" do session.select session_id="$REX_SESSION" window_id="$win"
 '''
 
 [[post-switch]]
