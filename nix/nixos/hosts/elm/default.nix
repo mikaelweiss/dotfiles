@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 {
   imports = [
@@ -6,7 +6,14 @@
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
     ../../modules/aspen-runner.nix
+    inputs.rex.nixosModules.default
   ];
+
+  services.rex.loginServer = {
+    enable = true;
+    accounts.mikaelweiss.principals = [ "tailscale:campingmikael@icloud.com" ];
+    tailscaleServe.enable = true;
+  };
 
   networking.hostName = "elm";
   networking.networkmanager.enable = true;
