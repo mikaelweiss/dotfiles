@@ -195,6 +195,8 @@ export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 export PATH="/opt/homebrew/opt/erlang@28/bin:$PATH"
 # Local bin
 export PATH="$HOME/.local/bin:$PATH"
+# Rex CLI, matched to the server the Rex app runs
+export PATH="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS:$PATH"
 
 # pnpm
 export PNPM_HOME="/Users/mikaelweiss/Library/pnpm"
