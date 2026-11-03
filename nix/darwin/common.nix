@@ -89,6 +89,13 @@ in
     };
   };
 
+  # Activation runs as root, and Rex's settings live in the user's preferences.
+  system.activationScripts.postActivation.text = ''
+    launchctl asuser "$(id -u mikaelweiss)" sudo --user=mikaelweiss -- \
+      ${pkgs.python3}/bin/python3 /Users/mikaelweiss/code/dotfiles/terminal/bin/rex-settings load \
+      || echo "rex-settings load failed"
+  '';
+
   # Key-only SSH. Loads before /etc/ssh/sshd_config, and sshd keeps the first value it reads.
   services.openssh.extraConfig = ''
     PasswordAuthentication no

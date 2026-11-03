@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+# Shares Rex's app settings across Macs through the dotfiles repo.
+# Usage: rex-settings save | load [--force]
+#
+# Rex keeps its settings in macOS preferences, which can't be symlinked:
+# cfprefsd replaces a symlinked plist with a regular file on its next write.
+import json
+import plistlib
+import subprocess
+import sys
+from pathlib import Path
+
+DOMAIN = "com.superlogical.rex"
+SETTINGS = Path(__file__).resolve().parent.parent / ".config/rex/settings.json"
+SNAPSHOT = Path.home() / ".local/state/rex-settings/last.json"
+
+SYNCED_PREFIXES = ("Workspace.", "rex.")
+SYNCED_KEYS = {"SUAutomaticallyUpdate", "SUEnableAutomaticChecks"}
+# Per-machine state that shares a prefix with real settings.
+MACHINE_KEYS = {
+    "Workspace.lastFocusedSession",
+    "Workspace.programActivitySeen",
+    "Workspace.sidebarCollapsed",
+    "rex.local-server.cached-route.v1",
+    "rex.sync.hosts-migrated.v1",
+}
+JSON_DATA = "json-data"
+
+
+def read_domain():
+    plist = subprocess.run(["defaults", "export", DOMAIN, "-"], capture_output=True, check=True).stdout
+    return plistlib.loads(plist)
+
+
+def is_synced(key):
+    return (key.startswith(SYNCED_PREFIXES) or key in SYNCED_KEYS) and key not in MACHINE_KEYS
+
+
+def to_text(value):
+    if isinstance(value, bytes):
+        return {JSON_DATA: json.loads(value)}
+    return value
+
+
+def from_text(value):
+    if isinstance(value, dict) and set(value) == {JSON_DATA}:
+        return json.dumps(value[JSON_DATA], separators=(",", ":")).encode()
+    return value
+
+
+def current_settings():
+    return {key: to_text(value) for key, value in read_domain().items() if is_synced(key)}
+
+
+def write_json(path, settings):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings, indent=2, sort_keys=True) + "\n")
+
+
+def read_json(path):
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def save():
+    settings = current_settings()
+    write_json(SETTINGS, settings)
+    write_json(SNAPSHOT, settings)
+    print(f"Saved {len(settings)} Rex settings to {SETTINGS}")
+
+
+def load(force):
+    shared = read_json(SETTINGS)
+    if shared is None:
+        sys.exit(f"No saved Rex settings at {SETTINGS}. Run 'rex-settings save' first.")
+    local = current_settings()
+    last = read_json(SNAPSHOT)
+    if not force and last is not None and local != last and local != shared:
+        print("Rex settings changed on this Mac since the last save or load, so they were left alone.")
+        print("Run 'rex-settings save' to keep them, or 'rex-settings load --force' to replace them.")
+        return
+    if local != shared:
+        domain = read_domain()
+        domain.update({key: from_text(value) for key, value in shared.items()})
+        subprocess.run(["defaults", "import", DOMAIN, "-"], input=plistlib.dumps(domain, fmt=plistlib.FMT_BINARY), check=True)
+        print(f"Loaded {len(shared)} Rex settings from {SETTINGS}")
+    write_json(SNAPSHOT, shared)
+
+
+def main():
+    args = sys.argv[1:]
+    if args == ["save"]:
+        save()
+    elif args and args[0] == "load" and args[1:] in ([], ["--force"]):
+        load(force=args[1:] == ["--force"])
+    else:
+        sys.exit("Usage: rex-settings save | load [--force]")
+
+
+main()
