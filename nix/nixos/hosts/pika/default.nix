@@ -1,4 +1,4 @@
-{ lib, inputs, nixos-raspberrypi, ... }:
+{ lib, pkgs, inputs, nixos-raspberrypi, ... }:
 
 let
   router = "192.168.0.1";
@@ -107,6 +107,16 @@ in
       "native.samsung"
       "native.tiktok"
       "native.winoffice"
+    ]
+    ++ [
+      {
+        url = "file://${pkgs.writeText "pihole-allow.txt" ''
+          ||sentry.io^
+          ||sentry-cdn.com^
+        ''}";
+        type = "allow";
+        description = "Domains needed for work";
+      }
     ];
     settings.dns = {
       upstreams = [ "1.1.1.1" "1.0.0.1" ];
