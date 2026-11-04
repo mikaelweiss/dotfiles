@@ -23,7 +23,13 @@
     erlang
     postgresql
     cockpit
+    zstd # Aspen's Kata updater unpacks .tar.zst bundles
   ];
+
+  virtualisation.docker.daemon.settings.runtimes.aspen-kata = {
+    runtimeType = "/opt/aspen/kata/bin/containerd-shim-kata-v2";
+    options.ConfigPath = "/opt/aspen/kata/configuration.toml";
+  };
 
   fileSystems."/mnt/backup" = {
     device = "/dev/disk/by-uuid/5E6F-A55B";

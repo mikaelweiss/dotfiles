@@ -17,7 +17,9 @@
   networking.nameservers = [ "1.1.1.1" ];
   services.resolved = {
     enable = true;
-    dnssec = "allow-downgrade";
+    # After a network outage, allow-downgrade got stuck rejecting every answer
+    # with "no-signature", which took the runners and Aspen host offline.
+    dnssec = "false";
     domains = [ "~." ];
     fallbackDns = [ "1.1.1.1" ];
     dnsovertls = "opportunistic";
