@@ -51,7 +51,7 @@ let
     rm -rf ${stateDir}
     install -d -m 700 -o mikaelweiss ${stateDir} ${stateDir}/etc
     ${pkgs.util-linux}/bin/runuser -u postgres -- ${config.services.postgresql.package}/bin/pg_dumpall > ${stateDir}/pg_dumpall.sql
-    for d in portfolio weisssolutions lunchninja asher parlance cloudflared cloudflare restic webhook; do
+    for d in portfolio weisssolutions lunchninja asher parlance corpus cloudflared restic webhook; do
       [ -d /etc/$d ] && cp -a /etc/$d ${stateDir}/etc/
     done
     [ -d /var/lib/parlance/backups ] && cp -a /var/lib/parlance/backups ${stateDir}/parlance

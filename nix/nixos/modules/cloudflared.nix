@@ -16,6 +16,7 @@ in
         "weisssolutions.org" = "http://localhost:4001";
         "pmgforrms.org" = "http://localhost:4003";
         "rachelweiss.org" = "http://localhost:4004";
+        "www.rachelweiss.org" = "http://localhost:4004";
         "lunchninja.org" = "http://localhost:4005";
         "vault.mikaelweiss.dev" = "http://localhost:4006";
         "rubrixai.app" = "http://localhost:4007";
