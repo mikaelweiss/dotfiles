@@ -94,6 +94,14 @@ in
     launchctl asuser "$(id -u mikaelweiss)" sudo --set-home --user=mikaelweiss -- \
       ${pkgs.python3}/bin/python3 /Users/mikaelweiss/code/dotfiles/terminal/bin/rex-settings load \
       || echo "rex-settings load failed"
+
+    # Claude Code writes its browser extension host only for browsers it knows, and Dia is not one.
+    launchctl asuser "$(id -u mikaelweiss)" sudo --set-home --user=mikaelweiss -- sh -c '
+      hosts="/Users/mikaelweiss/Library/Application Support/Dia/User Data/NativeMessagingHosts"
+      mkdir -p "$hosts"
+      ln -sfn "/Users/mikaelweiss/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json" \
+        "$hosts/com.anthropic.claude_code_browser_extension.json"
+    ' || echo "Dia native host link failed"
   '';
 
   # Key-only SSH. Loads before /etc/ssh/sshd_config, and sshd keeps the first value it reads.
