@@ -14,6 +14,8 @@ export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 export CLAUDE_CODE_NO_FLICKER=1
 export PI_LENS_STARTUP_MODE=quick
+# Claude Code computer use only knows a fixed list of terminals. Naming Rex lets it keep the Rex window out of screenshots.
+[[ "$TERM_PROGRAM" == rex ]] && export __CFBundleIdentifier=com.superlogical.rex
 
 # Alias'
 alias gs="git status"
