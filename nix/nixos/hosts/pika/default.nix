@@ -21,7 +21,7 @@ in
   services.weiss-status.sensor.smart = false;
   services.weiss-status.agent = {
     enable = true;
-    units = [ "pihole-ftl" "pihole-web" "cloudflare-dyndns" ];
+    units = [ "pihole-ftl" "cloudflare-dyndns" ];
     logUnits = [ "pihole-ftl" ];
     throttle = true;
   };
