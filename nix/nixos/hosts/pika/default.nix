@@ -24,6 +24,8 @@ in
     units = [ "pihole-ftl" "cloudflare-dyndns" ];
     logUnits = [ "pihole-ftl" ];
     throttle = true;
+    # Oak lives on another network, so the house's internet is watched from here.
+    internet = true;
   };
 
   boot.loader.systemd-boot.enable = lib.mkForce false;
