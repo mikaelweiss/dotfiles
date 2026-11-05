@@ -235,6 +235,8 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 # Route claude through the rotating proxy on wolf. Each machine keeps its own
 # device key outside ~/.config, which mutagen syncs.
 [[ -r ~/.local/state/claude-rotate/env ]] && source ~/.local/state/claude-rotate/env
+# An env token hides the plan from Claude Code, which then drops plan-gated features such as computer use.
+[[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]] && export CLAUDE_CODE_SUBSCRIPTION_TYPE=max
 
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
