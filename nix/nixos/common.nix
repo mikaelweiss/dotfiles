@@ -4,9 +4,12 @@
   imports = [ inputs.status.nixosModules.default ];
 
   services.weiss-status.sensor.enable = true;
+  # ssh only uses a key its user owns, so root and mikaelweiss each get a copy.
   programs.ssh.extraConfig = ''
-    Match host github.com
+    Match host github.com localuser root
       IdentityFile /etc/status/deploy-key
+    Match host github.com localuser mikaelweiss
+      IdentityFile /etc/status/deploy-key-mikaelweiss
   '';
   programs.ssh.knownHosts."github.com".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
 
