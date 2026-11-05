@@ -21,6 +21,17 @@
 
   networking.hostName = "sparrow";
 
+  services.weiss-status.agent = let
+    sites = [ "portfolio" "weisssolutions" "lunchninja" "asher" "pmgforrms" "rachelportfolio" "rubrix" "vault" "mikaelmc" "corpus" "orbit" "parlance" "webhook" ];
+    servers = [ "the-shire" "rexburg-friends" "skyblock" "minecraft-server" ];
+  in {
+    enable = true;
+    units = sites ++ [ "postgresql" "cloudflared-tunnel-a799dbbd-a209-44f5-a997-e4b90226ece9" "podman-the-shire" ]
+      ++ map (n: "lazymc-${n}") (lib.remove "the-shire" servers);
+    logUnits = sites;
+    minecraft = map (n: { id = n; container = n; data = "/var/lib/minecraft/${n}/data"; }) servers;
+  };
+
   # Elm pulls disc rips from sparrow.
   users.users.mikaelweiss.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOblJ/RxhoeC0kmf1Q0WUK9AXoH9aY3ZMzGmaOctgy/S mikaelweiss@elm"

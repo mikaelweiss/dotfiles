@@ -17,6 +17,15 @@ in
 
   networking.hostName = "pika";
 
+  # The SD card reports no SMART data.
+  services.weiss-status.sensor.smart = false;
+  services.weiss-status.agent = {
+    enable = true;
+    units = [ "pihole-ftl" "pihole-web" "cloudflare-dyndns" ];
+    logUnits = [ "pihole-ftl" ];
+    throttle = true;
+  };
+
   boot.loader.systemd-boot.enable = lib.mkForce false;
   boot.loader.efi.canTouchEfiVariables = lib.mkForce false;
 

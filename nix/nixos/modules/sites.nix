@@ -242,7 +242,7 @@ let
     '';
   };
   hooksTemplate = pkgs.writeText "hooks.json" (builtins.toJSON [
-    (phoenixHook "portfolio" "false")
+    (phoenixHook "portfolio" "true")
     (phoenixHook "weisssolutions" "false")
     (phoenixHook "lunchninja" "false")
     (phoenixHook "asher" "true")

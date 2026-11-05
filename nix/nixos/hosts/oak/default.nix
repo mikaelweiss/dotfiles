@@ -11,6 +11,25 @@
 
   networking.hostName = "oak";
 
+  # Gathers everything inside the house once a minute and sends it to
+  # status.weissfamily.us. Its tokens live in /etc/status/env.
+  services.weiss-status.hub = {
+    enable = true;
+    sensors = {
+      sparrow = [ "http://sparrow:9100/metrics" "http://sparrow:9633/metrics" ];
+      elm = [ "http://elm:9100/metrics" "http://elm:9633/metrics" ];
+      oak = [ "http://127.0.0.1:9100/metrics" "http://127.0.0.1:9633/metrics" ];
+      pika = [ "http://pika:9100/metrics" ];
+      wolf = [ "http://wolf:9100/metrics" ];
+      pip = [ "http://pip:9100/metrics" ];
+    };
+    agents = {
+      sparrow = "http://sparrow:9101/";
+      elm = "http://elm:9101/";
+      pika = "http://pika:9101/";
+    };
+  };
+
   # Agents run on the Macs and elm. Every npm global is supply chain exposure
   # on a server that never uses it.
   npm.globalPackages = lib.mkForce [ ];

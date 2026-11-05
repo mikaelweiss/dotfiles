@@ -16,6 +16,13 @@
   };
 
   networking.hostName = "elm";
+
+  services.weiss-status.agent = {
+    enable = true;
+    units = [ "jellyfin" "ilovemywife" "github-runner-aspen-linux-1" "github-runner-aspen-linux-2" "rex-login-server" "aspen-machine-host" "docker" ];
+    logUnits = [ "jellyfin" "ilovemywife" ];
+    gpu = true;
+  };
   networking.networkmanager.enable = true;
 
   environment.systemPackages = with pkgs; [

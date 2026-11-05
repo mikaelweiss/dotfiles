@@ -32,6 +32,16 @@ in
     };
   };
 
+  # Oak reads wolf's health from this sensor. The macOS firewall drops inbound
+  # connections to unsigned nix binaries, so it listens on localhost and
+  # `tailscale serve --bg --tcp 9100 tcp://127.0.0.1:9100` exposes it to the tailnet.
+  launchd.daemons.node-exporter.serviceConfig = {
+    ProgramArguments = [ "${pkgs.prometheus-node-exporter}/bin/node_exporter" "--web.listen-address=127.0.0.1:9100" ];
+    RunAtLoad = true;
+    KeepAlive = true;
+    StandardErrorPath = "/tmp/node-exporter.log";
+  };
+
   # pip pushes its Postgres dumps to /private/var/pip/pg-backup over sftp. The
   # chroot keeps its unattended key away from every other file on wolf.
   users.knownUsers = [ "pip" ];

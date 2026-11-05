@@ -237,7 +237,28 @@
         "nixpkgs-makemkv": "nixpkgs-makemkv",
         "nixpkgs-master": "nixpkgs-master",
         "nixpkgs-stable": "nixpkgs-stable",
-        "rex": "rex"
+        "rex": "rex",
+        "status": "status"
+      }
+    },
+    "status": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs-stable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793842148,
+        "narHash": "sha256-5WfqRHhu9TFHGeHy4j8KUTLl/EkUjt/X51Eiip2cziI=",
+        "ref": "refs/heads/main",
+        "rev": "e2fd463055aecf2478f3fd30094ce4685692b89c",
+        "revCount": 2,
+        "type": "git",
+        "url": "ssh://git@github.com/mikaelweiss/status"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@github.com/mikaelweiss/status"
       }
     }
   },
