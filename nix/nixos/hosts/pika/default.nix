@@ -20,6 +20,8 @@ in
   networking.hostName = "pika";
 
   resticBackups.gitea = true;
+  # Pi-hole owns DNS here, so tailnet names do not resolve without Tailscale DNS.
+  networking.hosts."100.91.63.11" = [ "oak" ];
 
   # The SD card reports no SMART data.
   services.weiss-status.sensor.smart = false;
