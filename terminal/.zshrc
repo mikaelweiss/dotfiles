@@ -82,8 +82,9 @@ _nix_latest_inputs() {
   nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r '
     .locks.nodes as $n | $n.root.inputs | to_entries[]
     | select(.value | type == "string") | .key as $k | $n[.value].original
-    | select(.type == "github")
-    | "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"'
+    | if .type == "github" then "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"
+      elif .type == "tarball" and (.url | startswith("https://gitri.weissfamily.us/")) then "--override-input", $k, .url
+      else empty end'
 }
 # Unauthenticated GitHub API calls hit a 60 per hour limit.
 _nix_github_auth() {
