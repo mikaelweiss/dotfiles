@@ -76,7 +76,7 @@ export default class RexStatus extends View {
     const events = now.events.filter((e) => e.ended == null);
     const stale = Date.now() / 1000 - out.at > STALE;
     const level = down.length > 2 ? "crit" : down.length || events.length ? "warn" : "good";
-    const text = down.length ? `${down.length} ${down.length === 1 ? "service is" : "services are"} down` : events.length ? events[0].title : "Everything is up";
+    const text = down.length ? `${down.length} ${down.length === 1 ? "service is" : "services are"} down` : events.length ? events[0].title : "All green here :)";
     return { level, text, down, events, stale, at: out.at, total: now.sites.length + now.minecraft.length };
   }
 

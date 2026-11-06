@@ -138,41 +138,51 @@ export default class RexMachines extends View {
     return div().w(32).flex_none().text_right().text_color(color).child(v === null || v === undefined ? "–" : `${Math.round(v)}%`);
   }
 
-  expanded(t, name, host) {
+  now(host) {
+    const last = (series) => (series.length ? series[series.length - 1] : null);
+    return { cpu: last(host.cpu), mem: last(host.mem), disk: host.disk };
+  }
+
+  machine(t, name, host) {
+    const v = this.now(host);
     return v_flex().gap(5).when(host.offline, (el) => el.opacity(0.5))
-      .child(this.collapsed(t, name, host, true))
+      .child(h_flex().id(`machine-${name ?? "local"}`).gap(4).items_center().text_size(11.5)
+        .tooltip(host.offline ? "Offline" : host.mount ? `Disk: ${host.mount}` : "")
+        .child(svg(`${ICON}/${name ? "server" : "monitor"}.svg`).size(13).text_color(t.dim))
+        .child(div().flex_1().min_w(0).truncate().text_size(12.5).font_medium().text_color(t.foreground).child(name ?? "This Mac"))
+        .child(this.value(t, v.cpu, this.level(t, v.cpu)))
+        .child(this.value(t, v.mem, this.level(t, v.mem)))
+        .child(this.value(t, v.disk, this.level(t, v.disk))))
       .when(host.cpu.length > 0, (el) => el.child(this.graph(t, host)));
   }
 
-  collapsed(t, name, host, open = false) {
-    const last = (s) => (s.length ? s[s.length - 1] : null);
-    return h_flex().id(`machine-${name ?? "local"}`).gap(4).items_center().text_size(11.5).when(host.offline && !open, (el) => el.opacity(0.5))
-      .tooltip(host.offline ? "Offline" : host.mount ? `Disk: ${host.mount}` : "")
-      .when(open, (el) => el.child(svg(`${ICON}/${name ? "server" : "monitor"}.svg`).size(13).text_color(t.dim)))
-      .child(div().flex_1().min_w(0).truncate().text_color(t.foreground).when(open, (el) => el.text_size(12.5).font_medium()).child(name ?? "This Mac"))
-      .child(this.value(t, last(host.cpu), this.level(t, last(host.cpu))))
-      .child(this.value(t, last(host.mem), this.level(t, last(host.mem))))
-      .child(this.value(t, host.disk, this.level(t, host.disk)));
+  // Collapsed, the card is one line: the highest of each across every computer.
+  highest(t, names) {
+    const c = this.colors(t);
+    const now = names.map((name) => ({ name: name ?? "This Mac", ...this.now(this.hosts[name ?? ""] ?? { cpu: [], mem: [], disk: null }) }));
+    const label = { cpu: "CPU", mem: "RAM", disk: "Disk" };
+    const top = (key) => now.filter((m) => m[key] !== null).reduce((a, m) => (a && a[key] >= m[key] ? a : m), null);
+    const keys = ["cpu", "mem", "disk"];
+    const tooltip = [`Highest across ${names.length} computers`, ...keys.map((k) => top(k) && `${label[k]} ${Math.round(top(k)[k])}% on ${top(k).name}`).filter(Boolean)].join("\n");
+    return { tooltip, cells: keys.map((k) => this.value(t, top(k)?.[k], top(k)?.[k] >= 90 ? APPLE.red : c[k])) };
   }
 
   render() {
     const t = theme();
     const names = this.list();
-    const header = h_flex().id("machines-toggle").gap(6).items_center().cursor_pointer()
+    const c = this.colors(t);
+    const label = (text, color) => div().w(32).text_right().text_size(10.5).text_color(color).child(text);
+    const summary = this.open ? null : this.highest(t, names);
+    const header = h_flex().id("machines-toggle").gap(4).items_center().text_size(11.5).cursor_pointer()
       .on_click((_e, cx) => this.toggle(cx))
+      .when(Boolean(summary), (el) => el.tooltip(summary.tooltip))
       .child(div().flex_1().text_size(12).font_medium().text_color(t.dim).child("Computers"))
-      .child(div().w(32).text_right().text_size(10.5).text_color(this.colors(t).cpu).child("CPU"))
-      .child(div().w(32).text_right().text_size(10.5).text_color(this.colors(t).mem).child("RAM"))
-      .child(div().w(32).text_right().text_size(10.5).text_color(this.colors(t).disk).child("Disk"))
-      .child(svg(`${ICON}/${this.open ? "chevron-down" : "chevron-right"}.svg`).size(12).text_color(t.dim));
-    const rows = names.map((name) => {
-      const host = this.hosts[name ?? ""] ?? { cpu: [], mem: [], disks: [], disk: null, offline: false };
-      return this.open ? this.expanded(t, name, host) : this.collapsed(t, name, host);
-    });
+      .children(summary ? summary.cells : [label("CPU", c.cpu), label("RAM", c.mem), label("Disk", c.disk)])
+      .child(svg(`${ICON}/${this.open ? "chevron-down" : "chevron-right"}.svg`).size(12).ml(2).text_color(t.dim));
     return div().size_full().bg(t.chrome).px(10).pb(6).child(
-      v_flex().id("machines-card").w_full().px(12).py(9).gap(this.open ? 10 : 6).rounded(12).bg(t.surface).border(0.5).border_color("#ffffff14")
+      v_flex().id("machines-card").w_full().px(12).py(9).gap(10).rounded(12).bg(t.surface).border(0.5).border_color("#ffffff14")
         .on_size_change((size) => this.fit(size.height))
         .child(header)
-        .children(rows));
+        .when(this.open, (el) => el.children(names.map((name) => this.machine(t, name, this.hosts[name ?? ""] ?? { cpu: [], mem: [], disks: [], disk: null, offline: false })))));
   }
 }
