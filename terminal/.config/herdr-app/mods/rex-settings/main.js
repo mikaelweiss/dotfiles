@@ -462,6 +462,8 @@ export default class Settings extends View {
     const s = settings();
     const p = this.person;
     const own = (key, composed, def) => (p[key] ?? def) !== composed;
+    // 5% steps: Herdr's zoom commands move 10% at a time.
+    const zoomBy = (d, cx) => this.change((q) => (q.zoom = Math.max(0.5, Math.min(3, Math.round(((q.zoom ?? s.zoom) + d) * 100) / 100))), cx);
     const size = (key, value, d, cx) => this.change((q) => (q[key] = Math.max(8, Math.min(32, (q[key] ?? value) + d))), cx);
     const fontRow = (which, sizeKey, title, family, def, sizeNow) =>
       v_flex()
@@ -499,7 +501,7 @@ export default class Settings extends View {
           h_flex()
             .gap(8)
             .items_center()
-            .child(this.stepper(t, "st-zoom", `${Math.round(s.zoom * 100)}%`, () => run("app.zoom_out"), () => run("app.zoom_in")))
+            .child(this.stepper(t, "st-zoom", `${Math.round(s.zoom * 100)}%`, (_e, cx) => zoomBy(-0.05, cx), (_e, cx) => zoomBy(0.05, cx)))
             .child(this.button(t, "st-zoom-reset", "Reset", () => run("app.zoom_reset"))),
         ),
         fontRow("font", "font_size", "Terminal font", s.font_family, DEFAULT_FONT, s.font_size),
