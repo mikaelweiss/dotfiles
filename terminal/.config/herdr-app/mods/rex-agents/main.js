@@ -353,7 +353,7 @@ export default class Agents extends View {
       return h_flex()
         .id(`ag-${a.address}`)
         .px(8)
-        .h(34)
+        .h(32)
         .flex_none()
         .relative()
         .rounded_full()
@@ -403,8 +403,8 @@ export default class Agents extends View {
       return h_flex()
         .id(g.id)
         .px(8)
-        .pt(12)
-        .h(36)
+        .pt(10)
+        .h(33)
         .flex_none()
         .gap(6)
         .items_center()
@@ -436,7 +436,7 @@ export default class Agents extends View {
         el.child(
           h_flex()
             .px(18)
-            .h(44)
+            .h(42)
             .pt(14)
             .pb(5)
             .flex_none()
@@ -458,7 +458,7 @@ export default class Agents extends View {
       .when(list.length === 0 && !collapsed, (el) =>
         el.child(div().px(12).text_size(12).text_color(t.dim).child("No agent status yet. Agents show up here when they report their status. Older versions and agents inside tmux may not.")),
       )
-      .child(v_flex().id("ag-list").flex_1().min_h(0).px(collapsed ? 0 : 10).gap(4).overflow_y_scrollbar().mode("always").children(rows))
+      .child(v_flex().id("ag-list").flex_1().min_h(0).px(collapsed ? 0 : 10).gap(2).overflow_y_scrollbar().mode("always").children(rows))
       .when(collapsed, (el) =>
         el.child(
           h_flex()
