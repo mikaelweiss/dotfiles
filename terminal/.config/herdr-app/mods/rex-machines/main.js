@@ -7,6 +7,9 @@ import { View, div, svg, PathBuilder } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { exec, machines, theme, run, settings, nextCommand } from "herdr";
 
+// Apple's dark-mode system colors.
+const APPLE = { blue: "#0a84ff", purple: "#bf5af2", mint: "#66d4cf", green: "#30d158", orange: "#ff9f0a", red: "#ff453a" };
+
 const EVERY = 3000;
 const HISTORY = (5 * 60 * 1000) / EVERY;
 const ICON = "mods/workspace-chrome";
@@ -104,26 +107,31 @@ export default class RexMachines extends View {
   }
 
   colors(t) {
-    return { cpu: t.accent, mem: t.ansi5, disk: t.ansi2 };
+    return { cpu: APPLE.blue, mem: APPLE.purple, disk: APPLE.mint };
   }
 
-  level(t, value, normal) {
+  // Numbers stay quiet unless something is nearly full.
+  level(t, value) {
     if (value === null || value === undefined) return t.dim;
-    return value >= 90 ? t.blocked : value >= 80 ? t.working : normal;
+    return value >= 90 ? APPLE.red : t.muted;
   }
 
   // One graph per machine: the three series drawn over each other, newest at the right.
   graph(t, host) {
     const c = this.colors(t);
-    const line = (series, color) => {
-      if (series.length < 2) return null;
+    const line = (raw, color, smooth = 1) => {
+      if (raw.length < 2) return null;
+      const series = raw.map((_, i) => {
+        const w = raw.slice(Math.max(0, i - smooth + 1), i + 1);
+        return w.reduce((a, b) => a + b, 0) / w.length;
+      });
       const start = HISTORY - series.length;
       const points = series.map((v, i) => [`${((start + i) / (HISTORY - 1)) * 100}%`, `${6 + (100 - v) * 0.88}%`]);
-      const path = PathBuilder.stroke(1.5).add_polygon(points, false).build();
+      const path = PathBuilder.stroke(1.25).add_polygon(points, false).build();
       return window.paint_path(path, color).absolute().inset_0();
     };
-    return div().relative().w_full().h(34).rounded(6).bg(t.background)
-      .children([line(host.disks, c.disk), line(host.mem, c.mem), line(host.cpu, c.cpu)].filter(Boolean));
+    return div().relative().w_full().h(30)
+      .children([line(host.disks, c.disk), line(host.mem, c.mem), line(host.cpu, c.cpu, 4)].filter(Boolean));
   }
 
   value(t, v, color) {
@@ -137,15 +145,14 @@ export default class RexMachines extends View {
   }
 
   collapsed(t, name, host, open = false) {
-    const c = this.colors(t);
     const last = (s) => (s.length ? s[s.length - 1] : null);
     return h_flex().id(`machine-${name ?? "local"}`).gap(4).items_center().text_size(11.5).when(host.offline && !open, (el) => el.opacity(0.5))
       .tooltip(host.offline ? "Offline" : host.mount ? `Disk: ${host.mount}` : "")
       .when(open, (el) => el.child(svg(`${ICON}/${name ? "server" : "monitor"}.svg`).size(13).text_color(t.dim)))
       .child(div().flex_1().min_w(0).truncate().text_color(t.foreground).when(open, (el) => el.text_size(12.5).font_medium()).child(name ?? "This Mac"))
-      .child(this.value(t, last(host.cpu), this.level(t, last(host.cpu), c.cpu)))
-      .child(this.value(t, last(host.mem), this.level(t, last(host.mem), c.mem)))
-      .child(this.value(t, host.disk, this.level(t, host.disk, c.disk)));
+      .child(this.value(t, last(host.cpu), this.level(t, last(host.cpu))))
+      .child(this.value(t, last(host.mem), this.level(t, last(host.mem))))
+      .child(this.value(t, host.disk, this.level(t, host.disk)));
   }
 
   render() {

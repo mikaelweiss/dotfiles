@@ -6,6 +6,9 @@ import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { exec, theme, home, run, settings, nextCommand } from "herdr";
 
+// Apple's dark-mode system colors.
+const APPLE = { blue: "#0a84ff", purple: "#bf5af2", mint: "#66d4cf", green: "#30d158", orange: "#ff9f0a", red: "#ff453a" };
+
 const REFRESH = 5 * 60 * 1000;
 const WEEK = 7 * 24 * 60 * 60;
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
@@ -115,7 +118,7 @@ export default class RexUsage extends View {
     const onPace = !p || Math.abs(p.delta) <= 2 || Math.round(Math.abs(p.delta)) === 0;
     const paceText = !p ? null : onPace ? "On pace" : p.delta > 0 ? `${Math.round(p.delta)}% in deficit` : `${Math.round(-p.delta)}% in reserve`;
     const paceShort = !p ? "" : onPace ? "On pace" : p.delta > 0 ? `${Math.round(p.delta)}% over` : `${Math.round(-p.delta)}% under`;
-    const paceColor = onPace ? t.muted : p.delta > 0 ? (p.delta > 12 ? t.blocked : t.working) : t.ansi2;
+    const paceColor = onPace ? t.muted : p.delta > 0 ? (p.delta > 12 ? APPLE.red : APPLE.orange) : APPLE.green;
     const eta = !p ? null : p.lasts ? "Lasts until reset" : p.eta === 0 ? "Runs out now" : `Runs out in ${span(p.eta)}`;
     const bar = (h) => div().relative().h(h).flex_1().min_w(0).rounded_full().bg(t.hover)
       .child(div().absolute().left(0).top(0).h(h).rounded_full().bg("#e56a40").w(`${Math.min(100, used)}%`))
