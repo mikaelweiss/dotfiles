@@ -50,7 +50,26 @@ export default class RexTabs extends View {
       run(showing === "agents" ? "agent.next" : "space.next");
     } else if (command === "sidebar-up") {
       run(showing === "agents" ? "agent.prev" : "space.prev");
+    } else if (command === "last-tab") {
+      this.goLastTab();
     }
+  }
+
+  // Remembers the tab shown before this one, in any space.
+  trackTab(all) {
+    const space = all.find((s) => s.active);
+    const tab = space?.tabs?.find((c) => c.active);
+    if (!tab || tab.id === this.current?.tab) return;
+    this.previous = this.current;
+    this.current = { space: space.id, tab: tab.id };
+  }
+
+  goLastTab() {
+    const last = this.previous;
+    const space = last && spaces().find((s) => s.id === last.space);
+    if (!space?.tabs?.some((c) => c.id === last.tab)) return;
+    if (!space.active) run("space.select", { id: space.id });
+    run("tab.select", { id: last.tab });
   }
 
   // Herdr's side panel behavior: each space remembers which panel it had open.
@@ -124,7 +143,9 @@ export default class RexTabs extends View {
 
   render() {
     const t = theme();
-    const space = spaces().find((s) => s.active);
+    const all = spaces();
+    this.trackTab(all);
+    const space = all.find((s) => s.active);
     const allPanes = panes();
     const root = layout();
     const panel = find(root, "panel");

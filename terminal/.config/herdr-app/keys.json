@@ -57,7 +57,7 @@
     "ctrl-7": "space.select:7",
     "ctrl-8": "space.select:8",
     "ctrl-9": "space.select:9",
-    "ctrl-f ctrl-f": "send:\u0006",
+    "ctrl-f ctrl-f": "rex-tabs.last-tab",
     "ctrl-f n": "tab.new",
     "ctrl-f left": "tab.prev",
     "ctrl-f right": "tab.next",
