@@ -72,7 +72,7 @@
     "ctrl-f o": "mod.open:picker",
     "ctrl-f shift-s": "mod.open:picker",
     "ctrl-f ctrl-p": "space.prev",
-    "ctrl-f ctrl-n": "space.next",
+    "ctrl-f ctrl-n": "tab.new",
     "ctrl-k": "rex-tabs.sidebar-up",
     "ctrl-j": "rex-tabs.sidebar-down",
     "ctrl-f ,": "mod.open:rex-settings",
