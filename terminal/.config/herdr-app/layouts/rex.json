@@ -63,6 +63,19 @@
           "active": "spaces"
         },
         {
+          "id": "usage",
+          "type": "block",
+          "size": {
+            "px": 86
+          },
+          "content": {
+            "mod": "rex-usage",
+            "props": {
+              "provider": "claude"
+            }
+          }
+        },
+        {
           "id": "sidebar-footer",
           "type": "block",
           "size": {
