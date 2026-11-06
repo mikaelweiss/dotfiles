@@ -92,13 +92,20 @@ codex/.codex/.sqlite-maintenance.lock
 terminal/.config/herdr/*
 !terminal/.config/herdr/config.toml
 
-# Herdr app runtime/state (keep keys, settings, personal themes)
+# Herdr app runtime/state (keep keys, settings and the Rex look)
 terminal/.config/herdr-app/*
 !terminal/.config/herdr-app/keys.json
 !terminal/.config/herdr-app/settings.json
 !terminal/.config/herdr-app/themes/
 terminal/.config/herdr-app/themes/*
-!terminal/.config/herdr-app/themes/catppuccin.json
+!terminal/.config/herdr-app/themes/rex.json
+!terminal/.config/herdr-app/layouts/
+terminal/.config/herdr-app/layouts/*
+!terminal/.config/herdr-app/layouts/rex.json
+!terminal/.config/herdr-app/mods/
+terminal/.config/herdr-app/mods/*
+!terminal/.config/herdr-app/mods/rex-sidebar/
+terminal/.config/herdr-app/mods/rex-sidebar/*.d.ts
 
 # Composer global install (keep composer.json + lock, drop credentials and vendor)
 terminal/.config/composer/auth.json

@@ -3,11 +3,8 @@
   "sounds": {
     "enabled": true
   },
-  "font": "MesloLGS Nerd Font Mono",
+  "font": "Menlo",
   "font_ligatures": false,
   "minimum_contrast": 1.0,
-  "theme": "catppuccin",
-  "colors": {
-    "accent": "#f5c2e7"
-  }
+  "theme": "rex"
 }
