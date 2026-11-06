@@ -3,9 +3,28 @@
 // its first terminal is in now, only where unusual: branch, ahead/behind. Agent state lives in the agents list, not here. Click to
 // switch, right-click for its menu, drag to reorder.
 
-import { View, div, svg } from "gpui-kit";
+import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, machines, panes, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout } from "herdr";
+import { spaces, machines, panes, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout, appHome } from "herdr";
+import * as fs from "fs/promises";
+
+// Rex-style program cards, built by mods/rex-tabs/cards/build.py.
+let cards = new Set();
+async function loadCards() {
+  try {
+    cards = new Set((await fs.readdir(`${appHome()}/mods/rex-tabs/cards`)).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
+  } catch {
+    cards = new Set();
+  }
+}
+
+// The card of what the space's shown tab runs: its agent, else its first program.
+function activeCard(space, ps) {
+  const tab = space.tabs?.find((c) => c.active) ?? space.tabs?.[0];
+  const own = ps.filter((p) => p.tab === tab?.id);
+  const program = (own.find((p) => p.program?.agent) ?? own[0])?.program;
+  return program?.key && cards.has(program.key) ? `mods/rex-tabs/cards/${program.key}.svg` : null;
+}
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -69,6 +88,7 @@ export default class Spaces extends View {
     for (const state of Object.values(this.reconnecting)) state.busy = false;
     this.folded = new Set(JSON.parse(localStorage.getItem("machines.folded") ?? "[]"));
     this.refreshMachines(cx);
+    cx.spawn(async (cx) => { await loadCards(); cx.notify(); });
     cx.timer.every(15000, cx => this.refreshMachines(cx));
     // `git status` walks the whole tree, on another machine a process there:
     // only when its answer could have changed (see `due`).
@@ -376,6 +396,7 @@ export default class Spaces extends View {
     const colors = shared("space.colors") ?? {};
     const color = colors[w.id] ?? "ansi6";
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
+    const card = activeCard(w, panes());
     return v_flex()
       .relative()
       .id(`space-${w.id}`)
@@ -423,7 +444,9 @@ export default class Spaces extends View {
           .gap(9)
           .items_center()
           .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
-          .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
+          .when(!tree, el => el.child(card
+            ? image(card).w(22).h(18).flex_none()
+            : h_flex().w(22).h(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
           .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
       );

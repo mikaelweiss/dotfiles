@@ -8,6 +8,7 @@ Run after a Herdr update to pick up new programs:
 """
 import base64
 import json
+import math
 import re
 import subprocess
 from pathlib import Path
@@ -32,6 +33,33 @@ def program_table():
             except json.JSONDecodeError:
                 pass
     return table
+
+
+def squircle(x, y, w, h, radius, smoothing=0.6):
+    """Apple-style continuous corners, after figma-squircle's corner smoothing."""
+    budget = min(w, h) / 2
+    r = min(radius, budget)
+    smoothing = min(smoothing, budget / r - 1)
+    p = min((1 + smoothing) * r, budget)
+    arc_measure = 90 * (1 - smoothing)
+    arc = math.sin(math.radians(arc_measure / 2)) * r * math.sqrt(2)
+    alpha = (90 - arc_measure) / 2
+    beta = 45 * smoothing
+    c = r * math.tan(math.radians(alpha / 2)) * math.cos(math.radians(beta))
+    d = c * math.tan(math.radians(beta))
+    b = (p - arc - c - d) / 3
+    a = 2 * b
+    n = lambda v: f"{v:.3f}"
+    return (
+        f"M {n(x + w - p)} {n(y)} "
+        f"c {n(a)} 0 {n(a + b)} 0 {n(a + b + c)} {n(d)} a {n(r)} {n(r)} 0 0 1 {n(arc)} {n(arc)} c {n(d)} {n(c)} {n(d)} {n(b + c)} {n(d)} {n(a + b + c)} "
+        f"L {n(x + w)} {n(y + h - p)} "
+        f"c 0 {n(a)} 0 {n(a + b)} {n(-d)} {n(a + b + c)} a {n(r)} {n(r)} 0 0 1 {n(-arc)} {n(arc)} c {n(-c)} {n(d)} {n(-(b + c))} {n(d)} {n(-(a + b + c))} {n(d)} "
+        f"L {n(x + p)} {n(y + h)} "
+        f"c {n(-a)} 0 {n(-(a + b))} 0 {n(-(a + b + c))} {n(-d)} a {n(r)} {n(r)} 0 0 1 {n(-arc)} {n(-arc)} c {n(-d)} {n(-c)} {n(-d)} {n(-(b + c))} {n(-d)} {n(-(a + b + c))} "
+        f"L {n(x)} {n(y + p)} "
+        f"c 0 {n(-a)} 0 {n(-(a + b))} {n(d)} {n(-(a + b + c))} a {n(r)} {n(r)} 0 0 1 {n(arc)} {n(-arc)} c {n(c)} {n(-d)} {n(b + c)} {n(-d)} {n(a + b + c)} {n(-d)} Z"
+    )
 
 
 def mix(hex_color, target, amount):
@@ -75,9 +103,9 @@ def card(key, program):
 <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>
 <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#ffffff" stop-opacity="0.16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.08"/></linearGradient>
 </defs>
-<rect x="0.75" y="0.75" width="62.5" height="50.5" rx="13.25" fill="none" stroke="#000000" stroke-opacity="0.4" stroke-width="1.5"/>
-<rect x="1.5" y="1.5" width="61" height="49" rx="12.5" fill="url(#fill)"/>
-<rect x="2.25" y="2.25" width="59.5" height="47.5" rx="11.75" fill="none" stroke="url(#edge)" stroke-width="1.5"/>
+<path d="{squircle(0.75, 0.75, 62.5, 50.5, 13.25)}" fill="none" stroke="#000000" stroke-opacity="0.4" stroke-width="1.5"/>
+<path d="{squircle(1.5, 1.5, 61, 49, 12.5)}" fill="url(#fill)"/>
+<path d="{squircle(2.25, 2.25, 59.5, 47.5, 11.75)}" fill="none" stroke="url(#edge)" stroke-width="1.5"/>
 {art}
 </svg>
 '''
