@@ -1,13 +1,15 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, ... }:
 
 let
   domain = "gitri.weissfamily.us";
   httpPort = 3000;
+  # Each push to main builds the fork from origin and points this link at it, so a deploy needs no system rebuild.
+  current = "/var/lib/gitri/current";
 in
 {
   services.gitea = {
     enable = true;
-    package = inputs.gitri.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = pkgs.writeShellScriptBin "gitea" ''exec ${current}/bin/gitea "$@"'';
     database.type = "postgres";
     settings = {
       server = {
@@ -20,6 +22,7 @@ in
         SSH_PORT = 2222;
         BUILTIN_SSH_SERVER_USER = "git";
         SSH_CREATE_AUTHORIZED_KEYS_FILE = false;
+        STATIC_ROOT_PATH = "${current}-data";
       };
       service.DISABLE_REGISTRATION = true;
       # The fork reports a commit hash as its version, which the checker cannot compare against releases.
@@ -55,5 +58,42 @@ in
     };
   };
 
-  services.weiss-status.agent.units = [ "gitea" "postgresql" "nginx" ];
+  systemd.services."gitri-deploy@" = {
+    description = "Deploy gitri at commit %i";
+    path = [ config.nix.package pkgs.git ];
+    serviceConfig = {
+      Type = "oneshot";
+      StateDirectory = "gitri";
+    };
+    scriptArgs = "%i";
+    script = ''
+      nix build "git+https://${domain}/mikaelweiss/gitri?rev=$1&shallow=1" --out-link ${current}
+      systemctl restart gitea
+    '';
+  };
+
+  # Workflows run as the runner user, so it may start a deploy but cannot choose what gets built.
+  services.gitea-actions-runner.instances.pika = {
+    enable = true;
+    name = "pika";
+    url = "http://127.0.0.1:${toString httpPort}";
+    # TOKEN=<registration token from `gitea actions generate-runner-token`>
+    tokenFile = "/etc/pika/gitea-runner-token";
+    labels = [ "pika:host" ];
+    hostPackages = with pkgs; [ bash coreutils gitMinimal config.nix.package config.systemd.package ];
+  };
+
+  security.polkit.enable = true;
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.systemd1.manage-units" &&
+          subject.user == "gitea-runner" &&
+          action.lookup("verb") == "start" &&
+          action.lookup("unit").indexOf("gitri-deploy@") == 0) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
+  services.weiss-status.agent.units = [ "gitea" "gitea-runner-pika" "postgresql" "nginx" ];
 }
