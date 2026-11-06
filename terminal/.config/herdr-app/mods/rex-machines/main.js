@@ -8,7 +8,7 @@ import { v_flex, h_flex } from "gpui-base";
 import { exec, machines, theme, run, settings, nextCommand } from "herdr";
 
 const EVERY = 3000;
-const HISTORY = (10 * 60 * 1000) / EVERY;
+const HISTORY = (5 * 60 * 1000) / EVERY;
 const ICON = "mods/workspace-chrome";
 
 const SAMPLE = `if [ "$(uname)" = Darwin ]; then
