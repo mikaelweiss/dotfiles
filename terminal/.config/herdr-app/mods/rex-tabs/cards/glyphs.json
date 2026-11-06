@@ -1,0 +1,914 @@
+{
+ "agent": {
+  "file": "glyphs/agent.svg",
+  "id": "bot",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "ansible": {
+  "file": "glyphs/ansible.svg",
+  "id": "ansible",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "antigravity": {
+  "file": "glyphs/antigravity.svg",
+  "id": "antigravity",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "apt": {
+  "file": "glyphs/apt.svg",
+  "id": "debian",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "astro": {
+  "file": "glyphs/astro.svg",
+  "id": "astro",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "biome": {
+  "file": "glyphs/biome.svg",
+  "id": "biome",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "brew": {
+  "file": "glyphs/brew.svg",
+  "id": "homebrew",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "bun": {
+  "file": "glyphs/bun.svg",
+  "id": "bun",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "caddy": {
+  "file": "glyphs/caddy.svg",
+  "id": "caddy",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "cargo": {
+  "file": "glyphs/cargo.svg",
+  "id": "rust",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "claude": {
+  "file": "glyphs/claude.svg",
+  "id": "claude",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "cmake": {
+  "file": "glyphs/cmake.svg",
+  "id": "cmake",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "codex": {
+  "file": "glyphs/codex.svg",
+  "id": "openai",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "composer": {
+  "file": "glyphs/composer.svg",
+  "id": "composer",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "copilot": {
+  "file": "glyphs/copilot.svg",
+  "id": "githubcopilot",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "crush": {
+  "file": "glyphs/crush.png",
+  "id": "charmbracelet/crush",
+  "license": "project trademark",
+  "source": "repo",
+  "tint": false,
+  "url": "https://raw.githubusercontent.com/charmbracelet/crush/HEAD/internal/ui/notification/crush-icon-solo.png"
+ },
+ "curl": {
+  "file": "glyphs/curl.svg",
+  "id": "curl",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "cursor": {
+  "file": "glyphs/cursor.svg",
+  "id": "cursor",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "dart": {
+  "file": "glyphs/dart.svg",
+  "id": "dart",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "deno": {
+  "file": "glyphs/deno.svg",
+  "id": "deno",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "django-admin": {
+  "file": "glyphs/django-admin.svg",
+  "id": "django",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "dnf": {
+  "file": "glyphs/dnf.svg",
+  "id": "fedora",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "docker": {
+  "file": "glyphs/docker.svg",
+  "id": "docker",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "dotnet": {
+  "file": "glyphs/dotnet.svg",
+  "id": "dotnet",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "dsh-tui": {
+  "file": "glyphs/dsh-tui.svg",
+  "id": "deepseek",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "electron": {
+  "file": "glyphs/electron.svg",
+  "id": "electron",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "emacs": {
+  "file": "glyphs/emacs.svg",
+  "id": "emacs",
+  "license": "CC0-1.0",
+  "source": "logos",
+  "tint": true,
+  "url": "https://github.com/gilbarbara/logos"
+ },
+ "erl": {
+  "file": "glyphs/erl.svg",
+  "id": "erlang",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "esbuild": {
+  "file": "glyphs/esbuild.svg",
+  "id": "esbuild",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "eslint": {
+  "file": "glyphs/eslint.svg",
+  "id": "eslint",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "expo": {
+  "file": "glyphs/expo.svg",
+  "id": "expo",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "fastapi": {
+  "file": "glyphs/fastapi.svg",
+  "id": "fastapi",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ffmpeg": {
+  "file": "glyphs/ffmpeg.svg",
+  "id": "ffmpeg",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "flask": {
+  "file": "glyphs/flask.svg",
+  "id": "flask",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "flutter": {
+  "file": "glyphs/flutter.svg",
+  "id": "flutter",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "fly": {
+  "file": "glyphs/fly.svg",
+  "id": "flydotio",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "gcloud": {
+  "file": "glyphs/gcloud.svg",
+  "id": "googlecloud",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "gemini": {
+  "file": "glyphs/gemini.svg",
+  "id": "googlegemini",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "gh": {
+  "file": "glyphs/gh.svg",
+  "id": "github",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ghci": {
+  "file": "glyphs/ghci.svg",
+  "id": "haskell",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "git": {
+  "file": "glyphs/git.svg",
+  "id": "git",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "glab": {
+  "file": "glyphs/glab.svg",
+  "id": "gitlab",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "go": {
+  "file": "glyphs/go.svg",
+  "id": "go",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "gradle": {
+  "file": "glyphs/gradle.svg",
+  "id": "gradle",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "grok": {
+  "file": "glyphs/grok.svg",
+  "id": "grok",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "helm": {
+  "file": "glyphs/helm.svg",
+  "id": "helm",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "htop": {
+  "file": "glyphs/htop.svg",
+  "id": "htop",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "hx": {
+  "file": "glyphs/hx.svg",
+  "id": "helix",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "iex": {
+  "file": "glyphs/iex.svg",
+  "id": "elixir",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "java": {
+  "file": "glyphs/java.svg",
+  "id": "openjdk",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "jest": {
+  "file": "glyphs/jest.svg",
+  "id": "jest",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "julia": {
+  "file": "glyphs/julia.svg",
+  "id": "julia",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "jupyter": {
+  "file": "glyphs/jupyter.svg",
+  "id": "jupyter",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "kimi": {
+  "file": "glyphs/kimi.svg",
+  "id": "kimi",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "kiro": {
+  "file": "glyphs/kiro.svg",
+  "id": "kiro",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "kotlin": {
+  "file": "glyphs/kotlin.svg",
+  "id": "kotlin",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "kubectl": {
+  "file": "glyphs/kubectl.svg",
+  "id": "kubernetes",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "lazygit": {
+  "file": "glyphs/lazygit.svg",
+  "id": "diff",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "less": {
+  "file": "glyphs/less.svg",
+  "id": "file-text",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "lua": {
+  "file": "glyphs/lua.svg",
+  "id": "lua",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "make": {
+  "file": "glyphs/make.svg",
+  "id": "gnu",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "mongosh": {
+  "file": "glyphs/mongosh.svg",
+  "id": "mongodb",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "muse": {
+  "file": "glyphs/muse.svg",
+  "id": "muse",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "mvn": {
+  "file": "glyphs/mvn.svg",
+  "id": "apachemaven",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "mysql": {
+  "file": "glyphs/mysql.svg",
+  "id": "mysql",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "netlify": {
+  "file": "glyphs/netlify.svg",
+  "id": "netlify",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "next": {
+  "file": "glyphs/next.svg",
+  "id": "nextdotjs",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "nginx": {
+  "file": "glyphs/nginx.svg",
+  "id": "nginx",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "nix": {
+  "file": "glyphs/nix.svg",
+  "id": "nixos",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "node": {
+  "file": "glyphs/node.svg",
+  "id": "nodedotjs",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "npm": {
+  "file": "glyphs/npm.svg",
+  "id": "npm",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "nuxt": {
+  "file": "glyphs/nuxt.svg",
+  "id": "nuxt",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "nvim": {
+  "file": "glyphs/nvim.svg",
+  "id": "neovim",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ocaml": {
+  "file": "glyphs/ocaml.svg",
+  "id": "ocaml",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ollama": {
+  "file": "glyphs/ollama.svg",
+  "id": "ollama",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "opencode": {
+  "file": "glyphs/opencode.svg",
+  "id": "opencode",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "pacman": {
+  "file": "glyphs/pacman.svg",
+  "id": "archlinux",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "perl": {
+  "file": "glyphs/perl.svg",
+  "id": "perl",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "php": {
+  "file": "glyphs/php.svg",
+  "id": "php",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "pi": {
+  "file": "glyphs/pi.svg",
+  "id": "pi",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "pnpm": {
+  "file": "glyphs/pnpm.svg",
+  "id": "pnpm",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "podman": {
+  "file": "glyphs/podman.svg",
+  "id": "podman",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "poetry": {
+  "file": "glyphs/poetry.svg",
+  "id": "poetry",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "prettier": {
+  "file": "glyphs/prettier.svg",
+  "id": "prettier",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "prisma": {
+  "file": "glyphs/prisma.svg",
+  "id": "prisma",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "program": {
+  "file": "glyphs/program.svg",
+  "id": "square-dot",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "psql": {
+  "file": "glyphs/psql.svg",
+  "id": "postgresql",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "pytest": {
+  "file": "glyphs/pytest.svg",
+  "id": "pytest",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "python": {
+  "file": "glyphs/python.svg",
+  "id": "python",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "qoder": {
+  "file": "glyphs/qoder.svg",
+  "id": "qoder",
+  "license": "MIT",
+  "source": "lobe",
+  "tint": true,
+  "url": "https://github.com/lobehub/lobe-icons"
+ },
+ "redis-cli": {
+  "file": "glyphs/redis-cli.svg",
+  "id": "redis",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "rg": {
+  "file": "glyphs/rg.svg",
+  "id": "search",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "ruby": {
+  "file": "glyphs/ruby.svg",
+  "id": "ruby",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ruff": {
+  "file": "glyphs/ruff.svg",
+  "id": "ruff",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "scala": {
+  "file": "glyphs/scala.svg",
+  "id": "scala",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "shell": {
+  "file": "glyphs/shell.svg",
+  "id": "terminal",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "sqlite3": {
+  "file": "glyphs/sqlite3.svg",
+  "id": "sqlite",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "ssh": {
+  "file": "glyphs/ssh.svg",
+  "id": "key-round",
+  "license": "ISC",
+  "source": "lucide",
+  "tint": true,
+  "url": "https://github.com/lucide-icons/lucide"
+ },
+ "supabase": {
+  "file": "glyphs/supabase.svg",
+  "id": "supabase",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "swift": {
+  "file": "glyphs/swift.svg",
+  "id": "swift",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "tauri": {
+  "file": "glyphs/tauri.svg",
+  "id": "tauri",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "terraform": {
+  "file": "glyphs/terraform.svg",
+  "id": "terraform",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "tmux": {
+  "file": "glyphs/tmux.svg",
+  "id": "tmux",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "tsc": {
+  "file": "glyphs/tsc.svg",
+  "id": "typescript",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "turbo": {
+  "file": "glyphs/turbo.svg",
+  "id": "turborepo",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "uv": {
+  "file": "glyphs/uv.svg",
+  "id": "uv",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "vercel": {
+  "file": "glyphs/vercel.svg",
+  "id": "vercel",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "vim": {
+  "file": "glyphs/vim.svg",
+  "id": "vim",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "vite": {
+  "file": "glyphs/vite.svg",
+  "id": "vite",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "vitest": {
+  "file": "glyphs/vitest.svg",
+  "id": "vitest",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "webpack": {
+  "file": "glyphs/webpack.svg",
+  "id": "webpack",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "wrangler": {
+  "file": "glyphs/wrangler.svg",
+  "id": "cloudflare",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "yarn": {
+  "file": "glyphs/yarn.svg",
+  "id": "yarn",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ },
+ "zig": {
+  "file": "glyphs/zig.svg",
+  "id": "zig",
+  "license": "CC0-1.0",
+  "source": "simple-icons",
+  "tint": true,
+  "url": "https://github.com/simple-icons/simple-icons"
+ }
+}

@@ -96,7 +96,6 @@ terminal/.config/herdr/*
 terminal/.config/herdr-app/*
 !terminal/.config/herdr-app/keys.json
 !terminal/.config/herdr-app/settings.json
-!terminal/.config/herdr-app/cards/
 !terminal/.config/herdr-app/themes/
 terminal/.config/herdr-app/themes/*
 !terminal/.config/herdr-app/themes/rex.json

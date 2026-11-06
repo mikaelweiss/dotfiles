@@ -3,16 +3,16 @@ import { h_flex } from "gpui-base";
 import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome } from "herdr";
 import * as fs from "fs/promises";
 
-// Rex-style program cards, built by cards/build.py. Programs without one keep their plain glyph.
+// Rex-style program cards, built by mods/rex-tabs/cards/build.py. Programs without one keep their plain glyph.
 let cards = new Set();
 async function loadCards() {
   try {
-    cards = new Set((await fs.readdir(`${appHome()}/cards`)).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
+    cards = new Set((await fs.readdir(`${appHome()}/mods/rex-tabs/cards`)).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
   } catch {
     cards = new Set();
   }
 }
-const cardOf = (p) => (p?.key && cards.has(p.key) ? `cards/${p.key}.svg` : null);
+const cardOf = (p) => (p?.key && cards.has(p.key) ? `mods/rex-tabs/cards/${p.key}.svg` : null);
 
 
 const ICON = "mods/rex-tabs";
