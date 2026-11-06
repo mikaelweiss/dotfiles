@@ -1,6 +1,19 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand } from "herdr";
+import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome } from "herdr";
+import * as fs from "fs/promises";
+
+// Rex-style program cards, built by cards/build.py. Programs without one keep their plain glyph.
+let cards = new Set();
+async function loadCards() {
+  try {
+    cards = new Set((await fs.readdir(`${appHome()}/cards`)).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
+  } catch {
+    cards = new Set();
+  }
+}
+const cardOf = (p) => (p?.key && cards.has(p.key) ? `cards/${p.key}.svg` : null);
+
 
 const ICON = "mods/rex-tabs";
 const stop = (_e, cx) => cx.stop_propagation();
@@ -22,6 +35,7 @@ function find(node, id) {
 }
 
 function icon(program, t) {
+  if (cardOf(program)) return image(cardOf(program)).size(18).flex_none();
   if (!program?.icon) return svg(`${ICON}/monitor.svg`).size(13).text_color(t.muted);
   const glyph = program.tint ? svg(program.icon).size(11).text_color(program.color ?? t.muted) : image(program.icon).size(11);
   return div().size(17).flex_none().rounded(5).when(Boolean(program.tile), (el) => el.bg(program.tile)).flex().items_center().justify_center().child(glyph);
@@ -31,6 +45,7 @@ export default class RexTabs extends View {
   init(_props, cx) {
     this.pressed = null;
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    cx.spawn(async (cx) => { await loadCards(); cx.notify(); });
     // The sidebar's list keys live here: this bar is always shown, the sidebar can be hidden.
     cx.spawn(async (cx) => {
       for (;;) {

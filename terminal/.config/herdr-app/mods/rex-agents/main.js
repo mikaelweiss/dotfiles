@@ -3,7 +3,20 @@
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout } from "herdr";
+import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome } from "herdr";
+import * as fs from "fs/promises";
+
+// Rex-style program cards, built by cards/build.py. Programs without one keep their plain glyph.
+let cards = new Set();
+async function loadCards() {
+  try {
+    cards = new Set((await fs.readdir(`${appHome()}/cards`)).filter((f) => f.endsWith(".svg")).map((f) => f.slice(0, -4)));
+  } catch {
+    cards = new Set();
+  }
+}
+const cardOf = (p) => (p?.key && cards.has(p.key) ? `cards/${p.key}.svg` : null);
+
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -70,12 +83,14 @@ function duration(ms) {
 
 // The agent's icon from the app's program table: a one-color glyph or a picture.
 function icon(p, size, color) {
+  if (cardOf(p)) return image(cardOf(p)).size(size + 4).flex_none();
   if (!p?.icon) return null;
   return p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();
 }
 
 export default class Agents extends View {
   init(_props, cx) {
+    cx.spawn(async (cx) => { await loadCards(); cx.notify(); });
     if (props()?.sortMenu) return;
     this.folded = new Set();
     // Each agent's last state and when it changed (ms), kept across restarts.
