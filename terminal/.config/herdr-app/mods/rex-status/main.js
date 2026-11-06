@@ -8,6 +8,9 @@ const PAGE = "https://status.weissfamily.us";
 const REFRESH = 60 * 1000;
 const STALE = 5 * 60;
 
+// Floored, so a bad hour never rounds up to 100%.
+const percent = (pct) => (Math.floor(pct * 100) / 100).toFixed(2) + "%";
+
 function ago(seconds) {
   const m = Math.max(0, Math.round(seconds / 60));
   if (m < 1) return "now";
@@ -19,6 +22,7 @@ function ago(seconds) {
 export default class RexStatus extends View {
   init(_props, cx) {
     this.now = null;
+    this.uptime = null;
     this.error = null;
     this.open = (localStorage.getItem("open") ?? "true") === "true";
     this.asked = null;
@@ -36,6 +40,8 @@ export default class RexStatus extends View {
         if (!res.ok) throw new Error(`Status request failed (${res.status})`);
         this.now = await res.json();
         this.error = null;
+        const up = await fetch(`${PAGE}/api/public/uptime?range=7d`);
+        this.uptime = up.ok ? await up.json() : null;
       } catch (e) {
         this.error = String(e.message ?? e);
       }
@@ -71,6 +77,25 @@ export default class RexStatus extends View {
     return { level, text, down, events, stale, at: out.at, total: now.sites.length + now.minecraft.length };
   }
 
+  // The console's headline: uptime across every site over 7 days, one bar per rollup.
+  uptimeView(t) {
+    const u = this.uptime;
+    const hours = u.minutes >= 60 ? `${u.minutes / 60} hours` : `${u.minutes} minutes`;
+    const bars = u.bars.map(([at, frac], i) => {
+      const color = frac == null ? t.hover : frac >= 0.9999 ? t.ansi2 : frac >= 0.99 ? t.working : t.blocked;
+      const when = new Date(at * 1000).toLocaleString("en-US", { timeZone: "America/Denver", weekday: "short", hour: "numeric" });
+      const down = frac == null ? 0 : Math.round((1 - frac) * u.minutes);
+      return div().id(`bar-${i}`).flex_1().h_full().rounded_full().bg(color)
+        .tooltip(frac == null ? `${when}: no data` : `${when}: ${percent(frac * 100)}${down ? `, about ${down} min down` : ""}`);
+    });
+    return v_flex().gap(5).pt(2)
+      .child(h_flex().items_baseline().gap(6)
+        .child(div().text_size(22).font_semibold().text_color(t.foreground).child(u.uptime == null ? "–" : percent(u.uptime)))
+        .child(div().text_color(t.dim).child("uptime, 7 days")))
+      .child(h_flex().h(16).gap(1).children(bars))
+      .child(div().text_size(11).text_color(t.dim).child(`Each bar is ${hours}, across ${u.sites} sites`));
+  }
+
   render() {
     const t = theme();
     const s = this.summary();
@@ -80,7 +105,8 @@ export default class RexStatus extends View {
       .on_click((_e, cx) => this.toggle(cx))
       .child(div().size(8).flex_none().rounded_full().bg(color))
       .child(div().flex_1().min_w(0).truncate().text_size(13).font_medium().text_color(t.foreground).child(s.text))
-      .when(Boolean(s.at), (el) => el.child(div().flex_none().text_color(s.stale ? t.working : t.dim).child(ago(Date.now() / 1000 - s.at))))
+      .when(!this.open && this.uptime?.uptime != null, (el) => el.child(div().flex_none().text_color(t.dim).child(percent(this.uptime.uptime))))
+      .when(this.open && Boolean(s.at), (el) => el.child(div().flex_none().text_color(s.stale ? t.working : t.dim).child(ago(Date.now() / 1000 - s.at))))
       .child(svg(`mods/workspace-chrome/${this.open ? "chevron-down" : "chevron-right"}.svg`).size(12).flex_none().text_color(t.dim));
     const line = (id, dot, text, note) => h_flex().id(id).gap(8).items_center()
       .child(div().size(6).mx(1).flex_none().rounded_full().bg(dot))
@@ -92,7 +118,8 @@ export default class RexStatus extends View {
     ];
     const body = v_flex().gap(6).text_size(12)
       .children(details)
-      .when(!details.length && Boolean(s.at), (el) => el.child(div().text_color(t.dim).child(`${s.total} services checked every minute`)))
+      .when(!details.length && Boolean(s.at) && !this.uptime, (el) => el.child(div().text_color(t.dim).child(`${s.total} services checked every minute`)))
+      .when(Boolean(this.uptime), (el) => el.child(this.uptimeView(t)))
       .child(div().id("open-page").text_color(t.accent).cursor_pointer().hover((st) => st.underline())
         .on_click(() => exec("open", [PAGE])).child("Open status page"));
     return div().size_full().bg(t.chrome).px(10).pb(6).child(
