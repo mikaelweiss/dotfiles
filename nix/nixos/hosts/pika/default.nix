@@ -10,6 +10,7 @@ in
   imports = with nixos-raspberrypi.nixosModules; [
     raspberry-pi-5.base
     sd-image
+    ../../modules/gitea.nix
     # 26.05's list setup fails on every run after the first, so reboots and weekly refreshes report failure.
     "${inputs.nixpkgs-master}/nixos/modules/services/networking/pihole-ftl.nix"
   ];
