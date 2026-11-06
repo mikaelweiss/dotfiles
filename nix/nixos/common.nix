@@ -5,10 +5,13 @@
 
   services.weiss-status.sensor.enable = true;
   # ssh only uses a key its user owns, so root and mikaelweiss each get a copy.
+  # GitHub stops at the first key it accepts, and the deploy key reaches only the
+  # status repo, so mikaelweiss offers the personal key first where one exists.
   programs.ssh.extraConfig = ''
     Match host github.com localuser root
       IdentityFile /etc/status/deploy-key
     Match host github.com localuser mikaelweiss
+      IdentityFile ~/.ssh/id_ed25519
       IdentityFile /etc/status/deploy-key-mikaelweiss
   '';
   programs.ssh.knownHosts."github.com".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
