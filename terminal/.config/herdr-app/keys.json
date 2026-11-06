@@ -115,7 +115,9 @@
     "ctrl-f shift-9": "space.select:9",
     "cmd-s": "layout.toggle:sidebar",
     "cmd-shift-t": "space.new",
-    "cmd-.": "rex-tabs.sidebar-switch"
+    "cmd-.": "rex-tabs.sidebar-switch",
+    "ctrl-h": "tab.prev",
+    "ctrl-l": "tab.next"
   },
   "terminal": {
     "cmd-f": "terminal.search",
