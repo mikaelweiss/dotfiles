@@ -12,7 +12,7 @@ const HISTORY = 30;
 const ICON = "mods/workspace-chrome";
 
 const SAMPLE = `if [ "$(uname)" = Darwin ]; then
-  top -l 2 -n 0 -s 1 | awk '/CPU usage/ {u=$3; s=$5} END {sub("%","",u); sub("%","",s); print "cpu=" u+s}'
+  iostat -c 2 -w 1 -n 0 | awk 'END {print "cpu=" 100-$3}'
   vm_stat | awk -v ps="$(sysctl -n hw.pagesize)" -v t="$(sysctl -n hw.memsize)" '/Pages active/ {a=$3} /Pages wired down/ {w=$4} /occupied by compressor/ {c=$5} END {gsub(/\\./,"",a); gsub(/\\./,"",w); gsub(/\\./,"",c); print "mem=" (a+w+c)*ps; print "memtotal=" t}'
   df -k /System/Volumes/Data | awk 'NR==2 {print "disk=" ($2-$4)*1024; print "disktotal=" $2*1024; print "mount=/"}'
 else
