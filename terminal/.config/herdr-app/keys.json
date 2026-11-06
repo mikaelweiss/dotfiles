@@ -17,7 +17,7 @@
     "cmd-n": "space.new",
     "cmd-p": "mod.open:picker",
     "cmd-shift-p": "app.palette",
-    "cmd-,": "app.settings",
+    "cmd-,": "mod.open:rex-settings",
     "cmd-d": "pane.split:right",
     "cmd-shift-d": "pane.split:down",
     "cmd-shift-w": "pane.close",
@@ -77,7 +77,7 @@
     "ctrl-f ctrl-n": "space.next",
     "ctrl-k": "agent.prev",
     "ctrl-j": "agent.next",
-    "ctrl-f ,": "app.settings",
+    "ctrl-f ,": "mod.open:rex-settings",
     "ctrl-f p": {
       "command": "pane.split",
       "args": {

@@ -104,8 +104,8 @@ terminal/.config/herdr-app/layouts/*
 !terminal/.config/herdr-app/layouts/rex.json
 !terminal/.config/herdr-app/mods/
 terminal/.config/herdr-app/mods/*
-!terminal/.config/herdr-app/mods/rex-sidebar/
-terminal/.config/herdr-app/mods/rex-sidebar/*.d.ts
+!terminal/.config/herdr-app/mods/rex-*/
+terminal/.config/herdr-app/mods/rex-*/*.d.ts
 
 # Composer global install (keep composer.json + lock, drop credentials and vendor)
 terminal/.config/composer/auth.json
