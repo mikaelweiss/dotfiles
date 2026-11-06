@@ -17,12 +17,11 @@ export default class RexSidebar extends View {
     const t = theme();
     const w = window();
     const lights = w?.platform === "macos" && !w.fullscreen;
-    return h_flex().size_full().bg(t.chrome).pl(lights ? 78 : 12).pr(10).gap(2).items_center()
+    return h_flex().size_full().bg(t.chrome).pl(lights ? 88 : 12).pr(10).gap(2).items_center()
       .child(this.iconButton("toggle", svg(`${ICON}/sidebar.svg`).size(15), () => run("layout.toggle", { id: "sidebar" })))
       .child(div().flex_1())
       .child(this.iconButton("search", svg(`${ICON}/search.svg`).size(15), () => run("mod.open", { name: "picker" })))
-      .child(this.iconButton("palette", div().text_size(15).child("⌘"), () => run("app.palette")))
-      .child(this.iconButton("new", svg(`${ICON}/plus.svg`).size(15), () => run("space.new")));
+      .child(this.iconButton("palette", div().text_size(15).child("⌘"), () => run("app.palette")));
   }
 
   footer() {

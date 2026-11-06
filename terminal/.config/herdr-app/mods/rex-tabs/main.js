@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, layout } from "herdr";
+import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings } from "herdr";
 
 const ICON = "mods/rex-tabs";
 const stop = (_e, cx) => cx.stop_propagation();
@@ -111,7 +111,13 @@ export default class RexTabs extends View {
     const body = find(root, "panel-body");
     const enabled = shared("workspace.panels") ?? ["files", "changes"];
     this.syncPanel(space, panel, body, enabled);
-    return h_flex().size_full().min_w(0).px(10).gap(4).items_center().bg(t.background)
+    // With the sidebar hidden or narrow, the macOS window buttons sit over this bar.
+    const w = window();
+    const sidebar = find(root, "sidebar");
+    const lights = w?.platform === "macos" && w.titlebar === "none" && !w.fullscreen && root?.traffic_lights
+      ? Math.max(10, (root.traffic_lights[0] + 64) / settings().zoom - (sidebar?.hidden ? 0 : sidebar?.size?.px ?? 0))
+      : 10;
+    return h_flex().size_full().min_w(0).px(10).pl(lights).gap(4).items_center().bg(t.background)
       .on_mouse_up("left", () => { this.pressed = null; })
       .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().gap(4).items_center().overflow_x_scrollbar()
         .children((space?.tabs ?? []).map((tab, i) => this.tab(space, tab, i, allPanes))))
