@@ -67,7 +67,7 @@ in
     };
     scriptArgs = "%i";
     script = ''
-      nix build "git+https://${domain}/mikaelweiss/gitri?rev=$1&shallow=1" --out-link ${current}
+      nix build "git+https://${domain}/mikaelweiss/gitri?rev=$1&shallow=1#default^*" --out-link ${current}
       systemctl restart gitea
     '';
   };
