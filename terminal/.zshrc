@@ -79,11 +79,18 @@ alias :q='exit'
 # nothing waits on a lock bump. The lock file stays untouched, which keeps the
 # git checkouts on sparrow and oak clean, and is the fallback when offline.
 _nix_latest_inputs() {
-  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r '
+  # Tagged hosts like elm cannot open connections to pika, and pika can be down.
+  # Without gitri, its inputs stay at the locked revision instead of failing the rebuild.
+  local gitri=true
+  if ! curl -s -o /dev/null --max-time 5 https://gitri.weissfamily.us/; then
+    gitri=false
+    print -u2 "gitri is unreachable, so its inputs stay at the locked revision."
+  fi
+  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r --argjson gitri $gitri '
     .locks.nodes as $n | $n.root.inputs | to_entries[]
     | select(.value | type == "string") | .key as $k | $n[.value].original
     | if .type == "github" then "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"
-      elif .type == "tarball" and (.url | startswith("https://gitri.weissfamily.us/")) then "--override-input", $k, .url
+      elif $gitri and .type == "tarball" and (.url | startswith("https://gitri.weissfamily.us/")) then "--override-input", $k, .url
       else empty end'
 }
 # Unauthenticated GitHub API calls hit a 60 per hour limit.
