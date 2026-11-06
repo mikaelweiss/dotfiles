@@ -53,35 +53,37 @@ fi
 } > "$STATE"
 chmod 644 "$STATE"
 
-block() {
-  grep -qF "$MARK_BEGIN" "$HOSTS" && return
-  {
-    echo "$MARK_BEGIN"
-    for d in youtube.com www.youtube.com m.youtube.com music.youtube.com \
-             youtu.be www.youtube-nocookie.com \
-             youtubei.googleapis.com youtube.googleapis.com \
-             facebook.com www.facebook.com m.facebook.com web.facebook.com \
-             instagram.com www.instagram.com \
-             twitter.com www.twitter.com mobile.twitter.com api.twitter.com \
-             x.com www.x.com api.x.com; do
-      echo "0.0.0.0 $d"
-      echo ":: $d"
-    done
-    echo "$MARK_END"
-  } >> "$HOSTS"
-  dscacheutil -flushcache
-  killall -HUP mDNSResponder
+BLOCKED_DOMAINS="m.youtube.com music.youtube.com youtu.be www.youtube-nocookie.com
+  youtubei.googleapis.com youtube.googleapis.com
+  facebook.com www.facebook.com m.facebook.com web.facebook.com
+  instagram.com www.instagram.com
+  twitter.com www.twitter.com mobile.twitter.com api.twitter.com
+  x.com www.x.com api.x.com"
+
+# The agent blocks YouTube watch pages per tab so Studio keeps working.
+# Without a live agent, the hosts file blocks all of www.youtube.com.
+[ "$tampered" -eq 1 ] && BLOCKED_DOMAINS="youtube.com www.youtube.com $BLOCKED_DOMAINS"
+
+hosts_block() {
+  echo "$MARK_BEGIN"
+  for d in $BLOCKED_DOMAINS; do
+    echo "0.0.0.0 $d"
+    echo ":: $d"
+  done
+  echo "$MARK_END"
 }
 
-unblock() {
-  grep -qF "$MARK_BEGIN" "$HOSTS" || return
+apply_hosts_block() {
+  local wanted="$1"
+  [ "$(sed -n "/^$MARK_BEGIN\$/,/^$MARK_END\$/p" "$HOSTS")" = "$wanted" ] && return
   sed -i '' "/^$MARK_BEGIN\$/,/^$MARK_END\$/d" "$HOSTS"
+  [ -n "$wanted" ] && printf '%s\n' "$wanted" >> "$HOSTS"
   dscacheutil -flushcache
   killall -HUP mDNSResponder
 }
 
 if [ "$ST_SECONDS" -ge $((LIMIT + BONUS_SECONDS)) ]; then
-  block
+  apply_hosts_block "$(hosts_block)"
 else
-  unblock
+  apply_hosts_block ""
 fi
