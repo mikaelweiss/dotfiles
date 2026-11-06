@@ -2,101 +2,71 @@
   "id": "root",
   "type": "row",
   "titlebar": "none",
-  "traffic_lights": [
-    16,
-    16
-  ],
+  "traffic_lights": [16, 16],
   "background": "background",
-  "terminal_padding": [
-    8,
-    8
-  ],
-  "divider": {
-    "width": 1,
-    "color": "border"
-  },
+  "terminal_padding": [8, 8],
+  "divider": { "width": 1, "color": "border" },
   "children": [
     {
       "id": "sidebar",
       "type": "column",
-      "size": {
-        "px": 280
-      },
+      "size": { "px": 280 },
       "min": 180,
       "max": 480,
       "background": "chrome",
+      "resizable": false,
       "children": [
+        { "id": "sidebar-top", "type": "block", "size": { "px": 46 }, "window_drag": true, "content": { "mod": "rex-sidebar", "props": { "part": "top" } } },
         {
-          "id": "sidebar-top",
-          "type": "block",
-          "size": {
-            "px": 46
-          },
-          "window_drag": true,
-          "content": {
-            "mod": "rex-sidebar",
-            "props": {
-              "part": "top"
-            }
-          }
+          "id": "sidebar-lists",
+          "type": "column",
+          "children": [
+            { "id": "spaces", "type": "block", "size": { "weight": 1 }, "min": 90, "content": { "mod": "rex-spaces" } },
+            { "id": "agents", "type": "block", "size": { "weight": 1 }, "min": 90, "content": { "mod": "rex-agents" } }
+          ]
         },
-        {
-          "id": "sidebar-list",
-          "type": "block",
-          "size": {
-            "weight": 1
-          },
-          "content": {
-            "mod": "rex-sidebar",
-            "props": {
-              "part": "list"
-            }
-          }
-        },
-        {
-          "id": "sidebar-footer",
-          "type": "block",
-          "size": {
-            "px": 44
-          },
-          "content": {
-            "mod": "rex-sidebar",
-            "props": {
-              "part": "footer"
-            }
-          }
-        }
+        { "id": "sidebar-footer", "type": "block", "size": { "px": 44 }, "content": { "mod": "rex-sidebar", "props": { "part": "footer" } } }
       ]
     },
     {
       "id": "work",
       "type": "column",
+      "resizable": false,
       "children": [
+        { "id": "tabs", "type": "block", "size": { "px": 40 }, "window_drag": true, "content": { "mod": "rex-tabs" } },
         {
-          "id": "tabs",
-          "type": "block",
-          "size": {
-            "px": 40
-          },
-          "window_drag": true,
-          "content": {
-            "mod": "rex-tabs"
-          }
-        },
-        {
-          "id": "main",
-          "type": "block",
-          "background": "border",
-          "content": {
-            "tab": "active",
-            "pane": {
-              "gap": 1,
-              "radius": 0,
-              "background": "background",
-              "lone": false
+          "id": "work-body",
+          "type": "row",
+          "divider": { "width": 1, "color": "border" },
+          "children": [
+            {
+              "id": "main",
+              "type": "block",
+              "background": "border",
+              "content": { "tab": "active", "pane": { "gap": 1, "radius": 0, "background": "background", "lone": false } }
+            },
+            {
+              "id": "panel",
+              "type": "column",
+              "hidden": true,
+              "size": { "px": 368 },
+              "min": 280,
+              "max": 900,
+              "children": [
+                {
+                  "id": "panel-body",
+                  "type": "stack",
+                  "active": "files",
+                  "children": [
+                    { "id": "files", "type": "block", "content": { "mod": "files" } },
+                    { "id": "changes", "type": "block", "content": { "mod": "changes" } }
+                  ]
+                }
+              ]
             }
-          }
-        }
+          ]
+        },
+        { "id": "status", "type": "block", "size": { "px": 28 }, "content": { "mod": "workspace-status" } }
       ]
     }
   ]

@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme } from "herdr";
+import { spaces, panes, run, openOverlay, theme, shared, layout } from "herdr";
 
 const ICON = "mods/rex-tabs";
 const stop = (_e, cx) => cx.stop_propagation();
@@ -12,6 +12,15 @@ function label(tab, tabPanes) {
   return tabPanes[0]?.program?.name ?? "Terminal";
 }
 
+function find(node, id) {
+  if (node?.id === id) return node;
+  for (const child of node?.children ?? []) {
+    const found = find(child, id);
+    if (found) return found;
+  }
+  return null;
+}
+
 function icon(program, t) {
   if (!program?.icon) return svg(`${ICON}/monitor.svg`).size(13).text_color(t.muted);
   const glyph = program.tint ? svg(program.icon).size(11).text_color(program.color ?? t.muted) : image(program.icon).size(11);
@@ -21,6 +30,50 @@ function icon(program, t) {
 export default class RexTabs extends View {
   init() {
     this.pressed = null;
+    this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+  }
+
+  // Herdr's side panel behavior: each space remembers which panel it had open.
+  syncPanel(space, panel, body, enabled) {
+    if (!space || !panel) return;
+    const now = panel.hidden ? null : body?.active ?? null;
+    if (space.id !== this.space) {
+      const first = this.space === undefined;
+      this.space = space.id;
+      this.pending = null;
+      if (!(first && !(space.id in this.panels))) {
+        const stored = this.panels[space.id] ?? null;
+        const want = enabled.includes(stored) ? stored : null;
+        if (want !== now) {
+          this.pending = { want, until: Date.now() + 1000 };
+          if (want) { run("layout.select", { stack: "panel-body", child: want }); run("layout.show", { id: "panel" }); }
+          else run("layout.hide", { id: "panel" });
+          return;
+        }
+      }
+    }
+    if (this.pending) {
+      if (this.pending.want !== now && Date.now() < this.pending.until) return;
+      this.pending = null;
+    }
+    if (this.panels[space.id] === now) return;
+    this.panels[space.id] = now;
+    localStorage.setItem("panels", JSON.stringify(this.panels));
+  }
+
+  panelButton(id, text, glyph, panel, body) {
+    const t = theme();
+    const on = panel && !panel.hidden && body?.active === id;
+    return h_flex().id(`panel-${id}`).h(28).px(10).gap(6).flex_none().items_center().rounded_full().text_size(13)
+      .border(1).border_color(on ? "#ffffff1a" : t.background)
+      .bg(on ? t.selected : t.background).text_color(on ? t.foreground : t.muted)
+      .hover((s) => s.bg(on ? t.selected : t.hover).text_color(t.foreground)).on_mouse_down("left", stop)
+      .on_click(() => {
+        if (on) run("layout.hide", { id: "panel" });
+        else { run("layout.select", { stack: "panel-body", child: id }); run("layout.show", { id: "panel" }); }
+      })
+      .child(svg(`${ICON}/${glyph}.svg`).size(14))
+      .child(text);
   }
 
   tab(space, tab, i, allPanes) {
@@ -53,6 +106,11 @@ export default class RexTabs extends View {
     const t = theme();
     const space = spaces().find((s) => s.active);
     const allPanes = panes();
+    const root = layout();
+    const panel = find(root, "panel");
+    const body = find(root, "panel-body");
+    const enabled = shared("workspace.panels") ?? ["files", "changes"];
+    this.syncPanel(space, panel, body, enabled);
     return h_flex().size_full().min_w(0).px(10).gap(4).items_center().bg(t.background)
       .on_mouse_up("left", () => { this.pressed = null; })
       .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().gap(4).items_center().overflow_x_scrollbar()
@@ -60,6 +118,8 @@ export default class RexTabs extends View {
       .child(div().id("tab-new").size(26).flex_none().flex().items_center().justify_center().rounded_full().text_color(t.muted)
         .hover((s) => s.bg(t.hover).text_color(t.foreground)).on_mouse_down("left", stop)
         .on_click(() => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 }))
-        .child(svg(`${ICON}/plus.svg`).size(14)));
+        .child(svg(`${ICON}/plus.svg`).size(14)))
+      .when(Boolean(panel) && enabled.includes("files"), (el) => el.child(this.panelButton("files", "Files", "file", panel, body)))
+      .when(Boolean(panel) && enabled.includes("changes"), (el) => el.child(this.panelButton("changes", "Changes", "changes", panel, body)));
   }
 }
