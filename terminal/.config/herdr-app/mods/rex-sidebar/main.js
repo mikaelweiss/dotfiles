@@ -16,7 +16,7 @@ function programIcon(program, t) {
   if (!program?.icon) return svg(`${ICON}/monitor.svg`).size(14).text_color(t.muted);
   const glyph = program.tint ? svg(program.icon).size(13).text_color(program.color ?? t.muted) : image(program.icon).size(13);
   if (!program.tile) return div().size(20).flex_none().flex().items_center().justify_center().child(glyph);
-  return div().size(20).flex_none().rounded(5).bg(program.tile).flex().items_center().justify_center().child(glyph);
+  return div().size(20).flex_none().rounded(6).bg(program.tile).flex().items_center().justify_center().child(glyph);
 }
 
 export default class RexSidebar extends View {
@@ -72,7 +72,8 @@ export default class RexSidebar extends View {
     const tabPanes = allPanes.filter((p) => p.tab === tab.id);
     const program = tabPanes.find((p) => p.program?.agent)?.program ?? tabPanes[0]?.program;
     const current = space.active && tab.active;
-    return h_flex().id(`tab-${tab.id}`).h(32).px(8).gap(8).items_center().rounded(9).text_size(13.5)
+    return h_flex().id(`tab-${tab.id}`).h(32).px(8).gap(8).items_center().rounded_full().text_size(13.5)
+      .border(1).border_color(current ? "#ffffff1a" : t.chrome)
       .bg(current ? t.selected : t.chrome).text_color(current ? t.foreground : t.muted)
       .when(!current, (el) => el.hover((s) => s.bg(t.hover).text_color(t.foreground)))
       .on_click((e) => {
@@ -89,7 +90,7 @@ export default class RexSidebar extends View {
 
   newSessionRow(machine) {
     const t = theme();
-    return h_flex().id(`new-session-${machine}`).h(32).px(10).gap(9).items_center().rounded(9).text_size(13.5).text_color(t.muted)
+    return h_flex().id(`new-session-${machine}`).h(32).px(10).gap(9).items_center().rounded_full().text_size(13.5).text_color(t.muted)
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click(() => run("space.new", { machine }))
       .child(svg(`${ICON}/plus.svg`).size(14))
