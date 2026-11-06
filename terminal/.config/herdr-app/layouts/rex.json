@@ -69,10 +69,7 @@
             "px": 86
           },
           "content": {
-            "mod": "rex-usage",
-            "props": {
-              "provider": "claude"
-            }
+            "mod": "rex-usage"
           }
         },
         {
