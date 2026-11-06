@@ -19,8 +19,6 @@
     # Private. Each machine fetches it with the read-only deploy key in /etc/status.
     status.url = "git+ssh://git@github.com/mikaelweiss/status";
     status.inputs.nixpkgs.follows = "nixpkgs-stable";
-    # SHA-256 repo, which GitHub cannot host, so it comes straight from gitri over Tailscale.
-    gitri-cli.url = "https://gitri.weissfamily.us/mikaelweiss/gitri-cli/archive/main.tar.gz";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, nixos-raspberrypi, ... }:

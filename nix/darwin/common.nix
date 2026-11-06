@@ -11,7 +11,6 @@ in
   node.pkgs = stable;
 
   environment.systemPackages = with pkgs; [
-    inputs.gitri-cli.packages.${pkgs.stdenv.hostPlatform.system}.default
     mutagen
     # opencode
     # github-copilot-cli
