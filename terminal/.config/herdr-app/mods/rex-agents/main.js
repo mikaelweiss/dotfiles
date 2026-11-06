@@ -83,10 +83,13 @@ function duration(ms) {
 
 // The agent's icon from the app's program table: a one-color glyph or a picture.
 function icon(p, size, color) {
-  if (cardOf(p)) return image(cardOf(p)).size(size + 4).flex_none();
+  if (cardOf(p)) return image(cardOf(p)).w(Math.round((size + 4) * 1.25)).h(size + 4).flex_none();
   if (!p?.icon) return null;
   return p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();
 }
+
+// Rex's glass edge: a bright outer hairline over a softer inner one.
+const rim = () => div().absolute().inset_0().rounded_full().border(0.5).border_color("#ffffff12");
 
 export default class Agents extends View {
   init(_props, cx) {
@@ -352,12 +355,13 @@ export default class Agents extends View {
         .px(8)
         .h(30)
         .flex_none()
+        .relative()
         .rounded_full()
-        .border_1()
-        .border_color(a.focused ? "#ffffff1a" : "#00000000")
+        .border(0.5)
+        .border_color(a.focused ? "#ffffff29" : "#00000000")
         .items_center()
         .gap(9)
-        .when(a.focused, (el) => el.bg(t.selected))
+        .when(a.focused, (el) => el.bg(t.selected).child(rim()))
         .cursor_pointer()
         .hover((s) => s.bg(t.hover))
         .on_hover((on, cx) => {

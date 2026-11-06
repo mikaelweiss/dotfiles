@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome } from "herdr";
+import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome, readTextFile, writeTextFile } from "herdr";
 import * as fs from "fs/promises";
 
 // Rex-style program cards, built by mods/rex-tabs/cards/build.py. Programs without one keep their plain glyph.
@@ -17,6 +17,8 @@ const cardOf = (p) => (p?.key && cards.has(p.key) ? `mods/rex-tabs/cards/${p.key
 
 const ICON = "mods/rex-tabs";
 const stop = (_e, cx) => cx.stop_propagation();
+// Rex's glass edge: a bright outer hairline over a softer inner one.
+const rim = () => div().absolute().inset_0().rounded_full().border(0.5).border_color("#ffffff12");
 
 function label(tab, tabPanes) {
   if (tab.named) return tab.name;
@@ -35,7 +37,7 @@ function find(node, id) {
 }
 
 function icon(program, t) {
-  if (cardOf(program)) return image(cardOf(program)).size(18).flex_none();
+  if (cardOf(program)) return image(cardOf(program)).w(22).h(18).flex_none();
   if (!program?.icon) return svg(`${ICON}/monitor.svg`).size(13).text_color(t.muted);
   const glyph = program.tint ? svg(program.icon).size(11).text_color(program.color ?? t.muted) : image(program.icon).size(11);
   return div().size(17).flex_none().rounded(5).when(Boolean(program.tile), (el) => el.bg(program.tile)).flex().items_center().justify_center().child(glyph);
@@ -67,6 +69,22 @@ export default class RexTabs extends View {
       run(showing === "agents" ? "agent.prev" : "space.prev");
     } else if (command === "last-tab") {
       this.goLastTab();
+    } else if (command === "zoom-in" || command === "zoom-out") {
+      this.zoomBy(command === "zoom-in" ? 0.05 : -0.05);
+    }
+  }
+
+  // 5% steps: Herdr's zoom commands move 10% at a time.
+  async zoomBy(step) {
+    const file = `${appHome()}/settings.json`;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const raw = await readTextFile(file);
+      const person = raw ? JSON.parse(raw) : {};
+      person.zoom = Math.max(0.5, Math.min(3, Math.round(((person.zoom ?? 1) + step) * 100) / 100));
+      try {
+        await writeTextFile(file, JSON.stringify(person, null, 2) + "\n", raw);
+        return;
+      } catch {}
     }
   }
 
@@ -118,8 +136,9 @@ export default class RexTabs extends View {
   panelButton(id, text, glyph, panel, body) {
     const t = theme();
     const on = panel && !panel.hidden && body?.active === id;
-    return h_flex().id(`panel-${id}`).h(28).px(10).gap(6).flex_none().items_center().rounded_full().text_size(13)
-      .border(1).border_color(on ? "#ffffff1a" : t.background)
+    return h_flex().id(`panel-${id}`).relative().h(28).px(10).gap(6).flex_none().items_center().rounded_full().text_size(13)
+      .border(0.5).border_color(on ? "#ffffff29" : t.background)
+      .when(on, (el) => el.child(rim()))
       .bg(on ? t.selected : t.background).text_color(on ? t.foreground : t.muted)
       .hover((s) => s.bg(on ? t.selected : t.hover).text_color(t.foreground)).on_mouse_down("left", stop)
       .on_click(() => {
@@ -134,8 +153,9 @@ export default class RexTabs extends View {
     const t = theme();
     const tabPanes = allPanes.filter((p) => p.tab === tab.id);
     const program = tabPanes.find((p) => p.program?.agent)?.program ?? tabPanes[0]?.program;
-    return h_flex().id(`tab-${tab.id}`).h(28).pl(8).pr(tab.active ? 6 : 12).gap(7).flex_none().items_center().rounded_full().text_size(13)
-      .border(1).border_color(tab.active ? "#ffffff1a" : t.background)
+    return h_flex().id(`tab-${tab.id}`).relative().h(28).pl(8).pr(tab.active ? 6 : 12).gap(7).flex_none().items_center().rounded_full().text_size(13)
+      .border(0.5).border_color(tab.active ? "#ffffff29" : t.background)
+      .when(tab.active, (el) => el.child(rim()))
       .bg(tab.active ? t.selected : t.background).text_color(tab.active ? t.foreground : t.muted)
       .when(!tab.active, (el) => el.hover((s) => s.bg(t.hover).text_color(t.foreground)))
       .on_mouse_down("left", (e, cx) => { cx.stop_propagation(); this.pressed = i; if (e.click_count === 2) run("tab.rename", { id: tab.id }); })

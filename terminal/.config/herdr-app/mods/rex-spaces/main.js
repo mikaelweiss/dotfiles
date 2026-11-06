@@ -45,6 +45,9 @@ export function tone(t, status) {
   return t[status] ?? t.unknown;
 }
 
+// Rex's glass edge: a bright outer hairline over a softer inner one.
+const rim = () => div().absolute().inset_0().rounded_full().border(0.5).border_color("#ffffff12");
+
 export default class Spaces extends View {
   init(_props, cx) {
     this.git = {}; // where() -> { name, branch, ahead, behind, repo, linked }, null: not a repo
@@ -381,9 +384,9 @@ export default class Spaces extends View {
       .flex_none()
       .justify_center()
       .rounded_full()
-      .border_1()
-      .border_color(on ? "#ffffff1a" : "#00000000")
-      .when(on, (el) => el.bg(t.selected))
+      .border(0.5)
+      .border_color(on ? "#ffffff29" : "#00000000")
+      .when(on, (el) => el.bg(t.selected).child(rim()))
       .when(!on, (el) => el.hover((s) => s.bg(t.hover)))
       .when(this.pressed === w.id && this.over !== w.id, (el) => el.opacity(0.5))
       .when(this.pressed !== null && this.over === w.id && this.pressed !== w.id, (el) => el.child(
