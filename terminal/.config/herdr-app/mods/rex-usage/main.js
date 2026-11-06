@@ -2,9 +2,9 @@
 // own login from the Keychain, sent to Anthropic's usage endpoint. Pace follows
 // CodexBar's math: how far through the window you are versus how much you've used.
 
-import { View, div, image } from "gpui-kit";
+import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { exec, theme, home } from "herdr";
+import { exec, theme, home, run, settings, nextCommand } from "herdr";
 
 const REFRESH = 5 * 60 * 1000;
 const WEEK = 7 * 24 * 60 * 60;
@@ -51,6 +51,11 @@ export default class RexUsage extends View {
     this.usage = null;
     this.stale = false;
     this.error = null;
+    this.open = (localStorage.getItem("open") ?? "true") === "true";
+    this.asked = null;
+    cx.spawn(async (cx) => {
+      for (;;) if ((await nextCommand()) === "toggle") this.toggle(cx);
+    });
     cx.spawn(async (cx) => {
       const r = await exec("claude", ["--version"]).catch(() => null);
       this.agent = `claude-cli/${r?.stdout?.trim().split(/\s+/)[0] || "unknown"} (external, cli)`;
@@ -83,26 +88,57 @@ export default class RexUsage extends View {
     });
   }
 
+  toggle(cx) {
+    this.open = !this.open;
+    localStorage.setItem("open", String(this.open));
+    cx.notify();
+  }
+
+  // The card grows and shrinks its own layout block to fit what it shows.
+  fit(height) {
+    const want = Math.ceil(height / settings().zoom) + 6;
+    if (this.asked !== null && Math.abs(want - this.asked) < 2) return;
+    this.asked = want;
+    run("layout.resize", { id: "usage", px: want });
+  }
+
   render() {
     const t = theme();
+    const chevron = svg(`mods/workspace-chrome/${this.open ? "chevron-down" : "chevron-right"}.svg`).size(12).flex_none().text_color(t.dim);
     const shell = (content) => div().size_full().bg(t.chrome).px(10).pb(6).child(
-      v_flex().size_full().px(12).py(10).gap(7).rounded(12).bg(t.surface).border(0.5).border_color("#ffffff14").text_size(12).child(content));
+      v_flex().id("usage-card").w_full().px(12).py(9).gap(8).rounded(12).bg(t.surface).border(0.5).border_color("#ffffff14").text_size(12)
+        .on_size_change((size) => this.fit(size.height))
+        .child(content));
     if (!this.usage) return shell(div().id("usage-error").text_color(t.dim).when(Boolean(this.error), (el) => el.tooltip(this.error)).child(this.error ? "Usage unavailable" : "Loading usage…"));
     const p = pace(this.usage.usedPercent, this.usage.resetsAt, Date.now());
     const used = Math.round(this.usage.usedPercent);
-    const paceText = !p ? null : Math.abs(p.delta) <= 2 || Math.round(Math.abs(p.delta)) === 0
-      ? "On pace" : p.delta > 0 ? `${Math.round(p.delta)}% in deficit` : `${Math.round(-p.delta)}% in reserve`;
-    const paceColor = !p || Math.abs(p.delta) <= 2 ? t.muted : p.delta > 0 ? (p.delta > 12 ? t.blocked : t.working) : t.ansi2;
+    const onPace = !p || Math.abs(p.delta) <= 2 || Math.round(Math.abs(p.delta)) === 0;
+    const paceText = !p ? null : onPace ? "On pace" : p.delta > 0 ? `${Math.round(p.delta)}% in deficit` : `${Math.round(-p.delta)}% in reserve`;
+    const paceShort = !p ? "" : onPace ? "On pace" : p.delta > 0 ? `${Math.round(p.delta)}% over` : `${Math.round(-p.delta)}% under`;
+    const paceColor = onPace ? t.muted : p.delta > 0 ? (p.delta > 12 ? t.blocked : t.working) : t.ansi2;
     const eta = !p ? null : p.lasts ? "Lasts until reset" : p.eta === 0 ? "Runs out now" : `Runs out in ${span(p.eta)}`;
-    return shell(v_flex().gap(7).when(this.stale, (el) => el.opacity(0.6))
-      .child(h_flex().gap(7).items_center()
-        .child(image("mods/rex-tabs/cards/claude.svg").w(18).h(15).flex_none())
+    const bar = (h) => div().relative().h(h).flex_1().min_w(0).rounded_full().bg(t.hover)
+      .child(div().absolute().left(0).top(0).h(h).rounded_full().bg("#e56a40").w(`${Math.min(100, used)}%`))
+      .when(Boolean(p), (el) => el.child(div().absolute().top(-2).h(h + 4).w(1.5).rounded_full().bg(t.foreground).left(`${p.expected}%`)));
+    const card = image("mods/rex-tabs/cards/claude.svg").w(18).h(15).flex_none();
+    if (!this.open) {
+      return shell(h_flex().id("usage-toggle").gap(8).items_center().cursor_pointer().when(this.stale, (el) => el.opacity(0.6))
+        .tooltip([`Weekly ${used}% used`, paceText, eta, p && `Resets in ${span(p.untilReset)}`].filter(Boolean).join(" · "))
+        .on_click((_e, cx) => this.toggle(cx))
+        .child(card)
+        .child(div().flex_none().text_size(12.5).font_medium().text_color(t.foreground).child(`${used}%`))
+        .child(bar(4))
+        .child(div().flex_none().text_color(paceColor).child(paceShort))
+        .child(chevron));
+    }
+    return shell(v_flex().gap(8).when(this.stale, (el) => el.opacity(0.6))
+      .child(h_flex().id("usage-toggle").gap(7).items_center().cursor_pointer().on_click((_e, cx) => this.toggle(cx))
+        .child(card)
         .child(div().id("usage-title").flex_1().min_w(0).truncate().text_size(13).font_medium().text_color(t.foreground)
           .when(this.stale, (el) => el.tooltip(`Last known. ${this.error}`)).child(`Weekly ${used}% used`))
-        .when(Boolean(p), (el) => el.child(div().id("resets").flex_none().text_color(t.dim).tooltip(`Resets in ${span(p.untilReset)}`).child(span(p.untilReset)))))
-      .child(div().relative().h(6).w_full().rounded_full().bg(t.hover)
-        .child(div().absolute().left(0).top(0).h(6).rounded_full().bg("#e56a40").w(`${Math.min(100, used)}%`))
-        .when(Boolean(p), (el) => el.child(div().absolute().top(-2).h(10).w(1.5).rounded_full().bg(t.foreground).left(`${p.expected}%`))))
+        .when(Boolean(p), (el) => el.child(div().id("resets").flex_none().text_color(t.dim).tooltip(`Resets in ${span(p.untilReset)}`).child(span(p.untilReset))))
+        .child(chevron))
+      .child(h_flex().child(bar(6)))
       .when(Boolean(p), (el) => el.child(h_flex().gap(8).justify_between()
         .child(div().flex_none().text_color(paceColor).child(paceText))
         .child(div().min_w(0).truncate().text_color(t.dim).child(eta)))));
