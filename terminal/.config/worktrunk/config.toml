@@ -323,10 +323,15 @@ cd = false   # the post-switch tmux hook owns navigation; pass --cd to override
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
 
-# Each worktree lives in a dedicated tmux window / herdr tab / rex tab named
-# after its branch: switch to it if it exists, otherwise open one at the
-# worktree path. Only the innermost mux reacts: herdr beats tmux, and both
-# beat rex, which is a GUI app and so always the outermost.
+# Each worktree lives in a dedicated tmux window / herdr tab / Herdr app tab /
+# rex tab named after its branch: switch to it if it exists, otherwise open
+# one at the worktree path. Only the innermost mux reacts: herdr beats tmux,
+# and both beat the Herdr app and rex, which are GUI apps and so always the
+# outermost.
+# The Herdr app runs on herdr-core, not the herdr TUI server, so it has its
+# own CLI (herdr-app) and marks its terminals with HC_TERMINAL_ID instead of
+# HERDR_ENV. The tab opens in the space holding the terminal wt runs in.
+# herdr-app do prints errors on stdout, so its output is shown only on failure.
 # Step two runs only on the MacBook Air: it splits the tab and attaches the
 # worktree's agent session on wolf via wolf-attach, which reconnects on its
 # own when the link drops (lid close); mutagen keeps the two copies
@@ -349,6 +354,19 @@ err=$(printf '%s' "$tabs" | jq -r '.error.message // empty')
 tab_id=$(printf '%s' "$tabs" | jq -r --arg b {{ branch }} '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
 [ -n "$tab_id" ] && herdr tab focus "$tab_id" && exit 0
 herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label {{ branch }} --cwd {{ worktree_path }} --focus
+'''
+herdr-app-tab = '''
+[ -n "${HC_TERMINAL_ID:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
+command -v herdr-app >/dev/null || exit 0
+ls=$(herdr-app ls) || exit 1
+space=$(printf '%s' "$ls" | jq -r --arg t "$HC_TERMINAL_ID" '[.spaces[] | select(any(.tabs[].terminals[]; .terminal == $t))][0].id // empty')
+[ -n "$space" ] || { echo "herdr-app: no space holds terminal $HC_TERMINAL_ID" >&2; exit 1; }
+tab_id=$(printf '%s' "$ls" | jq -r --arg s "$space" --arg b {{ branch }} '[.spaces[] | select(.id == $s) | .tabs[] | select(.name == $b)][0].id // empty')
+if [ -n "$tab_id" ]; then
+  out=$(herdr-app do tab.select --id "$tab_id")
+else
+  out=$(herdr-app do tab.new --name {{ branch }} --space "$space" --folder {{ worktree_path }})
+fi || { printf '%s\n' "$out" >&2; exit 1; }
 '''
 rex-tab = '''
 [ -n "${REX_SESSION:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
@@ -387,6 +405,19 @@ new=$(herdr pane split "$root" --direction right --cwd {{ worktree_path }} --foc
 herdr pane rename "$new" wolf
 herdr pane run "$new" "~/code/dotfiles/terminal/bin/wolf-attach {{ worktree_path }} {{ branch | sanitize }}"
 '''
+wolf-pane-herdr-app = '''
+[ -n "${HC_TERMINAL_ID:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
+command -v herdr-app >/dev/null || exit 0
+[ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
+[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
+ls=$(herdr-app ls) || exit 1
+tab=$(printf '%s' "$ls" | jq -c --arg t "$HC_TERMINAL_ID" --arg b {{ branch }} '[.spaces[] | select(any(.tabs[].terminals[]; .terminal == $t)) | .tabs[] | select(.name == $b)][0] // empty')
+[ -n "$tab" ] || exit 0
+[ "$(printf '%s' "$tab" | jq '.terminals | length')" = "1" ] || exit 0
+pane=$(printf '%s' "$tab" | jq -r '.terminals[0].pane')
+argv=$(jq -nc --arg p {{ worktree_path }} --arg n {{ branch | sanitize }} '[env.HOME + "/code/dotfiles/terminal/bin/wolf-attach", $p, $n]')
+out=$(herdr-app do pane.split --direction right --pane "$pane" --argv "$argv") || { printf '%s\n' "$out" >&2; exit 1; }
+'''
 wolf-pane-rex = '''
 [ -n "${REX_SESSION:-}" ] && [ -z "${TMUX:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
 [ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
@@ -403,7 +434,7 @@ root=$(printf '%s' "$tab" | jq -r '.layers[0].blocks[0].block_id')
 
 # Once a worktree is gone (wt remove, or wt merge with removal), kill its
 # wolf keeper session, clear wolf's leftover copy, and close its local
-# tmux window / herdr tab / rex tab. The script no-ops while the worktree still
+# tmux window / herdr tab / Herdr app tab / rex tab. The script no-ops while the worktree still
 # exists locally, so merges with --no-remove leave everything open.
 [post-remove]
 cleanup = '''
