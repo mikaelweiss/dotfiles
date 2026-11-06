@@ -103,9 +103,9 @@ def card(key, program):
 <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/><stop offset="1" stop-color="{bottom}"/></linearGradient>
 <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#ffffff" stop-opacity="0.16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.08"/></linearGradient>
 </defs>
-<path d="{squircle(0.75, 0.75, 62.5, 50.5, 13.25)}" fill="none" stroke="#000000" stroke-opacity="0.4" stroke-width="1.5"/>
-<path d="{squircle(1.5, 1.5, 61, 49, 12.5)}" fill="url(#fill)"/>
-<path d="{squircle(2.25, 2.25, 59.5, 47.5, 11.75)}" fill="none" stroke="url(#edge)" stroke-width="1.5"/>
+<path d="{squircle(0.75, 0.75, 62.5, 50.5, 16.25)}" fill="none" stroke="#000000" stroke-opacity="0.4" stroke-width="1.5"/>
+<path d="{squircle(1.5, 1.5, 61, 49, 15.5)}" fill="url(#fill)"/>
+<path d="{squircle(2.25, 2.25, 59.5, 47.5, 14.75)}" fill="none" stroke="url(#edge)" stroke-width="1.5"/>
 {art}
 </svg>
 '''
