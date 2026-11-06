@@ -51,21 +51,21 @@
         "type": "github"
       }
     },
-    "gitea": {
+    "gitri": {
       "inputs": {
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1793933579,
-        "narHash": "sha256-x/dTgxP/gnERqtuc+auCVun1QfqeB9qDn5WkZ9TKybg=",
+        "lastModified": 1793937183,
+        "narHash": "sha256-7edc85xJqJmZIv/VBeKiwrPgId7ZO2hBGGb6OWyUH/U=",
         "owner": "mikaelweiss",
-        "repo": "gitea",
-        "rev": "6694edfa48d1aad293c5c3511d8761fc89192b21",
+        "repo": "gitri",
+        "rev": "bfef272975836f7b9fd9ea13c703fd5fc8e3ba95",
         "type": "github"
       },
       "original": {
         "owner": "mikaelweiss",
-        "repo": "gitea",
+        "repo": "gitri",
         "type": "github"
       }
     },
@@ -265,7 +265,7 @@
     "root": {
       "inputs": {
         "disko": "disko",
-        "gitea": "gitea",
+        "gitri": "gitri",
         "nix-darwin": "nix-darwin",
         "nixos-raspberrypi": "nixos-raspberrypi",
         "nixpkgs": "nixpkgs_3",

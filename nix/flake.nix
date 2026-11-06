@@ -19,7 +19,7 @@
     # Private. Each machine fetches it with the read-only deploy key in /etc/status.
     status.url = "git+ssh://git@github.com/mikaelweiss/status";
     status.inputs.nixpkgs.follows = "nixpkgs-stable";
-    gitea.url = "github:mikaelweiss/gitea";
+    gitri.url = "github:mikaelweiss/gitri";
   };
 
   outputs = inputs@{ self, nixpkgs, nixpkgs-stable, nix-darwin, disko, nixos-raspberrypi, ... }:

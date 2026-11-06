@@ -7,7 +7,7 @@ in
 {
   services.gitea = {
     enable = true;
-    package = inputs.gitea.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = inputs.gitri.packages.${pkgs.stdenv.hostPlatform.system}.default;
     database.type = "postgres";
     settings = {
       server = {
