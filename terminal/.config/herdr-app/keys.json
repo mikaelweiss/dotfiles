@@ -113,7 +113,8 @@
     "ctrl-f shift-8": "space.select:8",
     "ctrl-f 9": "tab.select:9",
     "ctrl-f shift-9": "space.select:9",
-    "cmd-s": "layout.toggle:sidebar"
+    "cmd-s": "layout.toggle:sidebar",
+    "cmd-shift-t": "space.new"
   },
   "terminal": {
     "cmd-f": "terminal.search",
