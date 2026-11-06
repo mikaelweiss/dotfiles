@@ -11,12 +11,15 @@ in
     raspberry-pi-5.base
     sd-image
     ../../modules/gitea.nix
+    ../../modules/backups.nix
     # 26.05's list setup fails on every run after the first, so reboots and weekly refreshes report failure.
     "${inputs.nixpkgs-master}/nixos/modules/services/networking/pihole-ftl.nix"
   ];
   disabledModules = [ "services/networking/pihole-ftl.nix" ];
 
   networking.hostName = "pika";
+
+  resticBackups.gitea = true;
 
   # The SD card reports no SMART data.
   services.weiss-status.sensor.smart = false;

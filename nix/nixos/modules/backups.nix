@@ -5,6 +5,7 @@ let
   oak = "rest:http://oak:8000";
   keep = "--keep-daily 7 --keep-weekly 4 --keep-monthly 6";
   stateDir = "/var/backup/sparrow-state";
+  giteaDumpDir = "/var/backup/gitea-db";
 
   dailyTimer = {
     wantedBy = [ "timers.target" ];
@@ -57,6 +58,13 @@ let
     [ -d /var/lib/parlance/backups ] && cp -a /var/lib/parlance/backups ${stateDir}/parlance
     chown -R mikaelweiss ${stateDir}
   '';
+
+  stageGiteaDb = pkgs.writeShellScript "stage-gitea-db" ''
+    set -euo pipefail
+    install -d -m 700 -o mikaelweiss ${giteaDumpDir}
+    ${pkgs.util-linux}/bin/runuser -u postgres -- ${config.services.postgresql.package}/bin/pg_dump ${config.services.gitea.database.name} > ${giteaDumpDir}/gitea.sql
+    chown mikaelweiss ${giteaDumpDir}/gitea.sql
+  '';
 in
 {
   options.resticBackups = {
@@ -66,6 +74,7 @@ in
       description = "Minecraft data dir to back up, or null to skip.";
     };
     sparrowState = lib.mkEnableOption "Postgres + site-secret backup";
+    gitea = lib.mkEnableOption "Gitea repos + database backup";
     server = lib.mkEnableOption "the append-only repo server the other hosts back up to";
   };
 
@@ -127,6 +136,19 @@ in
           serviceConfig.AmbientCapabilities = [ "CAP_DAC_READ_SEARCH" ];
         };
       })
+      (lib.mkIf cfg.gitea {
+        gitea-backup = lib.recursiveUpdate (baseService {
+          description = "Restic backup of Gitea repos and database";
+          preStart = stageGiteaDb;
+          scriptBody = resticTo {
+            repo = "${config.networking.hostName}/gitea";
+            path = "${giteaDumpDir} ${config.services.gitea.stateDir}";
+          };
+        }) {
+          # Gitea keeps its repos readable only by the gitea user.
+          serviceConfig.AmbientCapabilities = [ "CAP_DAC_READ_SEARCH" ];
+        };
+      })
       (lib.mkIf cfg.sparrowState {
         sparrow-state-backup = baseService {
           description = "Restic backup of Postgres dump and site secrets";
@@ -139,6 +161,7 @@ in
     systemd.timers = lib.mkMerge [
       (lib.mkIf (cfg.minecraftPath != null) { minecraft-all-backup = dailyTimer; })
       (lib.mkIf cfg.sparrowState { sparrow-state-backup = dailyTimer; })
+      (lib.mkIf cfg.gitea { gitea-backup = dailyTimer; })
     ];
   }
   ];
