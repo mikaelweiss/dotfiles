@@ -71,8 +71,6 @@
     "ctrl-f ctrl-d": "window.close",
     "ctrl-f o": "mod.open:picker",
     "ctrl-f shift-s": "mod.open:picker",
-    "ctrl-p": "space.prev",
-    "ctrl-n": "space.next",
     "ctrl-f ctrl-p": "space.prev",
     "ctrl-f ctrl-n": "space.next",
     "ctrl-k": "rex-tabs.sidebar-up",
