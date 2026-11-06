@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings } from "herdr";
+import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand } from "herdr";
 
 const ICON = "mods/rex-tabs";
 const stop = (_e, cx) => cx.stop_propagation();
@@ -28,9 +28,29 @@ function icon(program, t) {
 }
 
 export default class RexTabs extends View {
-  init() {
+  init(_props, cx) {
     this.pressed = null;
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    // The sidebar's list keys live here: this bar is always shown, the sidebar can be hidden.
+    cx.spawn(async (cx) => {
+      for (;;) {
+        this.sidebarCommand(await nextCommand());
+        cx.notify();
+      }
+    });
+  }
+
+  sidebarCommand(command) {
+    const root = layout();
+    const showing = find(root, "sidebar-lists")?.active ?? "spaces";
+    if (command === "sidebar-switch") {
+      run("layout.select", { stack: "sidebar-lists", child: showing === "spaces" ? "agents" : "spaces" });
+      if (find(root, "sidebar")?.hidden) run("layout.show", { id: "sidebar" });
+    } else if (command === "sidebar-down") {
+      run(showing === "agents" ? "agent.next" : "space.next");
+    } else if (command === "sidebar-up") {
+      run(showing === "agents" ? "agent.prev" : "space.prev");
+    }
   }
 
   // Herdr's side panel behavior: each space remembers which panel it had open.

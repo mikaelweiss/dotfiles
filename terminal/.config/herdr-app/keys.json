@@ -75,8 +75,8 @@
     "ctrl-n": "space.next",
     "ctrl-f ctrl-p": "space.prev",
     "ctrl-f ctrl-n": "space.next",
-    "ctrl-k": "agent.prev",
-    "ctrl-j": "agent.next",
+    "ctrl-k": "rex-tabs.sidebar-up",
+    "ctrl-j": "rex-tabs.sidebar-down",
     "ctrl-f ,": "mod.open:rex-settings",
     "ctrl-f p": {
       "command": "pane.split",
@@ -114,7 +114,8 @@
     "ctrl-f 9": "tab.select:9",
     "ctrl-f shift-9": "space.select:9",
     "cmd-s": "layout.toggle:sidebar",
-    "cmd-shift-t": "space.new"
+    "cmd-shift-t": "space.new",
+    "cmd-.": "rex-tabs.sidebar-switch"
   },
   "terminal": {
     "cmd-f": "terminal.search",
