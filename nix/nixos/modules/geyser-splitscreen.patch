@@ -512,7 +512,7 @@ index ffe7d81..3eca531 100644
  
      public long nextEntityId() {
 diff --git a/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java b/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
-index a2ff71e..de6f293 100644
+index a2ff71e..6edbd60 100644
 --- a/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
 +++ b/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
 @@ -26,12 +26,16 @@
@@ -545,7 +545,7 @@ index a2ff71e..de6f293 100644
  import java.util.function.BiConsumer;
  
  public class LoginEncryptionUtils {
-@@ -66,6 +74,276 @@ public class LoginEncryptionUtils {
+@@ -66,6 +74,277 @@ public class LoginEncryptionUtils {
          return encryptConnectionWithCert(session, loginPacket.getAuthPayload(), loginPacket.getClientJwt());
      }
  
@@ -718,7 +718,7 @@ index a2ff71e..de6f293 100644
 +     * Floodgate setup, where the XUID is what links a Bedrock player to a real account, this is not
 +     * good enough and the guest should be refused instead - see the note on the class.
 +     */
-+    private static AuthData resolveSubClientAuthData(GeyserImpl geyser, GeyserSession session,
++    static AuthData resolveSubClientAuthData(GeyserImpl geyser, GeyserSession session,
 +                                                     GeyserSession parent, @Nullable IdentityData extraData,
 +                                                     ChainValidationResult result) {
 +        int slot = session.getUpstream().getSubClientId();
@@ -752,14 +752,15 @@ index a2ff71e..de6f293 100644
 +                && !identity.equals(NIL_UUID)
 +                && !identity.equals(parent.getAuthData().uuid());
 +
++        // A Switch sends the host's own XUID for the guest, which would read as the host joining twice.
 +        String xuid = rawXuid;
-+        if (isBlank(xuid)) {
++        if (isBlank(xuid) || xuid.equals(parent.xuid())) {
 +            String source = identityIdentifies ? "its identity UUID" : "the host's XUID and controller slot";
 +            xuid = syntheticXuid(identityIdentifies
 +                    ? "identity:" + identity
 +                    : "slot:" + parent.xuid() + ':' + slot);
 +            geyser.getLogger().warning(String.format(
-+                    "Split-screen: the console sent no XUID for the guest in slot %d - a long-standing "
++                    "Split-screen: the console sent no XUID of the guest's own in slot %d - a long-standing "
 +                            + "console limitation (MCPE-71033). Deriving one from %s. This is fine for an "
 +                            + "offline-mode server; it is NOT an identity claim and is not suitable for "
 +                            + "Floodgate or online mode.", slot, source));
@@ -971,5 +972,69 @@ index 0000000..63de48f
 +        GeyserBedrockPeer peer = mock(GeyserBedrockPeer.class);
 +        sessionInSlot(peer, -1).sendPacketsImmediately(move);
 +        verify(peer, never()).sendPacketsImmediately(anyInt(), anyInt(), any(BedrockPacket[].class));
++    }
++}
+diff --git a/core/src/test/java/org/geysermc/geyser/util/SplitScreenIdentityTest.java b/core/src/test/java/org/geysermc/geyser/util/SplitScreenIdentityTest.java
+new file mode 100644
+index 0000000..3b5b6dc
+--- /dev/null
++++ b/core/src/test/java/org/geysermc/geyser/util/SplitScreenIdentityTest.java
+@@ -0,0 +1,58 @@
++package org.geysermc.geyser.util;
++
++import org.cloudburstmc.protocol.bedrock.util.ChainValidationResult;
++import org.geysermc.geyser.GeyserImpl;
++import org.geysermc.geyser.session.GeyserSession;
++import org.geysermc.geyser.session.auth.AuthData;
++import org.junit.jupiter.api.Test;
++
++import java.util.Map;
++import java.util.UUID;
++
++import static org.junit.jupiter.api.Assertions.assertEquals;
++import static org.junit.jupiter.api.Assertions.assertNotEquals;
++import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.when;
++
++class SplitScreenIdentityTest {
++    private static final String HOST_NAME = "FussyPenny3883";
++    private static final String HOST_XUID = "2535458573368988";
++    private static final UUID HOST_IDENTITY = UUID.fromString("debd53b0-d53c-351c-9c48-7afe88fa47a1");
++
++    @Test
++    void guestSentTheHostsIdentityGetsItsOwn() {
++        AuthData guest = resolve(HOST_XUID, HOST_NAME, HOST_IDENTITY);
++        assertNotEquals(HOST_XUID, guest.xuid());
++        assertNotEquals(HOST_IDENTITY, guest.uuid());
++        assertNotEquals(HOST_NAME, guest.name());
++        // The guest keeps their inventory across joins
++        assertEquals(guest, resolve(HOST_XUID, HOST_NAME, HOST_IDENTITY));
++    }
++
++    @Test
++    void guestWithAnAccountKeepsIt() {
++        UUID identity = UUID.randomUUID();
++        AuthData guest = resolve("2535400000000001", "Guest", identity);
++        assertEquals("2535400000000001", guest.xuid());
++        assertEquals("Guest", guest.name());
++        assertEquals(identity, guest.uuid());
++    }
++
++    private static AuthData resolve(String xuid, String name, UUID identity) {
++        GeyserSession host = mock(GeyserSession.class, RETURNS_DEEP_STUBS);
++        when(host.xuid()).thenReturn(HOST_XUID);
++        when(host.bedrockUsername()).thenReturn(HOST_NAME);
++        when(host.getAuthData()).thenReturn(new AuthData(HOST_NAME, HOST_IDENTITY, HOST_XUID, 0, null));
++
++        GeyserSession guest = mock(GeyserSession.class, RETURNS_DEEP_STUBS);
++        when(guest.getUpstream().getSubClientId()).thenReturn(1);
++
++        ChainValidationResult result = new ChainValidationResult(true, Map.of(
++            "identityPublicKey", "",
++            "iat", 0L,
++            "extraData", Map.of("XUID", xuid, "displayName", name, "identity", identity.toString())));
++        return LoginEncryptionUtils.resolveSubClientAuthData(mock(GeyserImpl.class, RETURNS_DEEP_STUBS),
++            guest, host, result.identityClaims().extraData, result);
 +    }
 +}
