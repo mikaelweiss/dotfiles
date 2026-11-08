@@ -43,7 +43,8 @@ let
   };
 
   # Upstream Geyser kicks a console when a second split-screen player joins.
-  # The patch ports GeyserMC/Geyser#6689 onto this commit.
+  # The patch ports GeyserMC/Geyser#6689 onto this commit. docs/the-shire
+  # covers updating it and removing it once Geyser merges split screen.
   geyserSource = pkgs.applyPatches {
     name = "geyser-splitscreen";
     src = pkgs.fetchFromGitHub {
