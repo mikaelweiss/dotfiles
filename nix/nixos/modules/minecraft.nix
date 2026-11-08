@@ -327,7 +327,9 @@ in
         MemoryMax = "5G";
       };
     };
-    podman-the-shire.requires = [ "geyser-splitscreen.service" ];
+    # Requires would restart the server whenever the build restarts. Without
+    # the jar, the install in preStart fails and the server stays down.
+    podman-the-shire.wants = [ "geyser-splitscreen.service" ];
     podman-the-shire.after = [ "geyser-splitscreen.service" ];
     podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/"
       + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml"

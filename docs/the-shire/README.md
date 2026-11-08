@@ -31,7 +31,7 @@ Switches update Bedrock on their own. Until the server's Geyser supports the new
 Watch [#6689](https://github.com/GeyserMC/Geyser/pull/6689) and the issue [#750](https://github.com/GeyserMC/Geyser/issues/750). Once a Geyser release supports split screen:
 
 1. Add `geyser` back to the Shire's `MODRINTH_PROJECTS`.
-2. Delete `geyserSource`, `geyserJar`, the `geyser-splitscreen` service, the Shire's `requires` and `after` on it, the jar line in its `preStart`, and the patch file.
+2. Delete `geyserSource`, `geyserJar`, the `geyser-splitscreen` service, the Shire's `wants` and `after` on it, the jar line in its `preStart`, and the patch file.
 3. `nix-rebuild`, then delete `mods/Geyser-Fabric-splitscreen.jar` on sparrow. Nothing else removes it, and two Geysers will not start.
 
 ### New split-screen players
