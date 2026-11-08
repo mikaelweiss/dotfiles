@@ -3,7 +3,7 @@
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, machines, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome } from "herdr";
+import { agents, machines, terminals, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome } from "herdr";
 import * as fs from "fs/promises";
 
 // Rex-style program cards, built by mods/rex-tabs/cards/build.py. Programs without one keep their plain glyph.
@@ -40,17 +40,6 @@ function toggleSidebar() {
 }
 
 const clean = (s) => (s ?? "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
-
-function leadPanes(all) {
-  const leads = new Map();
-  for (const p of all) {
-    if (!p.terminal) continue;
-    const current = leads.get(p.tab);
-    // First agent, else first focused terminal, else first terminal in the tab.
-    if (!current || (!current.program?.agent && (p.program?.agent || (!current.focused && p.focused)))) leads.set(p.tab, p);
-  }
-  return leads;
-}
 
 function title(tab, l) {
   const prog = l?.program?.name;
@@ -303,12 +292,12 @@ export default class Agents extends View {
     };
 
     // A row's heading is a tab someone named or the agent's own title, never an
-    // automatic tab number: the program's name stands in for one.
-    // Read the pane snapshot once: every host read copies the whole list into JS.
-    const leads = leadPanes(panes());
-    const tabLabels = new Map(spaces().flatMap(s => s.tabs).map(tab => [tab.id, title(tab, leads.get(tab.id))]));
+    // automatic tab number: the program's name stands in for one. Each agent reads
+    // its own title, since agents split in one tab each name their own chat.
+    const tabs = new Map(spaces().flatMap(s => s.tabs).map(tab => [tab.id, tab]));
     const heading = (a) => {
-      const l = tabLabels.get(a.tab) ?? clean(a.title);
+      const tab = tabs.get(a.tab);
+      const l = tab ? title(tab, a) : clean(a.title);
       return !l || /^\d+$/.test(l) ? a.program?.name || l : l;
     };
 
