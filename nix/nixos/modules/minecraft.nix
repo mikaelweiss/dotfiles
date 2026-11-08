@@ -56,8 +56,11 @@ let
     patches = [ ./geyser-splitscreen.patch ];
   };
   # Gradle downloads Minecraft and its build plugins, which the Nix sandbox
-  # forbids, so a service builds the jar once per source.
-  geyserJar = "/var/lib/geyser-splitscreen/${builtins.baseNameOf geyserSource}.jar";
+  # forbids, so a service builds the jar once per source. The name ignores
+  # nixpkgs so a system update does not rebuild it.
+  geyserJar = let
+    key = builtins.hashString "sha256" (geyserSource.src.rev + builtins.hashFile "sha256" ./geyser-splitscreen.patch);
+  in "/var/lib/geyser-splitscreen/${builtins.substring 0 16 key}.jar";
 
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
