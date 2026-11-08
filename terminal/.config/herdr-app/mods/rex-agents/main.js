@@ -3,7 +3,7 @@
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { agents, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome } from "herdr";
+import { agents, machines, terminals, panes, focused, spaces, run, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, appHome } from "herdr";
 import * as fs from "fs/promises";
 
 // Rex-style program cards, built by mods/rex-tabs/cards/build.py. Programs without one keep their plain glyph.
@@ -248,7 +248,9 @@ export default class Agents extends View {
     if (props()?.sortMenu) return this.sortMenu(t);
     const collapsed = narrow();
     const sort = sortOf();
-    let list = agents();
+    // An offline machine's agents keep their last status forever, so they go until it's back.
+    const offline = new Set(machines().filter((m) => m.layout === "unavailable").map((m) => m.name));
+    let list = agents().filter((a) => !offline.has(a.address.includes("/") ? a.address.split("/")[0] : null));
     this.listed = new Map(list.map((a) => [a.address, a.status]));
     const all = terminals();
     this.migratePins(all);
