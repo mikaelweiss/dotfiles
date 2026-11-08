@@ -70,8 +70,13 @@ const SORTS = [
   { id: "grouped", label: "Grouped by space", icon: "layers" },
 ];
 const sortOf = () => SORTS.find((s) => s.id === shared("agents.sort")) ?? SORTS[0];
-const SECTION = { 4: "Needs you", 3: "Done", 2: "Working", 1: "Idle" };
-const SECTION_STATUS = { 4: "blocked", 3: "done", 2: "working" };
+// Done and idle share one section: the dot tells unread from read.
+const SECTION_OF = { 4: "blocked", 3: "done", 2: "working", 1: "done" };
+const SECTION = {
+  blocked: { label: "Needs you", order: 3 },
+  working: { label: "Working", order: 2 },
+  done: { label: "Done", order: 1 },
+};
 
 function duration(ms) {
   const m = Math.floor(ms / 60000);
@@ -254,7 +259,9 @@ export default class Agents extends View {
     const byPriority = sort.id === "priority";
     const urgency = new Map(list.map((a) => [a.address, Math.max(this.rank(a), ...this.tree(all, a.address).map((s) => RANK[kidStatus(s.t, this.listed)] ?? 0))]));
     const rankOf = (a) => urgency.get(a.address);
-    if (byPriority) list = [...list].sort((x, y) => rankOf(y) - rankOf(x) || this.since(y) - this.since(x) || y.seq - x.seq);
+    const sectionOf = (a) => SECTION_OF[rankOf(a) || RANK.idle];
+    const order = (a) => SECTION[sectionOf(a)].order;
+    if (byPriority) list = [...list].sort((x, y) => order(y) - order(x) || rankOf(y) - rankOf(x) || this.since(y) - this.since(x) || y.seq - x.seq);
     const pinned = list.filter((a) => a.pinned);
     const rest = list.filter((a) => !a.pinned);
     list = [...pinned, ...rest];
@@ -390,10 +397,10 @@ export default class Agents extends View {
     // space are next to each other in agents(), so neighbours make a group.
     const groups = pinned.length ? [{ id: "pinned", label: "Pinned", status: null, members: pinned }] : [];
     for (const a of rest) {
-      const r = rankOf(a) || RANK.idle;
-      const id = byPriority ? `sec-${r}` : `sp-${a.space}`;
+      const sec = sectionOf(a);
+      const id = byPriority ? `sec-${sec}` : `sp-${a.space}`;
       if (groups.at(-1)?.id === id) groups.at(-1).members.push(a);
-      else groups.push({ id, label: byPriority ? SECTION[r] : a.space_name || "", status: byPriority ? SECTION_STATUS[r] : null, members: [a] });
+      else groups.push({ id, label: byPriority ? SECTION[sec].label : a.space_name || "", status: byPriority ? sec : null, members: [a] });
     }
 
     // A group's header; it folds the group. Folded, it says how many and the most urgent state.
