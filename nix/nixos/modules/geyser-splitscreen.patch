@@ -165,7 +165,7 @@ index a53062c..5e7b688 100644
           * Accepts the handshake only once it is read through the decryptor.
           */
 diff --git a/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java b/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
-index 74c74ad..e0d1c05 100644
+index 74c74ad..64fa4f0 100644
 --- a/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
 +++ b/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
 @@ -29,6 +29,7 @@ import io.netty.buffer.Unpooled;
@@ -184,7 +184,7 @@ index 74c74ad..e0d1c05 100644
  import org.cloudburstmc.protocol.common.PacketSignal;
  import org.geysermc.geyser.GeyserImpl;
  import org.geysermc.geyser.api.network.AuthType;
-@@ -118,6 +120,48 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
+@@ -118,6 +120,51 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
          GeyserLocale.loadGeyserLocale(session.locale());
      }
  
@@ -217,6 +217,8 @@ index 74c74ad..e0d1c05 100644
 +        if (!session.isSubClient()) {
 +            return defaultHandler(packet);
 +        }
++        // The guest is gone, so nothing is sent back to their slot
++        session.getUpstream().evictSubClientSession();
 +        session.disconnect("Split-screen guest left");
 +        return PacketSignal.HANDLED;
 +    }
@@ -226,6 +228,7 @@ index 74c74ad..e0d1c05 100644
 +     */
 +    @Override
 +    public PacketSignal handle(SubClientLoginPacket packet) {
++        session.getUpstream().evictSubClientSession();
 +        session.disconnect("Received duplicate login packet!");
 +        return PacketSignal.HANDLED;
 +    }
@@ -233,7 +236,7 @@ index 74c74ad..e0d1c05 100644
      @Override
      public PacketSignal handle(ResourcePackClientResponsePacket packet) {
          if (session.getUpstream().isClosed() || session.isClosed()) {
-@@ -132,14 +176,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
+@@ -132,14 +179,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
          switch (packet.getStatus()) {
              case COMPLETED -> {
                  finishedResourcePackSending = true;
@@ -250,7 +253,7 @@ index 74c74ad..e0d1c05 100644
              case SEND_PACKS -> {
                  // Bedrock clients can send empty "send_packs" responses, in which case we shouldn't send anything back
 diff --git a/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java b/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
-index fb8eaae..b327cc7 100644
+index fb8eaae..fc17705 100644
 --- a/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
 +++ b/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
 @@ -124,6 +124,7 @@ import org.geysermc.geyser.api.entity.EntityData;
@@ -270,7 +273,7 @@ index fb8eaae..b327cc7 100644
      /**
       * The loop where all packets and ticking is processed to prevent concurrency issues.
       * If this is manually called, ensure that any exceptions are properly handled.
-@@ -1279,9 +1282,18 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+@@ -1279,9 +1282,23 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
                  geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.disconnect", address, MessageTranslator.convertMessage(reason)));
              }
  
@@ -284,6 +287,11 @@ index fb8eaae..b327cc7 100644
              if (!upstream.isClosed()) {
 -                upstream.disconnect(disconnectEvent.disconnectReason());
 +                if (isSubClient()) {
++                    // A kicked guest still holds its slot, and without this its screen hangs on
++                    // building terrain. It leaves the console's connection up.
++                    if (upstream.getSubClientId() >= 0) {
++                        upstream.disconnect(disconnectEvent.disconnectReason());
++                    }
 +                    upstream.evictSubClientSession();
 +                } else {
 +                    upstream.disconnect(disconnectEvent.disconnectReason());
@@ -291,7 +299,7 @@ index fb8eaae..b327cc7 100644
              }
  
              // Remove from session manager
-@@ -1386,6 +1398,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+@@ -1386,6 +1403,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
       * Called every Minecraft tick.
       */
      protected void tick() {
@@ -306,7 +314,7 @@ index fb8eaae..b327cc7 100644
          try {
              inventoryClicksLeft = ClickPlan.MAX_CLICKS_PER_TICK;
              pistonCache.tick();
-@@ -1465,7 +1485,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+@@ -1465,7 +1490,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
              this.dialogManager.tick();
              this.waypointCache.tick();
  
@@ -315,7 +323,7 @@ index fb8eaae..b327cc7 100644
              queuedImmediatelyPackets.clear();
  
              CooldownUtils.tickCooldown(this);
-@@ -1765,7 +1785,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+@@ -1765,7 +1790,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
  
      @Override
      public String locale() {
@@ -328,7 +336,7 @@ index fb8eaae..b327cc7 100644
      }
  
      @Override
-@@ -2648,6 +2672,19 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+@@ -2648,6 +2677,19 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
          return false; //todo
      }
  
