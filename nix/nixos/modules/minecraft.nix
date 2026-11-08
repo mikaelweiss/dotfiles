@@ -288,7 +288,7 @@ in
     geyser-splitscreen = {
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      path = with pkgs; [ jdk25_headless bash coreutils findutils gnused gnugrep ];
+      path = with pkgs; [ jdk25_headless bash coreutils findutils gnused gnugrep git ];
       environment = {
         HOME = "/tmp";
         GRADLE_USER_HOME = "/var/lib/geyser-splitscreen/gradle";
@@ -298,6 +298,11 @@ in
         cp -r ${geyserSource} /tmp/geyser
         chmod -R u+w /tmp/geyser
         cd /tmp/geyser
+        # Geyser's build reads its version from git.
+        git init -q -b splitscreen
+        git remote add origin https://github.com/GeyserMC/Geyser
+        git add -A
+        git -c user.name=sparrow -c user.email=sparrow@localhost commit -q -m "${geyserSource.src.rev} with split-screen"
         # Gradle's downloaded JDKs do not run on NixOS.
         bash ./gradlew --no-daemon --console=plain :fabric:build -x test \
           -Porg.gradle.java.installations.auto-download=false \
