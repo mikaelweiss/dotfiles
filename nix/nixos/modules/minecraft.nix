@@ -193,10 +193,7 @@ in
     the-shire = {
       image = "docker.io/itzg/minecraft-server:java25";
       ports = [ (gamePort "the-shire") "24455:24455/udp" ] ++ bedrockPorts "the-shire";
-      volumes = [
-        "${dataRoot}/the-shire/data:/data"
-        "${./minecraft-mods/requisition.jar}:/extra-mods/requisition.jar:ro"
-      ];
+      volumes = [ "${dataRoot}/the-shire/data:/data" ];
       autoStart = lib.elem "the-shire" cfg.alwaysOn;
       user = "${toString uid}:${toString uid}";
       extraOptions = containerOptions;
@@ -207,8 +204,6 @@ in
         VERSION = version;
         MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
-        # Requisition is Mikael's own mod and is not on Modrinth.
-        MODS = "/extra-mods/requisition.jar";
         ENFORCE_SECURE_PROFILE = "false";
         MOTD = "The Shire";
         PAUSE_WHEN_EMPTY_SECONDS = "0";
