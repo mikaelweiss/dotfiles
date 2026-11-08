@@ -80,7 +80,7 @@ const SECTION = {
 
 function duration(ms) {
   const m = Math.floor(ms / 60000);
-  if (m < 1) return "<1m";
+  if (m < 1) return "now";
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   return h < 24 ? `${h}h` : `${Math.floor(h / 24)}d`;
@@ -94,7 +94,7 @@ function icon(p, size, color) {
 }
 
 // Rex's glass edge: a bright outer hairline over a softer inner one.
-const rim = () => div().absolute().inset_0().rounded_full().border(0.5).border_color("#ffffff12");
+const rim = () => div().absolute().inset_0().rounded(16).border(0.5).border_color("#ffffff12");
 
 export default class Agents extends View {
   init(_props, cx) {
@@ -300,24 +300,18 @@ export default class Agents extends View {
         .when(!open, (el) => el.child(String(subs.length)));
     };
 
-    // A row reads "space \u00b7 detail": the detail is a tab someone named or the
-    // agent's own title, never an automatic tab number unless two rows would
-    // otherwise read the same.
+    // A row's heading is a tab someone named or the agent's own title, never an
+    // automatic tab number: the program's name stands in for one.
     // Read the pane snapshot once: every host read copies the whole list into JS.
     const leads = leadPanes(panes());
     const tabLabels = new Map(spaces().flatMap(s => s.tabs).map(tab => [tab.id, title(tab, leads.get(tab.id))]));
-    const labels = new Map(list.map(a => [a.address, tabLabels.get(a.tab) ?? (a.title || a.program?.name || "")]));
-    const label = (a) => labels.get(a.address);
-    const detail = new Map(list.map(a => [a.address, /^\d+$/.test(label(a)) ? null : label(a)]));
-    const seen = {};
-    for (const a of list) { const k = `${a.space_name}\u0000${detail.get(a.address) ?? ""}`; seen[k] = (seen[k] ?? 0) + 1; }
-    for (const a of list) {
-      if (detail.get(a.address) == null && seen[`${a.space_name}\u0000`] > 1) detail.set(a.address, label(a));
-    }
+    const heading = (a) => {
+      const l = tabLabels.get(a.tab) ?? clean(a.title);
+      return !l || /^\d+$/.test(l) ? a.program?.name || l : l;
+    };
 
     const row = (a, i, subs = []) => {
       const pic = icon(a.program, 16, t.foreground);
-      const more = detail.get(a.address);
       // An agent on another machine (`vps/t7`) says which.
       const machine = a.address.includes("/") ? a.address.split("/")[0] : null;
       if (collapsed) {
@@ -353,17 +347,13 @@ export default class Agents extends View {
           cx.notify();
         })
         .child(svg(`mods/workspace-chrome/${isPinned ? "pin-off" : "pin"}.svg`).size(13));
-      // Under a space header the space goes without saying; an automatic tab number says nothing.
-      // Without a space header above (priority, pinned) the row names its space.
-      const full = byPriority || isPinned;
-      const name = full ? a.space_name || label(a) : more ?? (/^\d+$/.test(label(a)) ? a.program?.name || label(a) : label(a));
       return h_flex()
         .id(`ag-${a.address}`)
         .px(8)
-        .h(32)
+        .h(50)
         .flex_none()
         .relative()
-        .rounded_full()
+        .rounded(16)
         .border(0.5)
         .border_color(a.focused ? "#ffffff29" : "#00000000")
         .items_center()
@@ -383,14 +373,15 @@ export default class Agents extends View {
             this.folded.has(a.address) ? this.folded.delete(a.address) : this.folded.add(a.address);
             cx.notify();
           })).child(pic)))
-        .child(h_flex().flex_1().min_w(0).gap(5).items_center()
-          .child(div().min_w(0).max_w(full && more ? 120 : 200).truncate().text_color(idle ? t.muted : t.foreground).child(name))
-          .when(full && Boolean(more), el => el.child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(`\u00b7 ${more}`))))
-        .when(Boolean(machine), el => el.child(div().text_size(10).text_color(t.dim).child(machine)))
-        .when(subs.length > 0, el => el.child(fold(a, subs)))
-        .when(this.hovered === a.address, el => el.child(pin))
-        .when(this.hovered !== a.address && Boolean(when), el => el.child(div().flex_none().text_size(11).text_color(t.dim).child(duration(now - when))))
-        .child(this.status(t, a, byPriority && !isPinned));
+        .child(v_flex().flex_1().min_w(0).gap(2)
+          .child(h_flex().min_w(0).gap(6).items_center()
+            .child(div().flex_1().min_w(0).truncate().text_color(idle ? t.muted : t.foreground).child(heading(a)))
+            .when(subs.length > 0, el => el.child(fold(a, subs)))
+            .child(this.hovered === a.address ? pin : this.status(t, a, byPriority && !isPinned)))
+          .child(h_flex().min_w(0).gap(6).items_center().text_size(11.5).text_color(t.dim)
+            .child(div().flex_1().min_w(0).truncate().child(a.space_name))
+            .when(Boolean(machine), el => el.child(div().flex_none().text_size(10.5).child(machine)))
+            .when(Boolean(when), el => el.child(div().flex_none().child(duration(now - when))))));
     };
 
     // Groups in list order: spaces (grouped) or priority sections. Agents of a
