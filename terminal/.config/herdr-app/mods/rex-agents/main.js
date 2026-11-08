@@ -256,7 +256,11 @@ export default class Agents extends View {
     const pinned = list.filter((a) => a.pinned);
     const rest = list.filter((a) => !a.pinned);
     list = [...pinned, ...rest];
-    setAgentOrder(list.map((a) => a.address));
+    const shownOrder = list.map((a) => a.address);
+    setAgentOrder(shownOrder);
+    // agent.next appends agents missing from the order, hidden ones too, so the
+    // sidebar keys step through this shared copy instead.
+    if (JSON.stringify(shared("agents.order")) !== JSON.stringify(shownOrder)) setShared("agents.order", shownOrder);
 
     const withKids = (a, i) => {
       const subs = collapsed ? [] : this.tree(all, a.address);

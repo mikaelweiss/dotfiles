@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome, readTextFile, writeTextFile } from "herdr";
+import { agents, spaces, panes, run, openOverlay, theme, shared, layout, window, settings, nextCommand, appHome, readTextFile, writeTextFile } from "herdr";
 import * as fs from "fs/promises";
 
 // Rex-style program cards, built by mods/rex-tabs/cards/build.py. Programs without one keep their plain glyph.
@@ -57,6 +57,15 @@ export default class RexTabs extends View {
     });
   }
 
+  // Steps through the agents list as shown, wrapping at the ends.
+  stepAgent(by) {
+    const order = shared("agents.order") ?? [];
+    if (!order.length) return run(by > 0 ? "agent.next" : "agent.prev");
+    const at = order.indexOf(agents().find((a) => a.focused)?.address);
+    const next = at < 0 ? (by > 0 ? 0 : order.length - 1) : (at + by + order.length) % order.length;
+    run("agent.focus", { terminal: order[next] });
+  }
+
   sidebarCommand(command) {
     const root = layout();
     const showing = find(root, "sidebar-lists")?.active ?? "spaces";
@@ -64,9 +73,9 @@ export default class RexTabs extends View {
       run("layout.select", { stack: "sidebar-lists", child: showing === "spaces" ? "agents" : "spaces" });
       if (find(root, "sidebar")?.hidden) run("layout.show", { id: "sidebar" });
     } else if (command === "sidebar-down") {
-      run(showing === "agents" ? "agent.next" : "space.next");
+      showing === "agents" ? this.stepAgent(1) : run("space.next");
     } else if (command === "sidebar-up") {
-      run(showing === "agents" ? "agent.prev" : "space.prev");
+      showing === "agents" ? this.stepAgent(-1) : run("space.prev");
     } else if (command === "last-tab") {
       this.goLastTab();
     } else if (command === "zoom-in" || command === "zoom-out") {
