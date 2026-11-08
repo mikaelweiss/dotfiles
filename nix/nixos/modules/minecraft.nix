@@ -298,7 +298,10 @@ in
         cp -r ${geyserSource} /tmp/geyser
         chmod -R u+w /tmp/geyser
         cd /tmp/geyser
-        bash ./gradlew --no-daemon --console=plain :fabric:build -x test
+        # Gradle's downloaded JDKs do not run on NixOS.
+        bash ./gradlew --no-daemon --console=plain :fabric:build -x test \
+          -Porg.gradle.java.installations.auto-download=false \
+          -Porg.gradle.java.installations.paths=${pkgs.jdk21_headless.home},${pkgs.jdk25_headless.home}
         install -m 0644 bootstrap/mod/fabric/build/libs/Geyser-Fabric.jar ${geyserJar}.part
         mv ${geyserJar}.part ${geyserJar}
         find /var/lib/geyser-splitscreen -maxdepth 1 -name '*.jar' ! -name ${builtins.baseNameOf geyserJar} -delete
