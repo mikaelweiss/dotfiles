@@ -23,6 +23,7 @@
     git
     git-lfs
     gh
+    flyctl
     lazygit
     tmux
     tldr
