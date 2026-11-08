@@ -1,0 +1,975 @@
+diff --git a/core/src/main/java/org/geysermc/geyser/network/bedrock/CodecProcessor.java b/core/src/main/java/org/geysermc/geyser/network/bedrock/CodecProcessor.java
+index 3a86ff5..e4d8f92 100644
+--- a/core/src/main/java/org/geysermc/geyser/network/bedrock/CodecProcessor.java
++++ b/core/src/main/java/org/geysermc/geyser/network/bedrock/CodecProcessor.java
+@@ -85,7 +85,6 @@ import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.SettingsCommandPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.SimpleEventPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.SubChunkRequestPacket;
+-import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
+ import org.cloudburstmc.protocol.common.util.VarInts;
+ import org.geysermc.geyser.GeyserImpl;
+ import org.geysermc.geyser.session.UpstreamSession;
+@@ -95,7 +94,7 @@ import org.geysermc.geyser.session.UpstreamSession;
+  */
+ @SuppressWarnings("deprecation")
+ public class CodecProcessor {
+-    
++
+     /**
+      * Generic serializer that throws an exception when trying to serialize or deserialize a packet, leading to client disconnection.
+      */
+@@ -270,7 +269,10 @@ public class CodecProcessor {
+             .updateSerializer(CraftingEventPacket.class, ILLEGAL_SERIALIZER)
+             // Illegal unusued serverbound packets that relate to unused features
+             .updateSerializer(ClientCacheBlobStatusPacket.class, ILLEGAL_SERIALIZER)
+-            .updateSerializer(SubClientLoginPacket.class, ILLEGAL_SERIALIZER)
++            // SubClientLoginPacket is deliberately absent from this list: it is how a console
++            // announces a split-screen guest, and rejecting it here tore down the whole
++            // connection - ejecting the player who was already in the world. See
++            // LoginPacketHandler#handle(SubClientLoginPacket).
+             .updateSerializer(SubChunkRequestPacket.class, ILLEGAL_SERIALIZER)
+             .updateSerializer(GameTestRequestPacket.class, ILLEGAL_SERIALIZER)
+             // Illegal bidirectional packets
+diff --git a/core/src/main/java/org/geysermc/geyser/network/bedrock/GeyserBedrockPeer.java b/core/src/main/java/org/geysermc/geyser/network/bedrock/GeyserBedrockPeer.java
+index c3a425b..f1ffd7c 100644
+--- a/core/src/main/java/org/geysermc/geyser/network/bedrock/GeyserBedrockPeer.java
++++ b/core/src/main/java/org/geysermc/geyser/network/bedrock/GeyserBedrockPeer.java
+@@ -27,6 +27,7 @@ package org.geysermc.geyser.network.bedrock;
+ 
+ import io.netty.channel.Channel;
+ import org.cloudburstmc.protocol.bedrock.BedrockPeer;
++import org.cloudburstmc.protocol.bedrock.BedrockSession;
+ import org.cloudburstmc.protocol.bedrock.BedrockSessionFactory;
+ 
+ import java.net.SocketAddress;
+@@ -38,6 +39,43 @@ public class GeyserBedrockPeer extends BedrockPeer {
+         super(channel, sessionFactory);
+     }
+ 
++    /**
++     * Drops a split-screen sub-client's session from this peer's sub-client map.
++     *
++     * <p>{@link BedrockSession#close(CharSequence)} deliberately does nothing for a sub-client,
++     * since only the primary session owns the connection - but that also means a sub-client that
++     * has left is never removed here, and {@link #onBedrockPacket} would keep routing that slot's
++     * packets to the dead session rather than building a fresh one for the player rejoining.
++     *
++     * <p>Exists because {@link #removeSession} is protected: a subclass may only reach it through
++     * its own type, so the call has to live inside this class.
++     */
++    /**
++     * Returns the sub-client id this peer has filed {@code session} under - 0 for the player who
++     * signed in first, 1-3 for split-screen guests - or -1 if the peer does not hold it.
++     *
++     * <p>{@link BedrockSession#subClientId} is protected and has no getter, but the id is worth
++     * recovering: it identifies the controller slot, so it is stable when a guest leaves and
++     * rejoins, which makes it the only durable thing to hang a synthesized identity off for a
++     * console that sends no XUID.
++     */
++    public int subClientIdOf(BedrockSession session) {
++        // Bedrock allows at most four local players per connection.
++        for (int id = 0; id < 4; id++) {
++            if (this.sessions.get(id) == session) {
++                return id;
++            }
++        }
++        return -1;
++    }
++
++    public void removeSubClientSession(BedrockSession session) {
++        if (!session.isSubClient()) {
++            throw new IllegalArgumentException("Refusing to evict the primary session from its peer");
++        }
++        this.removeSession(session);
++    }
++
+     public SocketAddress getRealAddress() {
+         SocketAddress proxied = this.proxiedAddress;
+         return proxied == null ? this.getSocketAddress() : proxied;
+diff --git a/core/src/main/java/org/geysermc/geyser/network/bedrock/LoginPacketHandler.java b/core/src/main/java/org/geysermc/geyser/network/bedrock/LoginPacketHandler.java
+index a53062c..5e7b688 100644
+--- a/core/src/main/java/org/geysermc/geyser/network/bedrock/LoginPacketHandler.java
++++ b/core/src/main/java/org/geysermc/geyser/network/bedrock/LoginPacketHandler.java
+@@ -41,6 +41,7 @@ import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.PlayStatusPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.RequestNetworkSettingsPacket;
++import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
+ import org.cloudburstmc.protocol.common.PacketSignal;
+ import org.cloudburstmc.protocol.common.util.Zlib;
+ import org.geysermc.geyser.Constants;
+@@ -63,7 +64,7 @@ public class LoginPacketHandler extends LoggingPacketHandler {
+     private static final String ENCRYPTED_INPUT_MARKER = "geyser-encrypted-input-marker";
+ 
+     private final CompressionStrategy compressionStrategy;
+-    private Stage stage = Stage.NETWORK_SETTINGS;
++    private Stage stage;
+     /**
+      * Whether a batch has been read through the decryptor.
+      */
+@@ -76,6 +77,8 @@ public class LoginPacketHandler extends LoggingPacketHandler {
+         ZlibCompression compression = new ZlibCompression(Zlib.RAW);
+         compression.setLevel(this.geyser.config().advanced().bedrock().compressionLevel());
+         this.compressionStrategy = new SimpleCompressionStrategy(compression);
++        // A split-screen guest shares the console's connection, which the primary player already set up.
++        this.stage = session.isSubClient() ? Stage.SUB_CLIENT_LOGIN : Stage.NETWORK_SETTINGS;
+     }
+ 
+     @Override
+@@ -175,6 +178,25 @@ public class LoginPacketHandler extends LoggingPacketHandler {
+         return PacketSignal.HANDLED;
+     }
+ 
++    @Override
++    public PacketSignal handle(SubClientLoginPacket packet) {
++        if (geyser.isShuttingDown() || geyser.isReloading()) {
++            session.disconnect(GeyserLocale.getLocaleStringLog("geyser.core.shutdown.kick.message"));
++            return PacketSignal.HANDLED;
++        }
++
++        stage = Stage.DONE;
++        loginProtocolVersion = session.protocolVersion();
++
++        if (!LoginEncryptionUtils.setupSubClientSession(session, packet)) {
++            session.disconnect("Failed to authenticate sub-client");
++            return PacketSignal.HANDLED;
++        }
++
++        finishLogin();
++        return PacketSignal.HANDLED;
++    }
++
+     @Override
+     public PacketSignal handle(ClientToServerHandshakePacket packet) {
+         stage = Stage.DONE;
+@@ -218,7 +240,11 @@ public class LoginPacketHandler extends LoggingPacketHandler {
+ 
+         UpstreamPacketHandler handler = new UpstreamPacketHandler(geyser, session);
+         session.getUpstream().getSession().setPacketHandler(handler);
+-        handler.sendResourcePacksInfo();
++        if (session.isSubClient()) {
++            handler.joinSubClient();
++        } else {
++            handler.sendResourcePacksInfo();
++        }
+     }
+ 
+     /**
+@@ -227,6 +253,7 @@ public class LoginPacketHandler extends LoggingPacketHandler {
+     private enum Stage {
+         NETWORK_SETTINGS(RequestNetworkSettingsPacket.class),
+         LOGIN(LoginPacket.class),
++        SUB_CLIENT_LOGIN(SubClientLoginPacket.class),
+         /**
+          * Accepts the handshake only once it is read through the decryptor.
+          */
+diff --git a/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java b/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
+index 74c74ad..e0d1c05 100644
+--- a/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
++++ b/core/src/main/java/org/geysermc/geyser/network/bedrock/UpstreamPacketHandler.java
+@@ -29,6 +29,7 @@ import io.netty.buffer.Unpooled;
+ import org.cloudburstmc.math.vector.Vector2f;
+ import org.cloudburstmc.protocol.bedrock.data.ResourcePackType;
+ import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
++import org.cloudburstmc.protocol.bedrock.packet.DisconnectPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ModalFormResponsePacket;
+ import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ResourcePackChunkDataPacket;
+@@ -38,6 +39,7 @@ import org.cloudburstmc.protocol.bedrock.packet.ResourcePackDataInfoPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ResourcePackStackPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ResourcePacksInfoPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.SetTitlePacket;
++import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
+ import org.cloudburstmc.protocol.common.PacketSignal;
+ import org.geysermc.geyser.GeyserImpl;
+ import org.geysermc.geyser.api.network.AuthType;
+@@ -118,6 +120,48 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
+         GeyserLocale.loadGeyserLocale(session.locale());
+     }
+ 
++    /**
++     * Joins a split-screen guest. The console negotiates resource packs once, as the primary player.
++     */
++    void joinSubClient() {
++        finishedResourcePackSending = true;
++        session.integratedPackActive(session.getParentSession().integratedPackActive());
++        GeyserLocale.loadGeyserLocale(session.locale());
++        joinJavaServer();
++    }
++
++    private void joinJavaServer() {
++        if (geyser.config().java().authType() != AuthType.ONLINE) {
++            session.authenticate(session.getAuthData().name());
++        } else if (!couldLoginUserByName(session.getAuthData().name())) {
++            // We must spawn the white world
++            session.connect();
++        }
++        geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.connect", session.getAuthData().name() +
++            " (" + session.protocolVersion() + ")" + (session.isSubClient() ? " [split-screen]" : "")));
++    }
++
++    /**
++     * The console stays connected when a guest leaves, so this packet is the only sign the slot is free.
++     */
++    @Override
++    public PacketSignal handle(DisconnectPacket packet) {
++        if (!session.isSubClient()) {
++            return defaultHandler(packet);
++        }
++        session.disconnect("Split-screen guest left");
++        return PacketSignal.HANDLED;
++    }
++
++    /**
++     * A guest logging in again on a live slot. Closing this session frees the slot for the console's retry.
++     */
++    @Override
++    public PacketSignal handle(SubClientLoginPacket packet) {
++        session.disconnect("Received duplicate login packet!");
++        return PacketSignal.HANDLED;
++    }
++
+     @Override
+     public PacketSignal handle(ResourcePackClientResponsePacket packet) {
+         if (session.getUpstream().isClosed() || session.isClosed()) {
+@@ -132,14 +176,7 @@ public class UpstreamPacketHandler extends LoggingPacketHandler {
+         switch (packet.getStatus()) {
+             case COMPLETED -> {
+                 finishedResourcePackSending = true;
+-                if (geyser.config().java().authType() != AuthType.ONLINE) {
+-                    session.authenticate(session.getAuthData().name());
+-                } else if (!couldLoginUserByName(session.getAuthData().name())) {
+-                    // We must spawn the white world
+-                    session.connect();
+-                }
+-                geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.connect", session.getAuthData().name() +
+-                    " (" + session.protocolVersion() + ")"));
++                joinJavaServer();
+             }
+             case SEND_PACKS -> {
+                 // Bedrock clients can send empty "send_packs" responses, in which case we shouldn't send anything back
+diff --git a/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java b/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
+index fb8eaae..b327cc7 100644
+--- a/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
++++ b/core/src/main/java/org/geysermc/geyser/session/GeyserSession.java
+@@ -124,6 +124,7 @@ import org.geysermc.geyser.api.entity.EntityData;
+ import org.geysermc.geyser.api.entity.type.player.GeyserPlayerEntity;
+ import org.geysermc.geyser.api.event.bedrock.SessionDisconnectEvent;
+ import org.geysermc.geyser.api.event.bedrock.SessionLoginEvent;
++import org.geysermc.geyser.api.network.AuthType;
+ import org.geysermc.geyser.api.network.RemoteServer;
+ import org.geysermc.geyser.api.skin.SkinData;
+ import org.geysermc.geyser.api.util.PlatformType;
+@@ -274,6 +275,8 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+     private final GeyserImpl geyser;
+     private final UpstreamSession upstream;
+     private DownstreamSession downstream;
++    @Setter
++    private GeyserSession parentSession;
+     /**
+      * The loop where all packets and ticking is processed to prevent concurrency issues.
+      * If this is manually called, ensure that any exceptions are properly handled.
+@@ -1279,9 +1282,18 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+                 geyser.getLogger().info(GeyserLocale.getLocaleStringLog("geyser.network.disconnect", address, MessageTranslator.convertMessage(reason)));
+             }
+ 
+-            // Disconnect upstream if necessary
++            // Disconnect upstream if necessary. A sub-client shares one console's RakNet connection
++            // with every other local player, so it must never close the peer - that would eject the
++            // whole couch. BedrockSession#close is already a no-op for sub-clients, but that cuts
++            // both ways: nothing removes the closed session from the peer's sub-client map either,
++            // and the next SubClientLoginPacket for that slot would be routed to this dead session
++            // instead of creating a fresh one. So evict it explicitly.
+             if (!upstream.isClosed()) {
+-                upstream.disconnect(disconnectEvent.disconnectReason());
++                if (isSubClient()) {
++                    upstream.evictSubClientSession();
++                } else {
++                    upstream.disconnect(disconnectEvent.disconnectReason());
++                }
+             }
+ 
+             // Remove from session manager
+@@ -1386,6 +1398,14 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+      * Called every Minecraft tick.
+      */
+     protected void tick() {
++        // A sub-client has no transport-level disconnect of its own to notice the parent leaving.
++        // The peer closing does cascade to every sub-client session, so this is only a backstop for
++        // a parent whose GeyserSession is torn down without the peer going down with it.
++        if (isSubClient() && parentSession != null && parentSession.isClosed()) {
++            disconnect("Parent session closed");
++            return;
++        }
++
+         try {
+             inventoryClicksLeft = ClickPlan.MAX_CLICKS_PER_TICK;
+             pistonCache.tick();
+@@ -1465,7 +1485,7 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+             this.dialogManager.tick();
+             this.waypointCache.tick();
+ 
+-            this.upstream.getSession().getPeer().sendPacketsImmediately(0, 0, queuedImmediatelyPackets.toArray(new BedrockPacket[0]));
++            this.upstream.sendPacketsImmediately(queuedImmediatelyPackets.toArray(new BedrockPacket[0]));
+             queuedImmediatelyPackets.clear();
+ 
+             CooldownUtils.tickCooldown(this);
+@@ -1765,7 +1785,11 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+ 
+     @Override
+     public String locale() {
+-        return clientData != null ? clientData.getLanguageCode() : GeyserLocale.getDefaultLocale();
++        if (clientData == null) {
++            return GeyserLocale.getDefaultLocale();
++        }
++        String languageCode = clientData.getLanguageCode();
++        return languageCode != null ? languageCode : GeyserLocale.getDefaultLocale();
+     }
+ 
+     @Override
+@@ -2648,6 +2672,19 @@ public class GeyserSession implements GeyserConnection, GeyserCommandSource, Jav
+         return false; //todo
+     }
+ 
++    /**
++     * Whether this session is a split-screen sub-client: a second, third or fourth local player
++     * sharing one console's single RakNet connection with whoever signed in first.
++     *
++     * <p>Derived from the transport rather than from {@link #parentSession}. A session is a
++     * sub-client from the moment the peer creates it, which is well before sub-client login has run
++     * and found the parent - so keying this off {@code parentSession} reports {@code false} for a
++     * sub-client during login, which is exactly when the answer matters most.
++     */
++    public boolean isSubClient() {
++        return upstream.getSession().isSubClient();
++    }
++
+     @SuppressWarnings("ConstantConditions") // Need to enforce the parameter annotations
+     @Override
+     public boolean transfer(@NonNull String address, @IntRange(from = 0, to = 65535) int port) {
+diff --git a/core/src/main/java/org/geysermc/geyser/session/GeyserSessionAdapter.java b/core/src/main/java/org/geysermc/geyser/session/GeyserSessionAdapter.java
+index 8331e71..55ef075 100644
+--- a/core/src/main/java/org/geysermc/geyser/session/GeyserSessionAdapter.java
++++ b/core/src/main/java/org/geysermc/geyser/session/GeyserSessionAdapter.java
+@@ -93,7 +93,7 @@ public class GeyserSessionAdapter extends SessionAdapter {
+                         session.bedrockUsername(),
+                         session.xuid(),
+                         clientData.getDeviceOs().ordinal(),
+-                        clientData.getLanguageCode(),
++                        session.locale(),
+                         clientData.getUiProfile().ordinal(),
+                         clientData.getCurrentInputMode().ordinal(),
+                         bedrockAddress,
+@@ -149,7 +149,7 @@ public class GeyserSessionAdapter extends SessionAdapter {
+         session.getPlayerEntity().uuid(uuid);
+         session.getPlayerEntity().setUsername(session.getProtocol().getProfile().getName());
+ 
+-        String locale = session.getClientData().getLanguageCode();
++        String locale = session.locale();
+ 
+         // Let the user know there locale may take some time to download
+         // as it has to be extracted from a JAR
+diff --git a/core/src/main/java/org/geysermc/geyser/session/UpstreamSession.java b/core/src/main/java/org/geysermc/geyser/session/UpstreamSession.java
+index 09ada8f..85b1eaa 100644
+--- a/core/src/main/java/org/geysermc/geyser/session/UpstreamSession.java
++++ b/core/src/main/java/org/geysermc/geyser/session/UpstreamSession.java
+@@ -57,10 +57,53 @@ public class UpstreamSession {
+         }
+     }
+ 
++    /**
++     * Sends packets immediately to this session's own sub-client. Going through the peer directly
++     * bypasses {@link BedrockServerSession}, which is what normally addresses a packet to its
++     * sub-client, so the id has to be supplied here - a hardcoded 0 hands a split-screen guest's
++     * packets to the primary player's view instead.
++     */
++    public void sendPacketsImmediately(@NonNull BedrockPacket... packets) {
++        if (isClosed()) {
++            return;
++        }
++        int subClientId = getSubClientId();
++        if (subClientId < 0) {
++            // An evicted guest no longer owns a slot; sending anywhere would reach someone else.
++            return;
++        }
++        session.getPeer().sendPacketsImmediately(subClientId, 0, packets);
++    }
++
+     public void disconnect(String reason) {
+         this.session.disconnect(reason);
+     }
+ 
++    /**
++     * @return this session's sub-client id: 0 for the primary, 1-3 for a split-screen guest.
++     */
++    public int getSubClientId() {
++        if (session.getPeer() instanceof GeyserBedrockPeer peer) {
++            return peer.subClientIdOf(session);
++        }
++        return session.isSubClient() ? -1 : 0;
++    }
++
++    /**
++     * Removes a split-screen sub-client's session from the console's shared peer, leaving the peer
++     * itself - and therefore every other local player on that console - untouched.
++     *
++     * @throws IllegalStateException if called for a primary session
++     */
++    public void evictSubClientSession() {
++        if (!session.isSubClient()) {
++            throw new IllegalStateException("evictSubClientSession called on a primary session");
++        }
++        if (session.getPeer() instanceof GeyserBedrockPeer peer) {
++            peer.removeSubClientSession(session);
++        }
++    }
++
+     /**
+      * Queue a packet that must be delayed until after login.
+      */
+diff --git a/core/src/main/java/org/geysermc/geyser/session/auth/BedrockClientData.java b/core/src/main/java/org/geysermc/geyser/session/auth/BedrockClientData.java
+index 57aa40d..e7ab2e4 100644
+--- a/core/src/main/java/org/geysermc/geyser/session/auth/BedrockClientData.java
++++ b/core/src/main/java/org/geysermc/geyser/session/auth/BedrockClientData.java
+@@ -59,12 +59,15 @@ public final class BedrockClientData {
+     private static final Pattern LANGUAGE_CODE = Pattern.compile("[a-zA-Z]{2,3}_[a-zA-Z]{2,3}");
+ 
+     @SerializedName(value = "GameVersion")
++    @Setter
+     private String gameVersion;
+     @SerializedName(value = "ServerAddress")
++    @Setter
+     private String serverAddress;
+     @SerializedName(value = "ThirdPartyName")
+     private String username;
+     @SerializedName(value = "LanguageCode")
++    @Setter
+     private String languageCode;
+ 
+     @SerializedName(value = "SkinId")
+diff --git a/core/src/main/java/org/geysermc/geyser/session/cache/EntityCache.java b/core/src/main/java/org/geysermc/geyser/session/cache/EntityCache.java
+index ffe7d81..3eca531 100644
+--- a/core/src/main/java/org/geysermc/geyser/session/cache/EntityCache.java
++++ b/core/src/main/java/org/geysermc/geyser/session/cache/EntityCache.java
+@@ -85,11 +85,57 @@ public class EntityCache {
+     @Getter
+     private final Set<Entity> dirtyEntities = new ObjectOpenHashSet<>();
+ 
++    /**
++     * Hands each split-screen sub-client its own range of Bedrock runtime entity ids.
++     *
++     * <p>Runtime ids have to be unique per <i>connection</i>, not per session. Vanilla split screen
++     * gets that for free: every local player on a console is fed by one server session, so one id
++     * space covers them all. Geyser breaks the assumption - each local player is a separate
++     * {@link GeyserSession} with a separate Java connection - and the Bedrock client still keeps a
++     * single entity registry for the connection. Two sessions both counting from 2 therefore mint
++     * the same id for different entities, and the client applies whichever movement packet arrived
++     * last to whichever entity holds that id: mobs and the other player snap to positions belonging
++     * to something in the other player's world and appear to fly. It starts the moment the second
++     * player joins, and nothing is wrong server-side.
++     *
++     * <p>A bank per sub-client keeps the ranges disjoint. Primary sessions still start at 2, so a
++     * connection with no guests on it is byte-for-byte what upstream sends.
++     */
++    private static final AtomicLong SUB_CLIENT_ID_BANKS = new AtomicLong(1L);
++
++    /**
++     * Ids one sub-client may mint before it would run into the next bank. Far more than a session
++     * can spawn in practice, and small enough that the ids stay cheap to encode as varints.
++     */
++    private static final long SUB_CLIENT_ID_BANK_SIZE = 1L << 32;
++
+     @Getter
+-    private final AtomicLong nextEntityId = new AtomicLong(2L);
++    private final AtomicLong nextEntityId;
+ 
+     public EntityCache(GeyserSession session) {
+         this.session = session;
++        // Resolved here rather than on first use: the session's own player entity takes an id in
++        // the GeyserSession constructor, before login has run, and it must land in this bank too -
++        // two local players both answering to runtime id 3 is the same collision.
++        this.nextEntityId = new AtomicLong(subClientIdBase(session) + 2L);
++    }
++
++    /**
++     * The base of this session's id bank - 0 for a primary session, a fresh bank for a sub-client.
++     *
++     * <p>Deliberately not keyed off the controller slot: {@code getSubClientId()} reads the peer's
++     * session map, which is not necessarily populated this early, and the id only has to be
++     * <i>disjoint</i>, never meaningful.
++     */
++    private static long subClientIdBase(GeyserSession session) {
++        // A session built for a test has no upstream, and a connection-wide id space means nothing
++        // without a connection - so fall back to the primary range rather than throwing from a
++        // constructor.
++        var upstream = session.getUpstream();
++        var bedrockSession = upstream == null ? null : upstream.getSession();
++        return bedrockSession != null && bedrockSession.isSubClient()
++                ? SUB_CLIENT_ID_BANKS.getAndIncrement() * SUB_CLIENT_ID_BANK_SIZE
++                : 0L;
+     }
+ 
+     public long nextEntityId() {
+diff --git a/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java b/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
+index a2ff71e..de6f293 100644
+--- a/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
++++ b/core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java
+@@ -26,12 +26,16 @@
+ package org.geysermc.geyser.util;
+ 
+ import net.raphimc.minecraftauth.msa.model.MsaDeviceCode;
++import org.checkerframework.checker.nullness.qual.Nullable;
++import org.cloudburstmc.protocol.bedrock.BedrockPeer;
++import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
+ import org.cloudburstmc.protocol.bedrock.data.auth.AuthPayload;
+ import org.cloudburstmc.protocol.bedrock.data.auth.AuthType;
+ import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
+ import org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload;
+ import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ServerToClientHandshakePacket;
++import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
+ import org.cloudburstmc.protocol.bedrock.util.ChainValidationResult;
+ import org.cloudburstmc.protocol.bedrock.util.ChainValidationResult.IdentityData;
+ import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
+@@ -52,8 +56,12 @@ import org.geysermc.geyser.text.GeyserLocale;
+ 
+ import javax.crypto.SecretKey;
+ import java.net.InetSocketAddress;
++import java.nio.charset.StandardCharsets;
+ import java.security.KeyPair;
+ import java.security.PublicKey;
++import java.util.List;
++import java.util.Locale;
++import java.util.UUID;
+ import java.util.function.BiConsumer;
+ 
+ public class LoginEncryptionUtils {
+@@ -66,6 +74,276 @@ public class LoginEncryptionUtils {
+         return encryptConnectionWithCert(session, loginPacket.getAuthPayload(), loginPacket.getClientJwt());
+     }
+ 
++    /**
++     * Authenticates a split-screen sub-client from its {@link SubClientLoginPacket} and prepares its
++     * session to connect to the Java server.
++     *
++     * <p>This is deliberately not a variant of {@link #encryptConnectionWithCert}. Codec,
++     * compression and encryption all belong to the console's connection as a whole, are already
++     * established by the primary session before any guest can join, and
++     * {@link org.cloudburstmc.protocol.bedrock.BedrockSession} throws if a sub-client tries to set
++     * any of them. So this path validates identity and touches the transport not at all.
++     *
++     * @return true if the sub-client was authenticated and may proceed to connect
++     */
++    public static boolean setupSubClientSession(GeyserSession session, SubClientLoginPacket subClientLoginPacket) {
++        GeyserImpl geyser = session.getGeyser();
++        try {
++            AuthPayload authPayload = subClientLoginPacket.getAuthPayload();
++            String jwt = subClientLoginPacket.getClientJwt();
++            if (authPayload == null || jwt == null) {
++                geyser.getLogger().warning("Split-screen: sub-client sent a login with no auth payload; rejecting it.");
++                return false;
++            }
++
++            ChainValidationResult result = validateSubClientPayload(authPayload);
++            if (!result.signed() && geyser.config().advanced().bedrock().validateBedrockLogin()) {
++                geyser.getLogger().warning("Split-screen: sub-client login chain is unsigned and "
++                        + "validate-bedrock-login is on; rejecting it.");
++                return false;
++            }
++
++            PublicKey identityPublicKey = result.identityClaims().parsedIdentityPublicKey();
++            byte[] clientDataPayload = EncryptionUtils.verifyClientData(jwt, identityPublicKey);
++            if (clientDataPayload == null) {
++                geyser.getLogger().warning("Split-screen: could not verify sub-client client data; rejecting it.");
++                return false;
++            }
++
++            GeyserSession parent = findPrimarySession(geyser, session);
++            if (parent == null) {
++                // Should be unreachable: the peer only creates a sub-client session for a connection
++                // that already has a primary one.
++                geyser.getLogger().warning("Split-screen: sub-client login with no primary session on the "
++                        + "same connection; rejecting it.");
++                return false;
++            }
++            if (parent.getAuthData() == null) {
++                // getAllSessions() includes sessions still logging in, and resolving a guest's
++                // identity reads the host's. Rejecting beats an NPE swallowed by the catch below.
++                geyser.getLogger().warning("Split-screen: sub-client login arrived before the host "
++                        + "finished logging in; rejecting it.");
++                return false;
++            }
++            session.setParentSession(parent);
++
++            BedrockClientData data = JsonUtils.fromJson(clientDataPayload, BedrockClientData.class);
++            data.setOriginalString(jwt);
++
++            // A guest has no options screen of its own, so a console leaves these empty and the
++            // player inherits whatever the console is set to. GameVersion is missing too, and the
++            // skin managers hand it to the client as the geometry engine version.
++            BedrockClientData parentData = parent.getClientData();
++            if (parentData != null) {
++                if (data.getGameVersion() == null) {
++                    data.setGameVersion(parentData.getGameVersion());
++                }
++                if (data.getLanguageCode() == null) {
++                    data.setLanguageCode(parentData.getLanguageCode());
++                }
++                if (data.getServerAddress() == null) {
++                    data.setServerAddress(parentData.getServerAddress());
++                }
++            }
++
++            IdentityData extraData = result.identityClaims().extraData;
++            AuthData authData = resolveSubClientAuthData(geyser, session, parent, extraData, result);
++            session.setAuthData(authData);
++
++            if (authPayload instanceof TokenPayload tokenPayload) {
++                session.setToken(tokenPayload.getToken());
++            } else if (authPayload instanceof CertificateChainPayload certificateChainPayload) {
++                session.setCertChainData(certificateChainPayload.getChain());
++            }
++
++            session.setClientData(data);
++            return true;
++        } catch (Exception ex) {
++            geyser.getLogger().error("Failed to set up split-screen sub-client session", ex);
++            return false;
++        }
++    }
++
++    /**
++     * Validates a sub-client's login payload the way {@link EncryptionUtils#validatePayload} does,
++     * minus its final assertion that an {@link AuthType#FULL} payload also carries an
++     * {@code extraData} claim with a non-null {@code xuid} and {@code displayName}.
++     *
++     * <p>That assertion is what kept split-screen out. A console sends {@code FULL} for a guest on
++     * a second controller - the connection as a whole really is fully authenticated, it belongs to
++     * the signed-in host - while sending no XUID and no display name for the guest itself, the
++     * long-standing behaviour tracked as
++     * <a href="https://bugs.mojang.com/browse/MCPE-71033">MCPE-71033</a>. {@code validatePayload}
++     * then throws {@code IllegalStateException: Missing extraData for full auth} before
++     * {@link #resolveSubClientAuthData} - which exists precisely to fill those blanks in - is ever
++     * reached.
++     *
++     * <p><b>No signature check is relaxed here.</b> This calls the same
++     * {@link EncryptionUtils#validateChain}/{@link EncryptionUtils#validateToken} that
++     * {@code validatePayload} calls, with the same empty-input guards, and returns their result
++     * untouched - so {@code signed()} still decides whether an unsigned chain is acceptable at the
++     * call site. The only dropped requirement is that a full-auth login also *name* its player.
++     * The primary login path still goes through {@code validatePayload} unchanged.
++     */
++    private static ChainValidationResult validateSubClientPayload(AuthPayload authPayload) throws Exception {
++        if (authPayload instanceof CertificateChainPayload chainPayload) {
++            List<String> chain = chainPayload.getChain();
++            if (chain == null || chain.isEmpty()) {
++                throw new IllegalStateException("Certificate chain is empty");
++            }
++            return EncryptionUtils.validateChain(chain);
++        } else if (authPayload instanceof TokenPayload tokenPayload) {
++            String token = tokenPayload.getToken();
++            if (token == null || token.isEmpty()) {
++                throw new IllegalStateException("Token is empty");
++            }
++            return EncryptionUtils.validateToken(authPayload.getAuthType(), token);
++        }
++        throw new IllegalArgumentException("Unsupported AuthPayload type: " + authPayload.getClass().getName());
++    }
++
++    /**
++     * Finds the session for the player who signed in first on this console - the one that owns the
++     * shared connection.
++     */
++    private static @Nullable GeyserSession findPrimarySession(GeyserImpl geyser, GeyserSession subClient) {
++        BedrockPeer peer = subClient.getUpstream().getSession().getPeer();
++        for (GeyserSession other : geyser.getSessionManager().getAllSessions()) {
++            if (other == subClient) {
++                continue;
++            }
++            BedrockServerSession otherUpstream = other.getUpstream().getSession();
++            if (otherUpstream.getPeer() == peer && !otherUpstream.isSubClient()) {
++                return other;
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Builds a sub-client's identity, filling in whatever the console left out.
++     *
++     * <p>This is the awkward part of split-screen. A guest signing in on a second controller has no
++     * Xbox Live identity of its own, and consoles have long shipped an XUID of {@code ""} for that
++     * player - reported on PlayStation and Switch alike, and tracked upstream as
++     * <a href="https://bugs.mojang.com/browse/MCPE-71033">MCPE-71033</a>. Geyser keys sessions by
++     * XUID, so two such players would collide with each other on the very first check.
++     *
++     * <p>What gets synthesized, in descending order of how stable it is:
++     * <ol>
++     *   <li>a real XUID, if the console sent one - nothing is invented;</li>
++     *   <li>otherwise one derived from the identity UUID, if that is present;</li>
++     *   <li>otherwise one derived from the primary player's XUID and this guest's controller slot,
++     *       which is stable across leaving and rejoining because the slot is.</li>
++     * </ol>
++     *
++     * <p>A synthesized XUID is <b>not</b> proof of identity and must not be treated as one. It is
++     * safe here only because it is derived from the primary player's already-validated XUID, so it
++     * cannot collide across consoles, and because it never leaves this server. On an online-mode or
++     * Floodgate setup, where the XUID is what links a Bedrock player to a real account, this is not
++     * good enough and the guest should be refused instead - see the note on the class.
++     */
++    private static AuthData resolveSubClientAuthData(GeyserImpl geyser, GeyserSession session,
++                                                     GeyserSession parent, @Nullable IdentityData extraData,
++                                                     ChainValidationResult result) {
++        int slot = session.getUpstream().getSubClientId();
++
++        Long rawIssuedAt = (Long) result.rawIdentityClaims().get("iat");
++        long issuedAt = rawIssuedAt != null ? rawIssuedAt : -1;
++
++        // A console may omit the extraData claim for a guest entirely rather than sending it with
++        // blank fields, so every read below goes through these locals rather than the record. Only
++        // the primary login path can still assume extraData is present.
++        String rawXuid = extraData == null ? null : extraData.xuid;
++        String rawName = extraData == null ? null : extraData.displayName;
++        UUID rawIdentity = extraData == null ? null : extraData.identity;
++        String minecraftId = extraData == null ? null : extraData.minecraftId;
++
++        // Log what the console actually sent before touching any of it. This is the one place that
++        // records how a given platform behaves, and the answer differs per platform.
++        geyser.getLogger().info(String.format(
++                "Split-screen: sub-client joining in slot %d behind %s - xuid=%s, displayName=%s, "
++                        + "identity=%s, minecraftId=%s, signed=%s, extraData=%s",
++                slot, parent.bedrockUsername(),
++                describe(rawXuid), describe(rawName),
++                rawIdentity, describe(minecraftId), result.signed(),
++                extraData == null ? "<absent>" : "present"));
++
++        // The identity UUID is only worth deriving from if it actually identifies this guest. A
++        // console with nothing to say about a guest may send the nil UUID, or echo the signed-in
++        // player's - either of which would make two guests derive the same XUID and collide.
++        UUID identity = rawIdentity;
++        boolean identityIdentifies = identity != null
++                && !identity.equals(NIL_UUID)
++                && !identity.equals(parent.getAuthData().uuid());
++
++        String xuid = rawXuid;
++        if (isBlank(xuid)) {
++            String source = identityIdentifies ? "its identity UUID" : "the host's XUID and controller slot";
++            xuid = syntheticXuid(identityIdentifies
++                    ? "identity:" + identity
++                    : "slot:" + parent.xuid() + ':' + slot);
++            geyser.getLogger().warning(String.format(
++                    "Split-screen: the console sent no XUID for the guest in slot %d - a long-standing "
++                            + "console limitation (MCPE-71033). Deriving one from %s. This is fine for an "
++                            + "offline-mode server; it is NOT an identity claim and is not suitable for "
++                            + "Floodgate or online mode.", slot, source));
++        }
++
++        String name = rawName;
++        if (isBlank(name) || name.equals(parent.bedrockUsername())) {
++            name = syntheticUsername(parent.bedrockUsername(), slot);
++            geyser.getLogger().warning(String.format(
++                    "Split-screen: the console sent no usable display name for the guest in slot %d; "
++                            + "they will appear as '%s'.", slot, name));
++        }
++
++        if (!identityIdentifies) {
++            identity = UUID.nameUUIDFromBytes(("GeyserSplitScreen:" + xuid).getBytes(StandardCharsets.UTF_8));
++        }
++
++        return new AuthData(name, identity, xuid, issuedAt, minecraftId);
++    }
++
++    private static final UUID NIL_UUID = new UUID(0, 0);
++
++    private static boolean isBlank(@Nullable String value) {
++        return value == null || value.isBlank();
++    }
++
++    private static String describe(@Nullable String value) {
++        return value == null ? "<null>" : value.isEmpty() ? "<empty>" : value;
++    }
++
++    /**
++     * Derives a stable, non-negative pseudo-XUID from {@code seed}. Real XUIDs are decimal, so this
++     * produces one too, keeping anything that parses an XUID as a number working. The result uses
++     * the full 63-bit range and so runs to 19 digits, well clear of the ~16-digit range Xbox Live
++     * actually issues from - a synthesized XUID cannot collide with a real one.
++     */
++    private static String syntheticXuid(String seed) {
++        UUID derived = UUID.nameUUIDFromBytes(("GeyserSplitScreen:" + seed).getBytes(StandardCharsets.UTF_8));
++        return Long.toUnsignedString(derived.getMostSignificantBits() >>> 1);
++    }
++
++    /**
++     * Builds a Java-legal username for a guest the console did not name. Java usernames are capped
++     * at 16 characters and limited to {@code [A-Za-z0-9_]}, so the host's name is trimmed to leave
++     * room for the suffix.
++     */
++    private static String syntheticUsername(String parentName, int slot) {
++        int player = slot >= 0 ? slot + 1 : 2;
++        String base = parentName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase(Locale.ROOT);
++        if (base.isEmpty()) {
++            base = "player";
++        }
++        String suffix = "_P" + player;
++        if (base.length() + suffix.length() > 16) {
++            base = base.substring(0, 16 - suffix.length());
++        }
++        return base + suffix;
++    }
++
+     private static boolean encryptConnectionWithCert(GeyserSession session, AuthPayload authPayload, String jwt) {
+         try {
+             GeyserImpl geyser = session.getGeyser();
+diff --git a/core/src/test/java/org/geysermc/geyser/network/bedrock/LoginPacketHandlerTest.java b/core/src/test/java/org/geysermc/geyser/network/bedrock/LoginPacketHandlerTest.java
+index 2c76abe..613fa56 100644
+--- a/core/src/test/java/org/geysermc/geyser/network/bedrock/LoginPacketHandlerTest.java
++++ b/core/src/test/java/org/geysermc/geyser/network/bedrock/LoginPacketHandlerTest.java
+@@ -37,6 +37,7 @@ import org.cloudburstmc.protocol.bedrock.packet.CommandRequestPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.RequestNetworkSettingsPacket;
+ import org.cloudburstmc.protocol.bedrock.packet.ServerboundLoadingScreenPacket;
++import org.cloudburstmc.protocol.bedrock.packet.SubClientLoginPacket;
+ import org.geysermc.geyser.GeyserImpl;
+ import org.geysermc.geyser.registry.BlockRegistries;
+ import org.geysermc.geyser.registry.Registries;
+@@ -124,7 +125,7 @@ class LoginPacketHandlerTest {
+     @Test
+     void onlyRequestNetworkSettingsComesFirst() {
+         // LoggingPacketHandler does not pass the last one to its default handler
+-        for (BedrockPacket packet : List.of(login(), new ClientToServerHandshakePacket(), new CommandRequestPacket(), new ServerboundLoadingScreenPacket())) {
++        for (BedrockPacket packet : List.of(login(), new SubClientLoginPacket(), new ClientToServerHandshakePacket(), new CommandRequestPacket(), new ServerboundLoadingScreenPacket())) {
+             new Connection(true).assertDisconnectsOn(packet);
+         }
+     }
+@@ -154,6 +155,35 @@ class LoginPacketHandlerTest {
+         }
+     }
+ 
++    @Test
++    void guestLoginJoinsWithoutResourcePacks() {
++        Connection guest = guest(true);
++        guest.handle(new SubClientLoginPacket());
++        guest.assertHandedOver();
++        UpstreamPacketHandler upstreamHandler = upstreamHandlers.constructed().get(0);
++        verify(upstreamHandler).joinSubClient();
++        verify(upstreamHandler, never()).sendResourcePacksInfo();
++    }
++
++    @Test
++    void onlySubClientLoginComesFirstForAGuest() {
++        for (BedrockPacket packet : List.of(requestNetworkSettings(), login(), new ClientToServerHandshakePacket(), new CommandRequestPacket())) {
++            guest(true).assertDisconnectsOn(packet);
++        }
++    }
++
++    @Test
++    void guestWhoseLoginFailsIsDisconnected() {
++        Connection guest = guest(false);
++        guest.handle(new SubClientLoginPacket());
++        verify(guest.session).disconnect("Failed to authenticate sub-client");
++        verify(guest.upstream, never()).setPacketHandler(any());
++    }
++
++    private Connection guest(boolean authenticates) {
++        return new Connection(false, true, authenticates);
++    }
++
+     private static RequestNetworkSettingsPacket requestNetworkSettings() {
+         RequestNetworkSettingsPacket packet = new RequestNetworkSettingsPacket();
+         packet.setProtocolVersion(VERSION);
+@@ -174,6 +204,13 @@ class LoginPacketHandlerTest {
+         private final LoginPacketHandler handler;
+ 
+         Connection(boolean encrypted) {
++            this(encrypted, false, false);
++        }
++
++        Connection(boolean encrypted, boolean subClient, boolean guestAuthenticates) {
++            when(session.isSubClient()).thenReturn(subClient);
++            when(session.protocolVersion()).thenReturn(VERSION);
++            encryption.when(() -> LoginEncryptionUtils.setupSubClientSession(eq(session), any())).thenReturn(guestAuthenticates);
+             when(session.xuid()).thenReturn("1");
+             when(session.isClosed()).thenAnswer(call -> closed.get());
+             doAnswer(call -> {
+diff --git a/core/src/test/java/org/geysermc/geyser/session/UpstreamSessionTest.java b/core/src/test/java/org/geysermc/geyser/session/UpstreamSessionTest.java
+new file mode 100644
+index 0000000..63de48f
+--- /dev/null
++++ b/core/src/test/java/org/geysermc/geyser/session/UpstreamSessionTest.java
+@@ -0,0 +1,74 @@
++/*
++ * Copyright (c) 2026 GeyserMC. http://geysermc.org
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ *
++ * @author GeyserMC
++ * @link https://github.com/GeyserMC/Geyser
++ */
++
++package org.geysermc.geyser.session;
++
++import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
++import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
++import org.cloudburstmc.protocol.bedrock.packet.MoveEntityDeltaPacket;
++import org.geysermc.geyser.network.bedrock.GeyserBedrockPeer;
++import org.junit.jupiter.api.Test;
++
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.ArgumentMatchers.anyInt;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++
++class UpstreamSessionTest {
++    private final BedrockPacket move = new MoveEntityDeltaPacket();
++
++    private static UpstreamSession sessionInSlot(GeyserBedrockPeer peer, int slot) {
++        BedrockServerSession bedrockSession = mock(BedrockServerSession.class);
++        when(bedrockSession.getPeer()).thenReturn(peer);
++        when(bedrockSession.isSubClient()).thenReturn(slot != 0);
++        when(peer.isConnected()).thenReturn(true);
++        when(peer.subClientIdOf(bedrockSession)).thenReturn(slot);
++        return new UpstreamSession(bedrockSession);
++    }
++
++    @Test
++    void primaryFlushesToSubClientZero() {
++        GeyserBedrockPeer peer = mock(GeyserBedrockPeer.class);
++        sessionInSlot(peer, 0).sendPacketsImmediately(move);
++        verify(peer).sendPacketsImmediately(0, 0, move);
++    }
++
++    @Test
++    void guestFlushesToItsOwnSubClient() {
++        GeyserBedrockPeer peer = mock(GeyserBedrockPeer.class);
++        sessionInSlot(peer, 1).sendPacketsImmediately(move);
++        verify(peer).sendPacketsImmediately(1, 0, move);
++        verify(peer, never()).sendPacketsImmediately(0, 0, move);
++    }
++
++    @Test
++    void evictedGuestSendsNothing() {
++        GeyserBedrockPeer peer = mock(GeyserBedrockPeer.class);
++        sessionInSlot(peer, -1).sendPacketsImmediately(move);
++        verify(peer, never()).sendPacketsImmediately(anyInt(), anyInt(), any(BedrockPacket[].class));
++    }
++}

@@ -42,6 +42,23 @@ let
     hash = "sha256-cSN9YR3oGlVj7l7MSttROeDe6EHmTdDlsbOi8p/Tavg=";
   };
 
+  # Upstream Geyser kicks a console when a second split-screen player joins.
+  # The patch ports GeyserMC/Geyser#6689 onto this commit.
+  geyserSource = pkgs.applyPatches {
+    name = "geyser-splitscreen";
+    src = pkgs.fetchFromGitHub {
+      owner = "GeyserMC";
+      repo = "Geyser";
+      rev = "1955f5151e2af01a7b51db1679e4324345690e70";
+      fetchSubmodules = true;
+      hash = "sha256-Ow8OVaE+YuO+HReH8JOR8g6SElvusv0Qi6e3sSWhSEM=";
+    };
+    patches = [ ./geyser-splitscreen.patch ];
+  };
+  # Gradle downloads Minecraft and its build plugins, which the Nix sandbox
+  # forbids, so a service builds the jar once per source.
+  geyserJar = "/var/lib/geyser-splitscreen/${builtins.baseNameOf geyserSource}.jar";
+
   runContainer = n: pkgs.writeShellScript "run-${n}" ''
     systemctl start podman-${n}.service
     trap 'systemctl stop podman-${n}.service' TERM INT
@@ -202,7 +219,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "4G";
         VERSION = version;
-        MODRINTH_PROJECTS = "geyser,floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
+        MODRINTH_PROJECTS = "floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         MOTD = "The Shire";
@@ -265,6 +282,41 @@ in
     podman-skyblock.preStart = setGeyserPort "skyblock" "plugins/Geyser-Spigot/config.yml";
   })
   (lib.mkIf cfg.shire {
+    geyser-splitscreen = {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      path = with pkgs; [ jdk25_headless bash coreutils findutils gnused gnugrep ];
+      environment = {
+        HOME = "/tmp";
+        GRADLE_USER_HOME = "/var/lib/geyser-splitscreen/gradle";
+      };
+      script = ''
+        [ -f ${geyserJar} ] && exit 0
+        cp -r ${geyserSource} /tmp/geyser
+        chmod -R u+w /tmp/geyser
+        cd /tmp/geyser
+        bash ./gradlew --no-daemon --console=plain :fabric:build -x test
+        install -m 0644 bootstrap/mod/fabric/build/libs/Geyser-Fabric.jar ${geyserJar}.part
+        mv ${geyserJar}.part ${geyserJar}
+        find /var/lib/geyser-splitscreen -maxdepth 1 -name '*.jar' ! -name ${builtins.baseNameOf geyserJar} -delete
+      '';
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        DynamicUser = true;
+        StateDirectory = "geyser-splitscreen";
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        NoNewPrivileges = true;
+        # Builds beside a running server, so it yields to it.
+        Nice = 19;
+        IOSchedulingClass = "idle";
+        MemoryMax = "5G";
+      };
+    };
+    podman-the-shire.requires = [ "geyser-splitscreen.service" ];
+    podman-the-shire.after = [ "geyser-splitscreen.service" ];
     podman-the-shire.preStart = setVoiceChat "the-shire" "s/^port=.*/port=24455/; s/^voice_host=.*/voice_host=/"
       + setGeyserPort "the-shire" "config/Geyser-Fabric/config.yml"
       # Mikael accepts the bot's friend requests himself, and friends stay through breaks.
@@ -273,6 +325,8 @@ in
       + ''
         install -D -m 0644 -o minecraft -g minecraft ${xboxBroadcast} \
           ${dataRoot}/the-shire/data/config/Geyser-Fabric/extensions/MCXboxBroadcastExtension.jar
+        install -D -m 0644 -o minecraft -g minecraft ${geyserJar} \
+          ${dataRoot}/the-shire/data/mods/Geyser-Fabric-splitscreen.jar
       '';
   })
   ];
