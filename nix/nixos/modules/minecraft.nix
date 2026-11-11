@@ -223,7 +223,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "4G";
         VERSION = version;
-        MODRINTH_PROJECTS = "floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat";
+        MODRINTH_PROJECTS = "floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat,jamlib,rightclickharvest";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         MOTD = "The Shire";
