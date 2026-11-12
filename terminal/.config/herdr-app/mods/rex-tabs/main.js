@@ -68,14 +68,16 @@ export default class RexTabs extends View {
 
   sidebarCommand(command) {
     const root = layout();
-    const showing = find(root, "sidebar-lists")?.active ?? "spaces";
+    const showing = find(root, "agents")?.hidden ? "spaces" : find(root, "spaces")?.hidden ? "agents" : "both";
     if (command === "sidebar-switch") {
-      run("layout.select", { stack: "sidebar-lists", child: showing === "spaces" ? "agents" : "spaces" });
+      const next = { spaces: "agents", agents: "both", both: "spaces" }[showing];
+      run(next === "agents" ? "layout.hide" : "layout.show", { id: "spaces" });
+      run(next === "spaces" ? "layout.hide" : "layout.show", { id: "agents" });
       if (find(root, "sidebar")?.hidden) run("layout.show", { id: "sidebar" });
     } else if (command === "sidebar-down") {
-      showing === "agents" ? this.stepAgent(1) : run("space.next");
+      showing === "spaces" ? run("space.next") : this.stepAgent(1);
     } else if (command === "sidebar-up") {
-      showing === "agents" ? this.stepAgent(-1) : run("space.prev");
+      showing === "spaces" ? run("space.prev") : this.stepAgent(-1);
     } else if (command === "last-tab") {
       this.goLastTab();
     } else if (command === "zoom-in" || command === "zoom-out") {

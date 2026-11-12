@@ -22,7 +22,7 @@
         },
         {
           "id": "sidebar-lists",
-          "type": "stack",
+          "type": "column",
           "children": [
             {
               "id": "spaces",
@@ -36,10 +36,10 @@
               "type": "block",
               "content": {
                 "mod": "rex-agents"
-              }
+              },
+              "hidden": true
             }
-          ],
-          "active": "spaces"
+          ]
         },
         {
           "id": "status-card",
