@@ -73,8 +73,10 @@
     "ctrl-f shift-s": "mod.open:picker",
     "ctrl-f ctrl-p": "space.prev",
     "ctrl-f ctrl-n": "tab.new",
-    "ctrl-k": "rex-tabs.sidebar-up",
-    "ctrl-j": "rex-tabs.sidebar-down",
+    "ctrl-k": "rex-tabs.agent-prev",
+    "ctrl-j": "rex-tabs.agent-next",
+    "ctrl-p": "space.prev",
+    "ctrl-n": "space.next",
     "ctrl-f ,": "mod.open:rex-settings",
     "ctrl-f p": {
       "command": "pane.split",
