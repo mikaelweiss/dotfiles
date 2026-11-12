@@ -251,6 +251,7 @@ alias claudef='claude --model claude-fable-5-2'
 alias cf='claude --model claude-fable-5-2'
 alias cs='claude --model sonnet'
 alias ca='env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN claude'
+alias caf='ca --model claude-fable-5-2'
 alias aspen="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
 alias a="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
 alias noveltty="/Users/mikaelweiss/code/noveltty/target/release/noveltty"
