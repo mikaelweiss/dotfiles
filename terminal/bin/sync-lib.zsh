@@ -35,6 +35,8 @@ gitignored() {
 # One "name root" pair per line.
 sessions() {
   print -r -- "dotfiles $HOME/code/dotfiles"
+  print -r -- "aspen-grove $HOME/code/aspen-grove"
+  print -r -- "aspen-grove-worktrees $HOME/.worktrees/aspen-grove"
 }
 
 session_ignores() {

@@ -1,16 +1,47 @@
 #!/bin/zsh
-# One-time (re)setup of the mutagen session that syncs ~/code/dotfiles
-# between this Mac and elm, the always-on hub. Ignore defaults come from
-# ~/.mutagen.yml, plus whatever git reports as ignored. Idempotent: an
-# existing session is left alone, so terminate it first to rebuild its
-# ignore list.
+# One-time (re)setup of the mutagen sessions between this Mac and elm, the
+# always-on hub. Ignore defaults come from ~/.mutagen.yml, plus whatever git
+# reports as ignored in each synced repo. Idempotent: existing sessions are
+# left alone, so terminate a session first to rebuild its ignore list.
 set -e
 source "${0:A:h}/sync-lib.zsh"
 
+# A new session has no sync history, so mutagen copies whatever either side
+# holds and a stale worktree folder on one machine spreads to every machine.
+# Stale means its git metadata is gone: no .git, or a gitdir that no longer
+# exists. Runs on both ends because elm can hold its own stale folders.
+list_stale='
+for d in $1; do
+  [ -d "$d" ] || continue
+  [ -d "$d/.git" ] && continue
+  if [ -f "$d/.git" ]; then
+    gitdir=$(sed -n "s/^gitdir: //p" "$d/.git")
+    [ -n "$gitdir" ] && [ -e "$gitdir" ] && continue
+  fi
+  echo "$d"
+done
+'
+
+# A worktrees root holds one folder per branch.
+stale_worktrees() {
+  local root=$1 pattern
+  [[ $root == $HOME/.worktrees/* ]] || return 0
+  pattern="$root/*"
+  sh -c "$list_stale" _ "$pattern" | sed 's|^|  |'
+  ssh -o BatchMode=yes "$hub" sh -s -- ${(q)pattern} <<< "$list_stale" | sed "s|^|  $hub:|"
+}
+
 create() {
-  local name=$1 root=$2
+  local name=$1 root=$2 stale
   if mutagen sync list "$name" >/dev/null 2>&1; then
     echo "session '$name' already exists"
+    return
+  fi
+  stale=$(stale_worktrees "$root")
+  if [[ -n $stale ]]; then
+    print -r -- "skipping '$name': stale worktree folders would spread to every machine."
+    print -r -- "Archive or delete them, then run sync-setup again:"
+    print -r -- "$stale"
     return
   fi
   local -a ig

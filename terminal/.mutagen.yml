@@ -46,6 +46,11 @@ sync:
         - ".pytest_cache"
         - ".ruff_cache"
         - ".mypy_cache"
+        # Aspen build outputs that git ignores. Unanchored so worktrees
+        # created after the session stay covered.
+        - "**/core/bin"
+        - "**/core/internal/machinebuild/aspen.gz"
+        - "**/deploy/machine/aspen"
         # direnv
         - ".direnv"
         # Transient git lock files
