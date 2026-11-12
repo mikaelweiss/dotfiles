@@ -17,6 +17,8 @@ Never comment, review, or approve except where a step says to. Never sign a comm
 gh pr view <pr> --json number,title,body,state,isDraft,baseRefName,url,comments
 ```
 
+If you're on a branch with an open PR, use that PR
+
 - No PR: say `<pr> names no pull request` and stop.
 - Not `OPEN`: say `PR #<n> is <state>, nothing to review` and stop.
 
@@ -197,20 +199,6 @@ A line marked `weak` is a claim the code at its own cited line does not carry.
 **The comment.** It carries an overview (What changes, How to test) only when no comment on the PR yet holds `<!-- penguin:overview -->` and this review has not posted one. Otherwise it carries only Blockers and Non-blockers. An empty section says `none`.
 
 ```markdown
-<!-- penguin:overview -->
-
-### What changes
-
-| Before | After |
-| --- | --- |
-| <before> | <after> |
-
-### How to test
-
-**<flow name>**
-
-1. <step>
-
 ### Blockers
 
 - <claim> (`<where>`)
@@ -219,8 +207,6 @@ A line marked `weak` is a claim the code at its own cited line does not carry.
 
 - <claim> (`<where>`)
 ```
-
-Escape `|` inside a table cell and fold its whitespace to single spaces.
 
 **With blockers.** When the user asked to post without confirming, post at once (Step 8) and say `Posted <count> blockers on PR #<n> without approving`. Otherwise show the comment without the marker line, then ask `Post this without approving?`
 

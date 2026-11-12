@@ -112,3 +112,19 @@ Stop and ask only when you can't continue without me, or before anything destruc
 </important>
 
 When done, commit code. The only time I don't want you to commit the code is if I ask you not to commit the code. Otherwise, default to committing whenever you make changes.
+
+<important if="you are going to run tests/code">
+  Only run tests or code for the code you changed or code effected by your changes. There's no reason to run tests/code for things that we already know pass on main.
+</important>
+
+<important if="you're about to say 'still open from earlier'">
+  Example:
+  You say "Here's a question"
+  and then some scripts finish, you run some code, we talk about other things etc.
+  Then you say "Still open from earlier:" and then list a few questions that you already explained earlier in the conversation
+  What that means for me:
+  That would mean that I have to slog through lots of previous text to find what the heck your talking about and sometimes that can be really hard.
+  What I want:
+  I want you to always assume that your most recent message is the only thing I can see. You should never assume I read any of your previous messages, and shouldn't reference things from earlier as if I've read every line. I haven't. I've only read your most recent message.
+  Keep all relevant info in your most recent message even if you repeat yourself 'till it's clear that I've read and addressed what you've said. I always want to have all the info I need to make an informed decision about things. If there's a lot of info, then you can simply list the questions or decisions I need to make and then I'll ask about them one by one when I'm ready. But listing questions for me to work through when I get to it, and assuming I've read all your previous messages are two very different things. One is helpful, and the other is frustrating.
+</important>

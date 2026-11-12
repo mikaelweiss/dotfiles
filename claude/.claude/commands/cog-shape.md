@@ -14,6 +14,7 @@ Interactive. You will challenge the user's thinking. When the scope is clear, yo
 ### 1. Investigate the codebase first
 
 Before the conversation, build real context:
+
 - Architecture — how the affected system is layered today.
 - Conventions — naming, patterns, how similar things were done before.
 - Components — specific files and modules the idea will touch.
@@ -40,6 +41,7 @@ Ground every question in the actual codebase — reference specific files, funct
 - **If a question can be answered by exploring the codebase, explore instead of asking.** The user shouldn't have to recite what `grep` would tell you.
 
 Keep going until you and the user agree on:
+
 - The smallest useful shipped version.
 - What's in scope and what's explicitly deferred.
 - The order of dependencies between pieces of work.
@@ -52,9 +54,10 @@ When the scope is clear, break the work into ordered GitHub issues. Rules:
 
 - **Each issue must be self-contained.** cog's `build` phase will implement it in isolation, starting from `main` once its blockers have merged. An issue that needs an unmerged sibling's code without a blocked-by link is a broken issue.
 - **Order by dependency.** List blocking issues first.
-- **Each issue must be implementable.** If an issue reduces to "think about X," it's not an issue — it's a conversation you need to have now.
+- **Each issue must be implementable.** If an issue reduces to "think about X," its not an issue — it's a conversation you need to have now.
 
 For each issue, draft:
+
 - **Title** — imperative, specific, under 80 characters.
 - **Description** — the change, grounded in the files it touches.
 - **Acceptance criteria** — bulleted, concrete, testable.
@@ -62,15 +65,11 @@ For each issue, draft:
 - **Technical context** — constraints, patterns to follow, gotchas from the codebase investigation.
 - **Blocked by**: issues in this set, or existing issues, that must merge first. Empty when none.
 
-### 4. Present for approval, then file
+### 4. Present for approval, then ask what to do
 
 Show the user the full issue list with titles, one-line summaries, and what each is blocked by. For any issue the user wants to drop, edit, or merge with another, iterate until they're satisfied. Then file all approved issues in dependency order, so every blocker has a number before the issues it blocks. Record dependencies with GitHub's native blocked-by links, never as "depends on" prose in the body. Drop the flag when the issue has no blockers:
 
-```bash
-gh issue create --title "<title>" --body "<body>" --blocked-by <n,n>
-```
-
-Report the URLs in the order filed.
+Sometimes the user will want you to file Jira tickets, GitHub issues, or Linear tickets, but sometimes they won't. So if they do, then use the native Jira, GitHub, Linear blocked by links. But otherwise, just tell them the list.
 
 ## Principles
 

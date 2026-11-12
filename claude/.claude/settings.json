@@ -246,7 +246,8 @@
     "linear@claude-plugins-official": true,
     "skill-creator@anthropic-plugin-directory": true,
     "slack@anthropic-plugin-directory": true,
-    "rust-analyzer-lsp@claude-plugins-official": true
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "svelte": {
@@ -306,5 +307,6 @@
   "voiceEnabled": true,
   "lsp": {
     "enabled": true
-  }
+  },
+  "autoCompactEnabled": false
 }

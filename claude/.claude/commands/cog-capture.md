@@ -16,6 +16,7 @@ Your job is not to write code. Your job is to produce an issue that cog's autono
 Ask the user short, focused questions to understand what they're reporting. Don't interview — ask the minimum needed. Different angles for bugs vs. features:
 
 **Bug:**
+
 - What behavior did you see?
 - What did you expect?
 - How do you reproduce it?
@@ -23,6 +24,7 @@ Ask the user short, focused questions to understand what they're reporting. Don'
 - Any error message or stack trace?
 
 **Feature:**
+
 - What problem does this solve?
 - Who is it for?
 - Is there a sharpest-wedge version — the smallest change that would be useful?
@@ -32,6 +34,7 @@ If their first response is already specific enough, don't force more questions. 
 ### 2. Investigate the codebase
 
 Ground the issue in real files before writing it. Use the `Agent` / subagent tool if available to:
+
 - Find the components involved.
 - Identify data flows and API calls the change touches.
 - Spot existing tests that will need to be updated.
@@ -52,6 +55,7 @@ Before filing, show the user a summary using this skeleton. Sections marked `(bu
 [Clear description of the problem or feature]
 
 **Steps to Reproduce:** (bugs)
+
 1. ...
 2. ...
 
@@ -65,13 +69,16 @@ Before filing, show the user a summary using this skeleton. Sections marked `(bu
 [What actually happens]
 
 **Affected Components:**
+
 - [File paths and module names identified during investigation]
 
 **Technical Context:**
+
 - [Relevant code paths, data flow, constraints]
 - [Related issues or cross-repo touchpoints]
 
 **Additional Context:**
+
 - [Error messages, stack traces, etc.]
 
 **Blocked by:** [Existing issue numbers that must merge first. Omit if none.]
@@ -86,6 +93,8 @@ Before creating the issue, search existing issues:
 
 ```bash
 gh issue list --state all --search "<keywords from title and body>"
+
+Sometimes the user will use GitHub, Jira, or Linear, so check whichever that repo uses for duplicates
 ```
 
 If you find a likely duplicate, surface it to the user and offer to comment on the existing issue with the new context instead of creating a new one. Do not silently skip the creation — ask.
@@ -96,34 +105,35 @@ If the user approved a new issue, build the body from this skeleton (parallel to
 
 ```markdown
 ## Description
+
 [Description from approved summary]
 
-## Steps to Reproduce  (bugs)
+## Steps to Reproduce (bugs)
+
 1. ...
 
-## Motivation  (features)
+## Motivation (features)
+
 [Motivation from approved summary]
 
-## Expected Behavior  (bugs)
-## Actual Behavior  (bugs)
+## Expected Behavior (bugs)
+
+## Actual Behavior (bugs)
 
 ## Affected Components
+
 - [Component list with paths]
 
 ## Technical Context
+
 [Technical details, code paths, potential root cause]
 
 ## Additional Context
+
 [Error messages, screenshots if provided, etc.]
 ```
 
-Then file it. Record dependencies with GitHub's native blocked-by and blocking links, never as "depends on" prose in the body. Drop either flag when its list is empty:
-
-```bash
-gh issue create --title "<title>" --body "<body>" --blocked-by <n,n> --blocking <n,n>
-```
-
-If they chose to comment on a duplicate, build the comment body from this skeleton — it's narrower because the original issue already carries the title, description, and reproduction shape:
+Sometimes the user will want you to file a GitHub, JIRA, or Linear ticket, and sometimes they won't. So just follow the user discretion here.
 
 ```markdown
 ## Additional Context
@@ -131,22 +141,10 @@ If they chose to comment on a duplicate, build the comment body from this skelet
 [New information discovered during this investigation]
 
 ### Technical Details
+
 - [Any new technical context]
 - [Additional affected components]
 ```
-
-Then post it:
-
-```bash
-gh issue comment <number> --body "<added context>"
-gh issue edit <number> --add-blocked-by <n,n> --add-blocking <n,n>
-```
-
-Run the `gh issue edit` only when the approved summary names new dependencies.
-
-Report the resulting URL.
-
-If either command fails, report the error verbatim to the user. The two common causes are not authenticated (`gh auth login`) and the account lacking write permission on the repo.
 
 ## Principles
 
