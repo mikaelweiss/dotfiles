@@ -29,4 +29,8 @@
     jujutsu
     lazyjj
   ];
+
+  # XcodeGen reads its setting presets from ../share/xcodegen beside the
+  # binary on PATH. Without them a generated project has no Debug settings.
+  environment.pathsToLink = [ "/share/xcodegen" ];
 }
