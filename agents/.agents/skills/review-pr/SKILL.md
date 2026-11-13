@@ -46,12 +46,24 @@ A review stopped mid-run leaves its worktree behind. List `git worktree list --p
 Repeat until the PR closes:
 
 1. `watch snap <url> > <scratchpad>/now.json`. A `state` other than `OPEN` ends the review: say `PR #<n> is <state>` and go to Step 9.
-2. A round is owed when no round has run yet, or `headRefOid` is not the commit the last round read.
+2. A round is owed when no round has run yet, or `headRefOid` is not the commit the last round read and the push changed code (below).
 3. When a round is owed and the PR is neither `isDraft` nor `isInMergeQueue`, run Steps 5 to 8, then repeat.
 4. Otherwise wait:
    - Remove the worktree (`git worktree remove --force <path>`). On failure say `the worktree stayed: <error>` and go on.
    - Say `waiting for changes on PR #<n>`.
-   - Run `watch wait <url> <scratchpad>/now.json` with `run_in_background`. It exits on the first change and prints one line per change. Say what each one means: `draft` waits, `ready` resumes, `queued` says `PR #<n> is queued to merge, the review waits`, `dequeued` says `PR #<n> left the merge queue`, `commits` owes a round. Then repeat.
+   - Run `watch wait <url> <scratchpad>/now.json` with `run_in_background`. It exits on the first change and prints one line per change. Say what each one means: `draft` waits, `ready` resumes, `queued` says `PR #<n> is queued to merge, the review waits`, `dequeued` says `PR #<n> left the merge queue`, `commits` owes a round unless it is a rebase. Then repeat.
+
+**A rebase owes no round.** When `headRefOid` moved, compare the PR's own changes at the last round's commit `<last>` and at the new head, from the main checkout:
+
+```bash
+git fetch origin <base>
+git fetch origin pull/<n>/head
+git cat-file -e <last>
+git diff -U0 "$(git merge-base origin/<base> <last>)" <last> | git patch-id --stable
+git diff -U0 "$(git merge-base origin/<base> FETCH_HEAD)" FETCH_HEAD | git patch-id --stable
+```
+
+The same id twice means the push only moved the PR onto a newer base: say `PR #<n> was rebased with no code change, so no round runs`, and the new head becomes the commit the last round read. When the last round approved and `approvals` in `now.json` is 0, the push dismissed it: run `gh pr review <url> --approve` and say `Approved PR #<n> again after the rebase`. Different ids, a missing `<last>`, or a failed command owe a round. A rebase that resolved a conflict changes the ids, so it gets a round.
 
 ## Step 5 - The round
 
