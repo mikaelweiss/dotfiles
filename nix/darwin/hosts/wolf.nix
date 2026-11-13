@@ -47,7 +47,7 @@ in
   users.knownUsers = [ "pip" ];
   users.users.pip = {
     uid = 550;
-    home = "/var/empty";
+    home = "/private/var/empty_1";
     # Login fails PAM's account check unless the shell is in /etc/shells. The
     # chroot has no binaries and ForceCommand runs internal-sftp, so it never runs.
     shell = "/bin/sh";
