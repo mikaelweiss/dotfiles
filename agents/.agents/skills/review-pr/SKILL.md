@@ -63,7 +63,7 @@ git diff -U0 "$(git merge-base origin/<base> <last>)" <last> | git patch-id --st
 git diff -U0 "$(git merge-base origin/<base> FETCH_HEAD)" FETCH_HEAD | git patch-id --stable
 ```
 
-The same id twice means the push only moved the PR onto a newer base: say `PR #<n> was rebased with no code change, so no round runs`, and the new head becomes the commit the last round read. When the last round approved and `approvals` in `now.json` is 0, the push dismissed it: run `gh pr review <url> --approve` and say `Approved PR #<n> again after the rebase`. Different ids, a missing `<last>`, or a failed command owe a round. A rebase that resolved a conflict changes the ids, so it gets a round.
+The same id twice means the push only moved the PR onto a newer base: say `PR #<n> was rebased with no code change, so no round runs`, and the new head becomes the commit the last round read. When the last round approved, run `gh pr review <url> --approve` and say `Approved PR #<n> again after the rebase`. A repository that requires approval of the latest push stops counting the old approval, and `approvals` in `now.json` still counts it, so approve whatever it says. Different ids, a missing `<last>`, or a failed command owe a round. A rebase that resolved a conflict changes the ids, so it gets a round.
 
 ## Step 5 - The round
 
