@@ -11,6 +11,7 @@ in
   node.pkgs = stable;
 
   environment.systemPackages = with pkgs; [
+    jdk25
     mutagen
     # opencode
     # github-copilot-cli
@@ -128,11 +129,10 @@ in
     };
   };
 
-  # Android builds. Both come from Homebrew below. openjdk@21 is keg-only, so
-  # nothing finds it without JAVA_HOME. Variables reach non-interactive shells too.
+  # Variables reach non-interactive shells too.
   environment.variables = {
     ANDROID_HOME = "/opt/homebrew/share/android-commandlinetools";
-    JAVA_HOME = "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home";
+    JAVA_HOME = "${pkgs.jdk25.home}";
     # `ssh wolf tmux attach` runs no login shell, and without a UTF-8 locale
     # tmux draws every icon as an underscore.
     LANG = "en_US.UTF-8";
@@ -158,7 +158,6 @@ in
       "postgresql@18"
       "xcode-build-server"
       "mole"
-      "openjdk@21"
       # "mise" # node/python/etc version manager, per-project pinning
       "herdr"
       "pngpaste"

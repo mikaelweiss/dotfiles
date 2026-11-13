@@ -4,7 +4,6 @@
   imports = [ ../youtube-blocker ];
 
   environment.systemPackages = with pkgs; [
-    javaPackages.compiler.openjdk25 # Java
     rubyPackages_4_0.cocoapods
   ];
 
