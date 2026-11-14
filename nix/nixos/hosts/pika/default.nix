@@ -1,4 +1,4 @@
-{ lib, pkgs, inputs, nixos-raspberrypi, ... }:
+{ config, lib, pkgs, inputs, nixos-raspberrypi, ... }:
 
 let
   router = "192.168.0.1";
@@ -154,6 +154,12 @@ in
         [ "mikaelmc.com" "mikaelmc.net" ];
     };
   };
+
+  # The module's query uses strftime('%s'), and systemd expands %s to the user's shell, so every run fails.
+  systemd.services.pihole-ftl-log-deleter.serviceConfig.ExecStart = let cfg = config.services.pihole-ftl; in lib.mkForce [
+    "${pkgs.coreutils}/bin/echo 'Deleting query logs older than ${toString cfg.queryLogDeleter.age} days'"
+    "${lib.getExe cfg.package} sqlite3 ${cfg.settings.files.database} \"DELETE FROM query_storage WHERE timestamp <= unixepoch('now', '-${toString cfg.queryLogDeleter.age} day'); select changes() from query_storage limit 1\""
+  ];
 
   # The Pi has no RTC battery and boots with a stale clock, so list downloads fail TLS until NTP syncs.
   systemd.additionalUpstreamSystemUnits = [ "systemd-time-wait-sync.service" ];
