@@ -82,6 +82,7 @@ in
   homebrew.brews = [
     "tailscale"
     "flyctl"
+    "openjdk@21" # JAVA_HOME in actions-runner-2 and -3's .env for the Android builds
   ];
 
   homebrew.casks = [
