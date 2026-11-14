@@ -65,6 +65,13 @@ in
     install -d -m 0700 -o pip -g staff /private/var/pip/pg-backup
     # Remote Login admits admins only, so pip joins its access group.
     dseditgroup -o edit -a pip -t user com.apple.access_ssh
+
+    # Every Go build on wolf shares CI's cache in the runner image on The Vault,
+    # since Go's default cache on the internal disk fills it.
+    if [ ! -L /Users/mikaelweiss/Library/Caches/go-build ]; then
+      rm -rf /Users/mikaelweiss/Library/Caches/go-build
+      sudo -u mikaelweiss ln -s /Volumes/RunnerCache/go-build /Users/mikaelweiss/Library/Caches/go-build
+    fi
   '';
 
   programs.zsh.interactiveShellInit = ''
