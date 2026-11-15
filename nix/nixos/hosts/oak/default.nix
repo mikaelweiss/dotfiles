@@ -68,6 +68,32 @@
     "d /var/pip/pg-backup 0700 pip pip -"
   ];
 
+  # Homecloud backup keeper: receives encrypted backups and never deletes them
+  users.groups.homecloud = { };
+  users.users.homecloud = {
+    isSystemUser = true;
+    group = "homecloud";
+  };
+  systemd.services.homecloud-keeper = {
+    description = "Homecloud backup keeper";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" "tailscaled.service" ];
+    wants = [ "network-online.target" ];
+    unitConfig.ConditionPathExists = "/var/lib/homecloud-keeper/bin/rest-server";
+    serviceConfig = {
+      User = "homecloud";
+      Group = "homecloud";
+      ExecStart = "/var/lib/homecloud-keeper/bin/rest-server --path /var/lib/homecloud-keeper/data --listen 100.91.63.11:8446 --append-only --htpasswd-file /var/lib/homecloud-keeper/htpasswd";
+      Restart = "always";
+      RestartSec = 5;
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      PrivateTmp = true;
+      PrivateDevices = true;
+      ReadWritePaths = [ "/var/lib/homecloud-keeper/data" ];
+    };
+  };
+
   hardware.cpu.amd.updateMicrocode = true;
   zramSwap.enable = true;
 
