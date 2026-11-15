@@ -101,6 +101,44 @@
     };
   };
 
+  users.groups.homecloud = { };
+  users.users.homecloud = {
+    isSystemUser = true;
+    group = "homecloud";
+    home = "/var/lib/homecloud";
+    createHome = true;
+    # The program inside answers questions for whoever signs in to set
+    # things up. The settings and data inside stay private.
+    homeMode = "755";
+  };
+  systemd.services.homecloud = {
+    description = "Homecloud server";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" "tailscaled.service" ];
+    wants = [ "network-online.target" ];
+    unitConfig.ConditionPathExists = "/var/lib/homecloud/current/bin/hc-server";
+    path = [ config.services.tailscale.package ];
+    serviceConfig = {
+      User = "homecloud";
+      Group = "homecloud";
+      ExecStart = "/var/lib/homecloud/launch";
+      Restart = "always";
+      RestartSec = 3;
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = true;
+      PrivateDevices = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      RestrictSUIDSGID = true;
+      LockPersonality = true;
+      ReadWritePaths = [ "/var/lib/homecloud" "/mnt/nvme/homecloud" "-/run/tailscale" "-/var/run/tailscale" ];
+      LimitNOFILE = 65536;
+    };
+  };
+
   hardware.graphics = {
     enable = true;
     extraPackages = [ pkgs.intel-media-driver ];
