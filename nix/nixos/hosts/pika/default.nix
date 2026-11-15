@@ -130,6 +130,7 @@ in
         url = "file://${pkgs.writeText "pihole-allow.txt" ''
           @@||sentry.io^
           @@||sentry-cdn.com^
+          @@||tailscale.com^
         ''}";
         type = "allow";
         description = "Domains needed for work";
