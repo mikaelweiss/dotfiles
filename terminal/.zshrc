@@ -78,10 +78,37 @@ alias :q='exit'
 # Every rebuild moves each flake input to the newest commit on its branch, so
 # nothing waits on a lock bump. The lock file stays untouched, which keeps the
 # git checkouts on sparrow and oak clean, and is the fallback when offline.
+_nix_host_config() {
+  if [[ "$OSTYPE" == darwin* ]]; then
+    echo darwinConfigurations.$(scutil --get LocalHostName)
+  else
+    echo nixosConfigurations.$(hostname -s)
+  fi
+}
+# Nix fetches every overridden input, even one the host never reads. Tracing
+# an evaluation of the host's system shows which inputs it actually reads.
+_nix_used_inputs() {
+  local flake=$HOME/code/dotfiles/nix
+  nix eval --impure --raw --expr "
+    let flake = builtins.getFlake \"$flake\";
+        traced = builtins.mapAttrs (name: input: builtins.trace \"input:\${name}\" input) flake.inputs;
+        outputs = (import $flake/flake.nix).outputs (traced // { self = flake; });
+    in outputs.$(_nix_host_config).config.system.build.toplevel.drvPath" 2>&1 >/dev/null |
+    sed -n 's/^trace: input://p' | sort -u
+}
+# An input reached only through another input's follows never shows in the
+# trace, so the follows targets of used inputs count as used. A failed trace
+# leaves the list empty, and then every input moves.
 _nix_latest_inputs() {
-  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r '
-    .locks.nodes as $n | $n.root.inputs | to_entries[]
-    | select(.value | type == "string") | .key as $k | $n[.value].original
+  local used=$(_nix_used_inputs | jq -R . | jq -sc .)
+  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r --argjson used "$used" '
+    .locks.nodes as $n
+    | def follows: $n[$n.root.inputs[.]].inputs // {} | .[] | select(type == "array") | .[0];
+      def closure: (. + [.[] | follows] | unique) as $next | if $next == . then . else $next | closure end;
+    ($used | unique | closure) as $used
+    | $n.root.inputs | to_entries[]
+    | select(.value | type == "string") | .key as $k
+    | select($used == [] or ($used | index($k))) | $n[.value].original
     | if .type == "github" then "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"
       else empty end'
 }
