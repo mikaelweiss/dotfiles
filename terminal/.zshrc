@@ -267,7 +267,8 @@ export PATH="$HOME/.swiftpm/bin:$PATH"
 
 # alias's
 alias home='cd /Users/mikaelweiss/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Home'
-alias claude='claude --dangerously-skip-permissions'
+# A herdr restarted from inside Claude leaks CLAUDE_CODE_CHILD_SESSION into its terminals, which turns off transcript saving.
+alias claude='CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1 claude --dangerously-skip-permissions'
 alias codex='codex -c model_reasoning_effort="high" --ask-for-approval never --sandbox danger-full-access'
 alias c='claude'
 alias st='bun run dev:desktop'
@@ -277,7 +278,7 @@ alias sa='pnpm run start'
 alias claudef='claude --model claude-fable-5-2'
 alias cf='claude --model claude-fable-5-2'
 alias cs='claude --model sonnet'
-alias ca='env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN claude'
+alias ca='env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1 claude'
 alias caf='ca --model claude-fable-5-2'
 alias aspen="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
 alias a="/Users/mikaelweiss/code/aspen-grove/core/bin/aspen"
