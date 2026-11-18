@@ -98,7 +98,6 @@ function M.apply()
   local link_fg = fg(link) or text
   local faint = first("Comment")
   local faint_fg = fg(faint) or text
-  local raw_fg = fg("@markup.raw", "String") or text
   local code_bg = bg("ColorColumn", "CursorLine") or M.mix(text, base, 0.06)
   local tag_fg = fg("@markup.link.label", "Special") or link_fg
   local tag_bg = M.mix(tag_fg, base, 0.15)
@@ -111,7 +110,7 @@ function M.apply()
     MdItalic = { link = first("@markup.italic", "Italic") },
     MdStrike = { link = first("@markup.strikethrough") },
     MdHighlight = { link = "Search" },
-    MdCode = { fg = raw_fg, bg = code_bg },
+    MdCode = { fg = text, bg = code_bg },
     MdCodeBlock = { bg = code_bg },
     MdCodeFence = { fg = faint_fg, bg = code_bg },
     MdCodeLang = { fg = faint_fg, bg = code_bg },

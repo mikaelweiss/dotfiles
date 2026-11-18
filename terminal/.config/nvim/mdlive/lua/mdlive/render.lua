@@ -183,11 +183,9 @@ local function render_fence(row, info, block)
       hl(row, fc, #info.text, "MdCodeFence")
     else
       hide(row, fc, #info.text)
-    end
-  elseif row == block.s + 1 and not active and block.lang and block.lang ~= "" then
-    local label = block.lang .. " "
-    if vim.fn.strdisplaywidth(info.text) + #label + 2 <= ctx.width then
-      mark(row, 0, { virt_text = { { label, "MdCodeLang" } }, virt_text_pos = "right_align" })
+      if row == block.s and block.lang and block.lang ~= "" then
+        mark(row, 0, { virt_text = { { block.lang .. "  ", "MdCodeLang" } }, virt_text_pos = "right_align" })
+      end
     end
   end
 end
