@@ -309,5 +309,6 @@
   "lsp": {
     "enabled": true
   },
-  "autoCompactEnabled": false
+  "autoCompactEnabled": false,
+  "disableClaudeAiConnectors": true
 }
