@@ -15,7 +15,6 @@ return {
       less = { "prettier" },
       html = { "prettier" },
       yaml = { "prettier" },
-      markdown = { "prettier" },
       graphql = { "prettier" },
       php = { "pint" },
     })
