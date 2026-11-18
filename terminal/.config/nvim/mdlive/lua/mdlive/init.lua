@@ -247,6 +247,7 @@ function M.attach(buf)
   vim.b[buf].autoformat = false
   vim.b[buf].minipairs_disable = true
   vim.b[buf].snacks_indent = false
+  vim.b[buf].minianimate_disable = true
   ensure_highlighter(buf)
   keymaps(buf)
   attach_renumber(buf)

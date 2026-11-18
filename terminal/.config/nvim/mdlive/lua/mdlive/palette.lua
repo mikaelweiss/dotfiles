@@ -102,6 +102,8 @@ function M.apply()
   local tag_fg = fg("@markup.link.label", "Special") or link_fg
   local tag_bg = M.mix(tag_fg, base, 0.15)
   local pill_bg = bg("CursorLine") or M.mix(text, base, 0.08)
+  -- Resolved to a color rather than linked, since note windows remap WinSeparator to hide their edges.
+  local border = fg("WinSeparator", "NonText") or M.mix(text, base, 0.2)
   -- Headings keep the theme's color per level but drop its background band, as Obsidian's are plain text.
   local function heading(level)
     return { fg = fg("@markup.heading." .. level .. ".markdown", "@markup.heading." .. level, "Title") or text, bold = true }
@@ -136,9 +138,9 @@ function M.apply()
     MdTaskDone = { fg = faint_fg, strikethrough = true },
     MdQuoteBar = { fg = fg("@markup.quote", "Comment") or faint_fg },
     MdQuoteMarker = { link = faint },
-    MdHr = { link = first("WinSeparator", "NonText") },
+    MdHr = { fg = border },
     MdHrRaw = { link = faint },
-    MdTableBorder = { link = first("WinSeparator", "NonText") },
+    MdTableBorder = { fg = border },
     MdTableHeader = { bold = true },
     MdComment = { link = faint },
     MdMath = { link = first("@markup.math", "Special") },

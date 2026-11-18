@@ -35,6 +35,7 @@ local function new_pad(main, side, width)
   local buf = api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].filetype = PAD_FT
+  vim.b[buf].minianimate_disable = true
   local win = api.nvim_open_win(buf, false, { split = side, win = main, width = width })
   local wo = vim.wo[win]
   wo.winfixwidth = true
@@ -68,6 +69,25 @@ local function remove(tab)
   end
 end
 
+-- Updates react to resizes, including their own, so they skip any layout they already settled.
+local settled = {}
+
+local function layout_key(tab)
+  local parts = { vim.o.columns }
+  for _, win in ipairs(api.nvim_tabpage_list_wins(tab)) do
+    if api.nvim_win_get_config(win).relative == "" then
+      parts[#parts + 1] = ("%d:%d:%d"):format(win, api.nvim_win_get_width(win), api.nvim_win_get_buf(win))
+    end
+  end
+  return table.concat(parts, ",")
+end
+
+local function set_width(win, width)
+  if api.nvim_win_get_width(win) ~= width then
+    api.nvim_win_set_width(win, width)
+  end
+end
+
 local updating = false
 
 function M.update()
@@ -77,11 +97,16 @@ function M.update()
   updating = true
   local ok, err = pcall(function()
     local tab = api.nvim_get_current_tabpage()
+    if settled[tab] == layout_key(tab) then
+      return
+    end
     local mains = editing_windows(tab)
     local main = #mains == 1 and mains[1] or nil
     local b = main and state.get(api.nvim_win_get_buf(main))
     if not (b and b.enabled and b.settings.readableLineLength ~= false) then
-      return remove(tab)
+      remove(tab)
+      settled[tab] = layout_key(tab)
+      return
     end
     local p = pads[tab]
     if p and p.main ~= main then
@@ -96,15 +121,18 @@ function M.update()
         end
       end
     end
-    local target = M.width + vim.fn.getwininfo(main)[1].textoff
+    -- The gutter width reads stale right after a resize, so it is measured once per note window.
+    local target = (p and p.target) or (M.width + vim.fn.getwininfo(main)[1].textoff)
     local spare = total - target - 2
     if spare < 2 * MIN_PAD then
-      return remove(tab)
+      remove(tab)
+      settled[tab] = layout_key(tab)
+      return
     end
     local left = math.floor(spare / 2)
     local right = spare - left
     if not p then
-      p = { main = main, main_whl = vim.wo[main].winhighlight }
+      p = { main = main, main_whl = vim.wo[main].winhighlight, target = target }
       pads[tab] = p
       local whl = p.main_whl ~= "" and (p.main_whl .. ",") or ""
       vim.wo[main].winhighlight = whl .. "WinSeparator:MdPadSeparator"
@@ -115,8 +143,9 @@ function M.update()
     if not valid(p.right) then
       p.right = new_pad(main, "right", right)
     end
-    api.nvim_win_set_width(p.left, left)
-    api.nvim_win_set_width(p.right, right)
+    set_width(p.left, left)
+    set_width(p.right, right)
+    settled[tab] = layout_key(tab)
   end)
   updating = false
   if not ok then
