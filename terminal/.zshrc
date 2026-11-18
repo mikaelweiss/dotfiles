@@ -75,59 +75,26 @@ alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
 alias venv='source .venv/bin/activate'
 alias xc='sh ~/code/dotfiles/resize-xcode.sh'
 alias :q='exit'
-# Every rebuild moves each flake input to the newest commit on its branch, so
-# nothing waits on a lock bump. The lock file stays untouched, which keeps the
-# git checkouts on sparrow and oak clean, and is the fallback when offline.
-_nix_host_config() {
-  if [[ "$OSTYPE" == darwin* ]]; then
-    echo darwinConfigurations.$(scutil --get LocalHostName)
-  else
-    echo nixosConfigurations.$(hostname -s)
-  fi
-}
-# Nix fetches every overridden input, even one the host never reads. Tracing
-# an evaluation of the host's system shows which inputs it actually reads.
-_nix_used_inputs() {
-  local flake=$HOME/code/dotfiles/nix
-  nix eval --impure --raw --expr "
-    let flake = builtins.getFlake \"$flake\";
-        traced = builtins.mapAttrs (name: input: builtins.trace \"input:\${name}\" input) flake.inputs;
-        outputs = (import $flake/flake.nix).outputs (traced // { self = flake; });
-    in outputs.$(_nix_host_config).config.system.build.toplevel.drvPath" 2>&1 >/dev/null |
-    sed -n 's/^trace: input://p' | sort -u
-}
-# An input reached only through another input's follows never shows in the
-# trace, so the follows targets of used inputs count as used. A failed trace
-# leaves the list empty, and then every input moves.
-_nix_latest_inputs() {
-  local used=$(_nix_used_inputs | jq -R . | jq -sc .)
-  nix flake metadata --json --no-write-lock-file ~/code/dotfiles/nix 2>/dev/null | jq -r --argjson used "$used" '
-    .locks.nodes as $n
-    | def follows: $n[$n.root.inputs[.]].inputs // {} | .[] | select(type == "array") | .[0];
-      def closure: (. + [.[] | follows] | unique) as $next | if $next == . then . else $next | closure end;
-    ($used | unique | closure) as $used
-    | $n.root.inputs | to_entries[]
-    | select(.value | type == "string") | .key as $k
-    | select($used == [] or ($used | index($k))) | $n[.value].original
-    | if .type == "github" then "--override-input", $k, "github:\(.owner)/\(.repo)\(if .ref then "/" + .ref else "" end)"
-      else empty end'
-}
-# Unauthenticated GitHub API calls hit a 60 per hour limit.
-_nix_github_auth() {
-  local token
-  token=$(gh auth token 2>/dev/null) || return
-  print -l -- --option access-tokens "github.com=$token"
+# flake.lock pins every input, so every machine builds the same versions.
+# nix-update moves the pins to each branch head and shares them through git.
+nix-update() {
+  local repo=~/code/dotfiles
+  git -C $repo pull -q --ff-only || return 1
+  nix flake update --flake $repo/nix || return 1
+  git -C $repo diff --quiet -- nix/flake.lock && return
+  git -C $repo commit -q -m "chore: update flake inputs" -- nix/flake.lock || return 1
+  git -C $repo push -q
 }
 nix-rebuild() {
   if [[ $(hostname -s) == oak ]]; then
     echo "Use nix-rebuild-oak on oak."
     return 1
   fi
-  local -a latest=(${(f)"$(_nix_latest_inputs)"} ${(f)"$(_nix_github_auth)"})
+  nix-update || return 1
   if [[ "$OSTYPE" == darwin* ]]; then
-    sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName) --refresh --no-write-lock-file "${latest[@]}"
+    sudo darwin-rebuild switch --flake ~/code/dotfiles/nix#$(scutil --get LocalHostName)
   else
-    sudo nixos-rebuild switch --flake ~/code/dotfiles/nix --refresh --no-write-lock-file "${latest[@]}"
+    sudo nixos-rebuild switch --flake ~/code/dotfiles/nix
   fi
 }
 
@@ -149,9 +116,9 @@ _nix_rebuild_with_revert() {
     return 1
   fi
 
-  local -a latest=(${(f)"$(_nix_latest_inputs)"} ${(f)"$(_nix_github_auth)"})
+  nix-update || return 1
   local old=$(readlink -f $profile) new
-  new=$(nix build --no-link --print-out-paths --refresh --no-write-lock-file "${latest[@]}" \
+  new=$(nix build --no-link --print-out-paths \
     ~/code/dotfiles/nix#nixosConfigurations.$(hostname -s).config.system.build.toplevel) || return 1
   if [[ $new == $old ]]; then
     echo "Already up to date."
