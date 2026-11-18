@@ -187,6 +187,7 @@ in
       # Dev tools
       "ghostty"
       "sf-symbols"
+      "font-sf-mono" # Obsidian's default monospace font, used in Ghostty
       # "cmux" #fork of Ghostty, built agents first
       # "bruno"
       # "rapidapi"
