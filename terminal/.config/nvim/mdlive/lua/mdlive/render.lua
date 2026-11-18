@@ -279,7 +279,7 @@ local function render_list(row, info)
   elseif span_active(row, ms, ms + 1) then
     hl(row, ms, ms + 1, "MdListMarker")
   else
-    overlay(row, ms, { { "•", "MdListMarker" } })
+    overlay(row, ms, { { "-", "MdListMarker" } })
   end
 end
 

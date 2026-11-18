@@ -98,15 +98,16 @@ function M.apply()
   local link_fg = fg(link) or text
   local faint = first("Comment")
   local faint_fg = fg(faint) or text
-  local code_bg = bg("@markup.raw.markdown_inline", "@markup.raw", "ColorColumn", "CursorLine") or M.mix(text, base, 0.06)
+  -- Claude Code's inline code color, its dark theme "permission" color.
+  local code_fg = vim.o.background == "light" and "#5769f7" or "#b1b9f9"
   local tag_fg = fg("@markup.link.label", "Special") or link_fg
   local tag_bg = M.mix(tag_fg, base, 0.15)
   local pill_bg = bg("CursorLine") or M.mix(text, base, 0.08)
   -- Resolved to a color rather than linked, since note windows remap WinSeparator to hide their edges.
   local border = fg("WinSeparator", "NonText") or M.mix(text, base, 0.2)
-  -- Headings keep the theme's color per level but drop its background band, as Obsidian's are plain text.
+  -- Headings match Claude Code: the top level is bold, italic and underlined, the rest only bold.
   local function heading(level)
-    return { fg = fg("@markup.heading." .. level .. ".markdown", "@markup.heading." .. level, "Title") or text, bold = true }
+    return { fg = text, bold = true, italic = level == 1, underline = level == 1 }
   end
   local groups = {
     MdText = { link = "Normal" },
@@ -116,10 +117,10 @@ function M.apply()
     MdItalic = { link = first("@markup.italic", "Italic") },
     MdStrike = { link = first("@markup.strikethrough") },
     MdHighlight = { link = "Search" },
-    MdCode = { fg = text, bg = code_bg },
-    MdCodeBlock = { bg = code_bg },
-    MdCodeFence = { fg = faint_fg, bg = code_bg },
-    MdCodeLang = { fg = faint_fg, bg = code_bg },
+    MdCode = { fg = code_fg },
+    MdCodeBlock = {},
+    MdCodeFence = { fg = faint_fg },
+    MdCodeLang = { fg = faint_fg },
     MdFormatting = { link = faint },
     MdLink = { fg = link_fg, underline = true, sp = link_fg },
     MdLinkUnresolved = { fg = M.mix(link_fg, base, 0.6), underline = true, sp = M.mix(link_fg, base, 0.3) },
@@ -129,7 +130,7 @@ function M.apply()
     MdTagEdge = { fg = tag_bg },
     MdPill = { fg = text, bg = pill_bg },
     MdPillEdge = { fg = pill_bg },
-    MdListMarker = { link = first("@markup.list", "Special") },
+    MdListMarker = { link = "Normal" },
     MdIndentGuide = { link = first("SnacksIndent", "IblIndent", "NonText") },
     MdIndentGuideActive = { link = first("SnacksIndentScope", "IblScope", "Comment") },
     MdCheckbox = { link = first("@markup.list.unchecked", "@markup.list") },

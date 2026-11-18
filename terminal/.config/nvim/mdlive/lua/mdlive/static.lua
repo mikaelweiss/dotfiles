@@ -215,17 +215,6 @@ local function render_table(b, doc, block, ctx, avail)
   set(buf, block.s, 0, { end_row = block.e, conceal_lines = "" })
 end
 
--- Obsidian pads code inside its box, so each line gets two columns of box-colored space.
-local function pad_code(buf, doc, block)
-  for row = block.s, block.e do
-    local info = doc.rows[row]
-    local col = info.qend + (block.indent or 0)
-    if #info.text >= col then
-      set(buf, row, col, { virt_text = { { "  ", "MdCodeBlock" } }, virt_text_pos = "inline", right_gravity = false })
-    end
-  end
-end
-
 local function prop_type(settings, prop)
   local t = settings.propertyTypes[prop.key]
   if t then
@@ -503,9 +492,6 @@ function M.refresh(buf, force)
     return
   end
   for _, block in ipairs(doc.blocks) do
-    if block.type == "code" then
-      pad_code(buf, doc, block)
-    end
     if not render.block_active(ctx, block) then
       if block.type == "table" then
         render_table(b, doc, block, link_ctx, ctx.width)
