@@ -68,12 +68,93 @@ local function quote_prefix_chunks(doc, row)
   return out
 end
 
-local function render_table(b, doc, block, ctx)
+local function width_of(s)
+  return vim.fn.strdisplaywidth(s)
+end
+
+-- Wraps styled chunks at word boundaries, the way Obsidian wraps text inside a table cell.
+local function wrap(chunks, limit)
+  local lines, cur, cur_w = {}, {}, 0
+  local function push(s, group)
+    if s == "" then
+      return
+    end
+    cur[#cur + 1] = { s, group }
+    cur_w = cur_w + width_of(s)
+  end
+  local function newline()
+    local last = cur[#cur]
+    if last then
+      local trimmed = last[1]:gsub("%s+$", "")
+      cur_w = cur_w - (width_of(last[1]) - width_of(trimmed))
+      last[1] = trimmed
+    end
+    lines[#lines + 1] = { cur, cur_w }
+    cur, cur_w = {}, 0
+  end
+  for _, c in ipairs(chunks) do
+    local s, group = c[1], c[2]
+    local lead = s:match("^%s*")
+    if lead ~= "" and cur_w > 0 and cur_w + width_of(lead) <= limit then
+      push(lead, group)
+    end
+    for word, space in s:gmatch("(%S+)(%s*)") do
+      local ww = width_of(word)
+      if cur_w > 0 and cur_w + ww > limit then
+        newline()
+      end
+      if ww > limit then
+        for _, ch in ipairs(vim.fn.split(word, "\\zs")) do
+          if cur_w + width_of(ch) > limit then
+            newline()
+          end
+          push(ch, group)
+        end
+      else
+        push(word, group)
+      end
+      if space ~= "" and cur_w + width_of(space) <= limit then
+        push(space, group)
+      end
+    end
+  end
+  if #cur > 0 or #lines == 0 then
+    newline()
+  end
+  return lines
+end
+
+-- Shrinks the widest columns first until the table fits the window.
+local function fit(natural, budget)
+  local total = 0
+  for _, w in ipairs(natural) do
+    total = total + w
+  end
+  if total <= budget then
+    return vim.deepcopy(natural)
+  end
+  local order = {}
+  for j = 1, #natural do
+    order[j] = j
+  end
+  table.sort(order, function(a, b)
+    return natural[a] < natural[b]
+  end)
+  local widths, remaining, left = {}, budget, #natural
+  for _, j in ipairs(order) do
+    widths[j] = math.max(3, math.min(natural[j], math.floor(remaining / left)))
+    remaining = remaining - widths[j]
+    left = left - 1
+  end
+  return widths
+end
+
+local function render_table(b, doc, block, ctx, avail)
   local buf = b.buf
-  local cells, widths = {}, {}
   local ncols = #block.aligns
-  for i = 1, ncols do
-    widths[i] = 1
+  local cells, natural = {}, {}
+  for j = 1, ncols do
+    natural[j] = 1
   end
   for _, row in ipairs(block.rows) do
     local info = doc.rows[row]
@@ -85,35 +166,53 @@ local function render_table(b, doc, block, ctx)
         local base = row == block.rows[1] and "MdTableHeader" or "MdText"
         chunks, w = text.inline_chunks(info.text:sub(cell[3] + 1, cell[4]), base, vim.tbl_extend("force", ctx, { doc = doc, row = row }))
       end
-      cells[row][j] = { chunks, w }
-      widths[j] = math.max(widths[j], w)
+      cells[row][j] = chunks
+      natural[j] = math.max(natural[j], w)
     end
   end
-  local function line_chunks(prefix, str)
+  local prefix = quote_prefix_chunks(doc, block.s)
+  local prefix_w = 0
+  for _, c in ipairs(prefix) do
+    prefix_w = prefix_w + width_of(c[1])
+  end
+  local widths = fit(natural, avail - prefix_w - 1 - 3 * ncols)
+  local function border_line(left, mid, right)
     local out = vim.deepcopy(prefix)
-    out[#out + 1] = { str, "MdTableBorder" }
+    out[#out + 1] = { border(widths, left, mid, right), "MdTableBorder" }
     return out
   end
+  local lines = { border_line("┌", "┬", "┐") }
+  local last = block.rows[#block.rows]
   for _, row in ipairs(block.rows) do
-    local info = doc.rows[row]
-    local chunks = { { "│", "MdTableBorder" } }
+    local wrapped, height = {}, 1
     for j = 1, ncols do
-      chunks[#chunks + 1] = { " ", "MdText" }
-      for _, c in ipairs(pad(cells[row][j][1], cells[row][j][2], widths[j], block.aligns[j])) do
-        chunks[#chunks + 1] = c
-      end
-      chunks[#chunks + 1] = { " │", "MdTableBorder" }
+      wrapped[j] = wrap(cells[row][j], widths[j])
+      height = math.max(height, #wrapped[j])
     end
-    set(buf, row, info.qend, { end_col = #info.text, conceal = "" })
-    set(buf, row, info.qend, { virt_text = chunks, virt_text_pos = "inline" })
+    for k = 1, height do
+      local chunks = vim.deepcopy(prefix)
+      chunks[#chunks + 1] = { "│", "MdTableBorder" }
+      for j = 1, ncols do
+        local line = wrapped[j][k] or { {}, 0 }
+        chunks[#chunks + 1] = { " ", "MdText" }
+        vim.list_extend(chunks, pad(line[1], line[2], widths[j], block.aligns[j]))
+        chunks[#chunks + 1] = { " │", "MdTableBorder" }
+      end
+      lines[#lines + 1] = chunks
+    end
+    lines[#lines + 1] = row == last and border_line("└", "┴", "┘") or border_line("├", "┼", "┤")
   end
-  local delim = block.rows[1] + 1
-  local dinfo = doc.rows[delim]
-  set(buf, delim, dinfo.qend, { end_col = #dinfo.text, conceal = "" })
-  set(buf, delim, dinfo.qend, { virt_text = { { border(widths, "├", "┼", "┤"), "MdTableBorder" } }, virt_text_pos = "inline" })
-  local prefix = quote_prefix_chunks(doc, block.s)
-  set(buf, block.s, 0, { virt_lines = { line_chunks(prefix, border(widths, "┌", "┬", "┐")) }, virt_lines_above = true })
-  set(buf, block.e, 0, { virt_lines = { line_chunks(prefix, border(widths, "└", "┴", "┘")) } })
+  -- Concealed text keeps its wrapped height, so the raw rows collapse entirely and the grid
+  -- hangs off a neighboring line instead.
+  local before = block.s > 0 and doc.rows[block.s - 1]
+  if before and not (before.block and before.block.type == "frontmatter") then
+    set(buf, block.s - 1, 0, { virt_lines = lines })
+  elseif block.e + 1 < #doc.lines then
+    set(buf, block.e + 1, 0, { virt_lines = lines, virt_lines_above = true })
+  else
+    return
+  end
+  set(buf, block.s, 0, { end_row = block.e, conceal_lines = "" })
 end
 
 local function prop_type(settings, prop)
@@ -357,7 +456,7 @@ local function signature(b, doc, ctx)
       active[#active + 1] = block.s
     end
   end
-  return table.concat({ b.tick, b.mode, table.concat(active, ",") }, "|")
+  return table.concat({ b.tick, b.mode, ctx.width, table.concat(active, ",") }, "|")
 end
 
 function M.refresh(buf, force)
@@ -395,7 +494,7 @@ function M.refresh(buf, force)
   for _, block in ipairs(doc.blocks) do
     if not render.block_active(ctx, block) then
       if block.type == "table" then
-        render_table(b, doc, block, link_ctx)
+        render_table(b, doc, block, link_ctx, ctx.width)
       elseif block.type == "frontmatter" then
         render_properties(b, doc, block, vim.tbl_extend("force", link_ctx, { doc = doc }))
       end

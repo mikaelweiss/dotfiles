@@ -378,6 +378,17 @@ function M.setup()
       b.pair_row = row
     end,
   })
+  api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
+    group = group,
+    callback = function()
+      for _, win in ipairs(vim.v.event.windows or api.nvim_list_wins()) do
+        local buf = api.nvim_win_is_valid(win) and api.nvim_win_get_buf(win)
+        if buf and attached(buf) then
+          schedule_static(buf, false)
+        end
+      end
+    end,
+  })
   api.nvim_create_autocmd("WinScrolled", {
     group = group,
     callback = function()
