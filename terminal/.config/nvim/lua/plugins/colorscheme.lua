@@ -1,4 +1,5 @@
--- Neutral grays replace tokyonight's navy base so only the accent colors carry hue.
+-- Neutral grays replace tokyonight's navy base so only the accent colors carry hue. The grays and the
+-- markdown colors are sampled from Obsidian's default dark theme.
 -- on_colors runs after tokyonight derives its background colors, so those are rebuilt here too.
 return {
   "folke/tokyonight.nvim",
@@ -6,9 +7,9 @@ return {
     on_colors = function(c)
       local util = require("tokyonight.util")
       local grays = {
-        bg = "#1e1e1e",
-        bg_dark = "#1a1a1a",
-        bg_dark1 = "#161616",
+        bg = "#1c1c1c",
+        bg_dark = "#181818",
+        bg_dark1 = "#151515",
         bg_highlight = "#2c2c2c",
         fg = "#dadada",
         fg_dark = "#a3a3a3",
@@ -38,6 +39,19 @@ return {
         text = c.blue7,
       }
       c.git.ignore = c.dark3
+    end,
+    on_highlights = function(hl, c)
+      local link = "#3f8df5"
+      local code_bg = "#232323"
+      for level = 1, 6 do
+        hl["@markup.heading." .. level .. ".markdown"] = { fg = c.fg, bold = true }
+      end
+      hl["@markup.link"] = { fg = link }
+      hl["@markup.link.label"] = { fg = link }
+      hl["@markup.link.url"] = { fg = link, underline = true }
+      hl["@markup.raw"] = { fg = c.fg, bg = code_bg }
+      hl["@markup.raw.markdown_inline"] = { fg = c.fg, bg = code_bg }
+      hl.WinSeparator = { fg = "#333333" }
     end,
   },
 }

@@ -321,6 +321,9 @@ function M.setup()
         if api.nvim_buf_is_valid(ev.buf) and vim.bo[ev.buf].filetype == "markdown" then
           M.attach(ev.buf)
           ensure_highlighter(ev.buf)
+          for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
+            M.setup_window(win, ev.buf)
+          end
         end
       end)
     end,

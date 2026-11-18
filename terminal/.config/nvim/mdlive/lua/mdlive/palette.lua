@@ -98,7 +98,7 @@ function M.apply()
   local link_fg = fg(link) or text
   local faint = first("Comment")
   local faint_fg = fg(faint) or text
-  local code_bg = bg("ColorColumn", "CursorLine") or M.mix(text, base, 0.06)
+  local code_bg = bg("@markup.raw.markdown_inline", "@markup.raw", "ColorColumn", "CursorLine") or M.mix(text, base, 0.06)
   local tag_fg = fg("@markup.link.label", "Special") or link_fg
   local tag_bg = M.mix(tag_fg, base, 0.15)
   local pill_bg = bg("CursorLine") or M.mix(text, base, 0.08)
