@@ -61,7 +61,7 @@ function M.setup_window(win, buf)
     o.cursorline = false
     o.list = false
     o.colorcolumn = ""
-    o.spell = s.spellcheck
+    o.spell = false
     o.foldmethod = "expr"
     o.foldexpr = "v:lua.require'mdlive.fold'.expr()"
     o.foldtext = "v:lua.require'mdlive.fold'.text()"

@@ -102,9 +102,13 @@ function M.apply()
   local tag_fg = fg("@markup.link.label", "Special") or link_fg
   local tag_bg = M.mix(tag_fg, base, 0.15)
   local pill_bg = bg("CursorLine") or M.mix(text, base, 0.08)
+  -- Headings keep the theme's color per level but drop its background band, as Obsidian's are plain text.
+  local function heading(level)
+    return { fg = fg("@markup.heading." .. level .. ".markdown", "@markup.heading." .. level, "Title") or text, bold = true }
+  end
   local groups = {
     MdText = { link = "Normal" },
-    MdInlineTitle = { link = first("@markup.heading.1.markdown", "@markup.heading.1", "@markup.heading", "Title") },
+    MdInlineTitle = heading(1),
     MdHeadingMarker = { link = faint },
     MdBold = { link = first("@markup.strong", "Bold") },
     MdItalic = { link = first("@markup.italic", "Italic") },
@@ -150,7 +154,7 @@ function M.apply()
     MdFoldEllipsis = { link = faint },
   }
   for i = 1, 6 do
-    groups["MdH" .. i] = { link = first("@markup.heading." .. i .. ".markdown", "@markup.heading." .. i, "@markup.heading", "Title") }
+    groups["MdH" .. i] = heading(i)
   end
   for name, spec in pairs(M.callouts) do
     local color = fg(unpack(roles[spec.color])) or text
