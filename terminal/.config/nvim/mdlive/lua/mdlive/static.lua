@@ -215,6 +215,14 @@ local function render_table(b, doc, block, ctx, avail)
   set(buf, block.s, 0, { end_row = block.e, conceal_lines = "" })
 end
 
+-- Fence lines only pad the box, so they collapse until the cursor enters the block.
+local function collapse_fences(buf, block)
+  set(buf, block.s, 0, { end_row = block.s, conceal_lines = "" })
+  if block.closed then
+    set(buf, block.e, 0, { end_row = block.e, conceal_lines = "" })
+  end
+end
+
 local function prop_type(settings, prop)
   local t = settings.propertyTypes[prop.key]
   if t then
@@ -452,7 +460,7 @@ end
 local function signature(b, doc, ctx)
   local active = {}
   for _, block in ipairs(doc.blocks) do
-    if (block.type == "table" or block.type == "frontmatter") and render.block_active(ctx, block) then
+    if (block.type == "table" or block.type == "frontmatter" or block.type == "code") and render.block_active(ctx, block) then
       active[#active + 1] = block.s
     end
   end
@@ -497,6 +505,8 @@ function M.refresh(buf, force)
         render_table(b, doc, block, link_ctx, ctx.width)
       elseif block.type == "frontmatter" then
         render_properties(b, doc, block, vim.tbl_extend("force", link_ctx, { doc = doc }))
+      elseif block.type == "code" and block.e > block.s + 1 then
+        collapse_fences(buf, block)
       end
     end
   end

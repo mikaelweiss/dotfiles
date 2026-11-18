@@ -157,21 +157,37 @@ local function render_callout(row, info, block)
   end
 end
 
-local function render_fence(row, info, block)
-  local active = block_active(block)
-  line_bg(row, "MdCodeBlock")
-  if block.type == "icode" then
+-- The code box starts at the block's own indent, so code inside a list item lines up with the item.
+local function code_bg(row, info, block)
+  local line = info.text
+  local indent = block.indent or 0
+  local lead = #line:sub(info.qend + 1):match("^%s*")
+  if #line < info.qend + indent and indent > 0 then
+    mark(row, 0, { end_row = row + 1, end_col = 0, hl_group = "MdCodeBlock", hl_eol = true, priority = 50 })
+    overlay(row, 0, { { string.rep(" ", info.qend + indent), "Normal" } })
     return
   end
+  local start = info.qend + math.min(indent, lead)
+  mark(row, start, { end_row = row + 1, end_col = 0, hl_group = "MdCodeBlock", hl_eol = true, priority = 50 })
+end
+
+local function render_fence(row, info, block)
+  local active = block_active(block)
+  if block.type == "icode" then
+    return line_bg(row, "MdCodeBlock")
+  end
+  code_bg(row, info, block)
   if info.kind == "fence" then
     local fc = info.fence_col or info.qend
     if active then
       hl(row, fc, #info.text, "MdCodeFence")
     else
       hide(row, fc, #info.text)
-      if row == block.s and block.lang and block.lang ~= "" then
-        mark(row, 0, { virt_text = { { block.lang .. " ", "MdCodeLang" } }, virt_text_pos = "right_align" })
-      end
+    end
+  elseif row == block.s + 1 and not active and block.lang and block.lang ~= "" then
+    local label = block.lang .. " "
+    if vim.fn.strdisplaywidth(info.text) + #label + 2 <= ctx.width then
+      mark(row, 0, { virt_text = { { label, "MdCodeLang" } }, virt_text_pos = "right_align" })
     end
   end
 end
@@ -468,8 +484,6 @@ local function render_row(row)
   end
   if info.list then
     render_list(row, info)
-  elseif info.list_cont then
-    guides(row, info.list_cont)
   end
   if info.footdef then
     hl(row, info.qend, info.cs - 1, "MdFootnoteMarker")
