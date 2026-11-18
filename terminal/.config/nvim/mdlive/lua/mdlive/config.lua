@@ -17,7 +17,6 @@ M.defaults = {
   newFileFolderPath = "/",
   newLinkFormat = "shortest",
   attachmentFolderPath = "/",
-  accentColor = nil,
 }
 
 local cache = {}

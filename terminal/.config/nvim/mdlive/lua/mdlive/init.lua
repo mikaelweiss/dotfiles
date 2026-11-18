@@ -47,7 +47,6 @@ function M.setup_window(win, buf)
   if not b or not api.nvim_win_is_valid(win) then
     return
   end
-  palette.attach_window(win)
   local s = b.settings
   api.nvim_win_call(win, function()
     local o = vim.opt_local
@@ -237,7 +236,6 @@ function M.attach(buf)
   end
   local b = state.attach(buf)
   b.enabled = true
-  palette.apply(b.settings)
   local s = b.settings
   vim.bo[buf].expandtab = not s.useTab
   vim.bo[buf].tabstop = s.tabSize or 4
@@ -312,7 +310,7 @@ local function on_cursor()
 end
 
 function M.setup()
-  palette.apply(config.get(nil))
+  palette.apply()
   render.setup()
 
   api.nvim_create_autocmd("FileType", {
@@ -339,12 +337,9 @@ function M.setup()
   api.nvim_create_autocmd("BufWinEnter", {
     group = group,
     callback = function(ev)
-      local win = api.nvim_get_current_win()
       if attached(ev.buf) then
-        M.setup_window(win, ev.buf)
+        M.setup_window(api.nvim_get_current_win(), ev.buf)
         schedule_static(ev.buf, true)
-      else
-        palette.detach_window(win)
       end
     end,
   })
@@ -354,7 +349,7 @@ function M.setup()
       if ev.event == "OptionSet" and ev.match ~= "background" then
         return
       end
-      palette.apply(config.get(nil))
+      palette.apply()
     end,
   })
   api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
