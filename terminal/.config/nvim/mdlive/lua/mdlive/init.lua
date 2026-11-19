@@ -47,7 +47,6 @@ function M.setup_window(win, buf)
   if not b or not api.nvim_win_is_valid(win) then
     return
   end
-  local s = b.settings
   api.nvim_win_call(win, function()
     local o = vim.opt_local
     o.conceallevel = 2
@@ -56,8 +55,6 @@ function M.setup_window(win, buf)
     o.linebreak = true
     o.breakindent = true
     o.breakindentopt = "list:-1"
-    o.number = s.showLineNumber
-    o.relativenumber = false
     o.cursorline = false
     o.list = false
     o.colorcolumn = ""

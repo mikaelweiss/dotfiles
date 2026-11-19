@@ -11,7 +11,6 @@ M.defaults = {
   foldHeading = true,
   foldIndent = true,
   showIndentGuide = true,
-  showLineNumber = false,
   newFileLocation = "root",
   newFileFolderPath = "/",
   newLinkFormat = "shortest",
