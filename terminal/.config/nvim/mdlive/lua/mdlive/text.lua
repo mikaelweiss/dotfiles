@@ -190,7 +190,7 @@ function M.line_chunks(doc, row, ctx)
       add((M.inline_chunks(text:sub(from + 1), checked and "MdTaskDone" or "MdText", sub)))
       return out
     end
-    out[#out + 1] = { L.ordered and L.bullet or "- ", "MdListMarker" }
+    out[#out + 1] = { L.ordered and L.bullet or "• ", "MdListMarker" }
   elseif info.callout_header then
     local b = info.callout_header
     local spec = palette.callouts[b.ctype] or palette.callouts.note
