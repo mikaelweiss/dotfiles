@@ -2,6 +2,7 @@
 -- lines lands on the line they hang from. This maps the clicked screen cell back to the buffer
 -- position actually drawn there.
 local api = vim.api
+local state = require("mdlive.state")
 local render = require("mdlive.render")
 local static = require("mdlive.static")
 
@@ -128,5 +129,79 @@ function M.locate(b, win, buf, pos)
   end
   return text_hit(win, buf, pos)
 end
+
+local last
+
+-- The markdown window, buffer position and state under the mouse, or nil where Neovim's own handling applies.
+-- A click can reveal raw markdown and shift the line, so repeat clicks on the same cell reuse the first position.
+function M.at_mouse(repeated)
+  local pos = vim.fn.getmousepos()
+  local win = pos.winid
+  if win == 0 or pos.line == 0 then
+    return nil
+  end
+  if repeated and last and last.win == win and last.screenrow == pos.screenrow and last.screencol == pos.screencol then
+    return last
+  end
+  local buf = api.nvim_win_get_buf(win)
+  local b = state.get(buf)
+  if not (b and b.enabled and b.mode ~= "source") then
+    return nil
+  end
+  local row, col, on_text = M.locate(b, win, buf, pos)
+  if row then
+    last = { win = win, buf = buf, b = b, row = row, col = col, on_text = on_text, screenrow = pos.screenrow, screencol = pos.screencol }
+    return last
+  end
+end
+
+function M.feed(keys)
+  api.nvim_feedkeys(api.nvim_replace_termcodes(keys, true, false, true), "n", false)
+end
+
+local function visual()
+  return api.nvim_get_mode().mode:match("^[vV\22]") ~= nil
+end
+
+local dragging = false
+
+function M.drag()
+  local hit = M.at_mouse()
+  if not hit or hit.win ~= api.nvim_get_current_win() then
+    dragging = false
+    return M.feed("<LeftDrag>")
+  end
+  dragging = true
+  if not visual() then
+    vim.cmd("normal! v")
+  end
+  api.nvim_win_set_cursor(hit.win, { hit.row + 1, hit.col })
+end
+
+function M.release()
+  if dragging then
+    dragging = false
+    return
+  end
+  M.feed("<LeftRelease>")
+end
+
+local function select_at(motion, key)
+  return function()
+    local hit = M.at_mouse(true)
+    if not hit then
+      return M.feed(key)
+    end
+    if visual() then
+      vim.cmd("normal! " .. api.nvim_replace_termcodes("<Esc>", true, false, true))
+    end
+    api.nvim_set_current_win(hit.win)
+    api.nvim_win_set_cursor(hit.win, { hit.row + 1, hit.col })
+    vim.cmd("normal! " .. motion)
+  end
+end
+
+M.double = select_at("viw", "<2-LeftMouse>")
+M.triple = select_at("V", "<3-LeftMouse>")
 
 return M

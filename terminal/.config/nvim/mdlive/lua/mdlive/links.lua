@@ -212,10 +212,6 @@ local function toggle_box(buf, row)
   api.nvim_buf_set_text(buf, row, s, row, s + #m.cb, { m.cb == " " and "x" or " " })
 end
 
-local function feed(keys)
-  api.nvim_feedkeys(api.nvim_replace_termcodes(keys, true, false, true), "n", false)
-end
-
 -- Ghostty opens web links on Cmd+click, so a plain click only follows links to files.
 local function is_file_link(sp)
   if sp.t == "wikilink" or sp.t == "embed" then
@@ -227,20 +223,14 @@ end
 -- A click on a rendered file link or checkbox acts on it and leaves the cursor where it was.
 -- Any other click moves the cursor to the character drawn under the mouse.
 function M.click()
-  local pos = vim.fn.getmousepos()
-  local win = pos.winid
-  local buf = win ~= 0 and api.nvim_win_get_buf(win)
-  local b = buf and state.get(buf)
-  if not (b and b.enabled and b.mode ~= "source" and pos.line > 0) then
-    return feed("<LeftMouse>")
+  local hit = mouse.at_mouse()
+  if not hit then
+    return mouse.feed("<LeftMouse>")
   end
+  local win, buf, b, row, col = hit.win, hit.buf, hit.b, hit.row, hit.col
   local ctx = render.context(win, buf)
-  local row, col, on_text = mouse.locate(b, win, buf, pos)
-  if not row then
-    return feed("<LeftMouse>")
-  end
   local sel = ctx.sel
-  if on_text then
+  if hit.on_text then
     local info = ctx.doc.rows[row]
     if info and info.list and info.list.cb then
       local L = info.list
@@ -261,7 +251,7 @@ function M.click()
       end
     end
   end
-  if api.nvim_get_mode().mode:sub(1, 1) == "n" then
+  if api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
     vim.cmd("normal! " .. api.nvim_replace_termcodes("<LeftMouse>", true, false, true))
   end
   api.nvim_set_current_win(win)
