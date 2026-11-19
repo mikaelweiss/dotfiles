@@ -215,16 +215,6 @@ local function feed(keys)
   api.nvim_feedkeys(api.nvim_replace_termcodes(keys, true, false, true), "n", false)
 end
 
--- getmousepos maps clicks in blank space to the nearest character, so the click must land on that character's cells.
-local function on_text(pos)
-  local line = api.nvim_buf_get_lines(api.nvim_win_get_buf(pos.winid), pos.line - 1, pos.line, false)[1] or ""
-  if pos.column > #line then
-    return false
-  end
-  local cell = vim.fn.screenpos(pos.winid, pos.line, pos.column)
-  return cell.row == pos.screenrow and cell.col <= pos.screencol and pos.screencol <= cell.endcol
-end
-
 local function clicked()
   local pos = vim.fn.getmousepos()
   if pos.winid == 0 or pos.line == 0 then
@@ -235,7 +225,25 @@ local function clicked()
   if not (b and b.enabled and b.mode ~= "source") then
     return nil
   end
-  return pos, buf, b, render.context(pos.winid, buf), pos.line - 1, pos.column - 1
+  return pos.winid, buf, b, render.context(pos.winid, buf)
+end
+
+-- getmousepos ignores concealed text, but Neovim's own click lands on the character drawn under the mouse.
+-- virtualedit=all marks clicks past the end of the line with a virtual offset.
+local function native_click(win)
+  local opt = { scope = "local", win = win }
+  local ve = api.nvim_get_option_value("virtualedit", opt)
+  api.nvim_set_option_value("virtualedit", "all", opt)
+  vim.cmd("normal! " .. api.nvim_replace_termcodes("<LeftMouse>", true, false, true))
+  api.nvim_set_option_value("virtualedit", ve, opt)
+  local p = vim.fn.getcurpos()
+  local row, col = p[2] - 1, p[3] - 1
+  local line = api.nvim_get_current_line()
+  if p[4] > 0 then
+    api.nvim_win_set_cursor(0, { row + 1, math.max(math.min(col, #line - 1), 0) })
+  end
+  local on_text = p[4] == 0 and col < #line and not line:sub(col + 1, col + 1):match("%s")
+  return on_text, row, col
 end
 
 -- Ghostty opens web links on Cmd+click, so a plain click only follows links to files.
@@ -246,32 +254,42 @@ local function is_file_link(sp)
   return (sp.t == "link" or sp.t == "image") and not sp.url:match("^%a[%w+.-]*:")
 end
 
--- A click on a rendered file link or checkbox acts on it without moving the cursor.
+-- A click on a rendered file link or checkbox acts on it and leaves the cursor where it was.
 function M.click()
-  local pos, buf, b, ctx, row, col = clicked()
-  if pos and on_text(pos) then
-    local info = ctx.doc.rows[row]
-    local sel = ctx.sel
-    if info and info.list and info.list.cb then
-      local L = info.list
-      local box_s = L.ordered and L.cb_s or L.marker_s
-      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sel.scol <= L.cb_e and sel.ecol >= L.marker_s
-      if not active and col >= box_s and col <= box_s + 1 then
-        toggle_box(buf, row)
-        return
-      end
-    end
-    local sp = M.span_at(ctx.doc, row, col)
-    if sp and is_file_link(sp) then
-      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
-      if not active then
-        api.nvim_set_current_win(pos.winid)
-        M.follow(sp, b, row)
-        return
-      end
+  local win, buf, b, ctx = clicked()
+  if not win then
+    return feed("<LeftMouse>")
+  end
+  local prev_win = api.nvim_get_current_win()
+  local cursor = api.nvim_win_get_cursor(win)
+  local on_text, row, col = native_click(win)
+  if not on_text then
+    return
+  end
+  local function restore()
+    api.nvim_win_set_cursor(win, cursor)
+  end
+  local sel = ctx.sel
+  local info = ctx.doc.rows[row]
+  if info and info.list and info.list.cb then
+    local L = info.list
+    local box_s = L.ordered and L.cb_s or L.marker_s
+    local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sel.scol <= L.cb_e and sel.ecol >= L.marker_s
+    if not active and col >= box_s and col <= box_s + 1 then
+      restore()
+      api.nvim_set_current_win(prev_win)
+      toggle_box(buf, row)
+      return
     end
   end
-  feed("<LeftMouse>")
+  local sp = M.span_at(ctx.doc, row, col)
+  if sp and is_file_link(sp) then
+    local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
+    if not active then
+      restore()
+      M.follow(sp, b, row)
+    end
+  end
 end
 
 return M
