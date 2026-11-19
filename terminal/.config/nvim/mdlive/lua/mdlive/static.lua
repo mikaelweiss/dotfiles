@@ -182,6 +182,7 @@ local function render_table(b, doc, block, ctx, avail)
     return out
   end
   local lines = { border_line("┌", "┬", "┐") }
+  local rows = { block.rows[1] }
   local last = block.rows[#block.rows]
   for _, row in ipairs(block.rows) do
     local wrapped, height = {}, 1
@@ -199,20 +200,34 @@ local function render_table(b, doc, block, ctx, avail)
         chunks[#chunks + 1] = { " │", "MdTableBorder" }
       end
       lines[#lines + 1] = chunks
+      rows[#lines] = row
     end
     lines[#lines + 1] = row == last and border_line("└", "┴", "┘") or border_line("├", "┼", "┤")
+    rows[#lines] = row
   end
   -- Concealed text keeps its wrapped height, so the raw rows collapse entirely and the grid
   -- hangs off a neighboring line instead.
+  local layout = { rows = rows, cells = {}, starts = {}, widths = widths }
+  local start = prefix_w + 2
+  for j = 1, ncols do
+    layout.starts[j] = start
+    start = start + widths[j] + 3
+  end
+  for _, row in ipairs(block.rows) do
+    layout.cells[row] = doc.rows[row].cells
+  end
   local before = block.s > 0 and doc.rows[block.s - 1]
   if before and not (before.block and before.block.type == "frontmatter") then
     set(buf, block.s - 1, 0, { virt_lines = lines })
+    layout.anchor = block.s - 1
   elseif block.e + 1 < #doc.lines then
     set(buf, block.e + 1, 0, { virt_lines = lines, virt_lines_above = true })
+    layout.anchor, layout.above = block.e + 1, true
   else
     return
   end
   set(buf, block.s, 0, { end_row = block.e, conceal_lines = "" })
+  b.tables[#b.tables + 1] = layout
 end
 
 local function prop_type(settings, prop)
@@ -479,6 +494,7 @@ function M.refresh(buf, force)
   end
   b.static_sig = sig
   api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  b.tables = {}
   local link_ctx = { root = b.root, path = b.path }
   local title = title_lines(b)
   if title then

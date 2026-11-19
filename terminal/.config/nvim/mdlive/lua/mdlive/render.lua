@@ -13,6 +13,9 @@ local ns = M.ns
 local ctx
 
 local function mark(row, col, opts)
+  if ctx.capture then
+    return
+  end
   opts.ephemeral = true
   pcall(api.nvim_buf_set_extmark, ctx.buf, ns, row, col, opts)
 end
@@ -31,6 +34,10 @@ end
 
 local function hide(row, s, e, replacement, group)
   if e > s then
+    if ctx.capture then
+      ctx.capture[#ctx.capture + 1] = { s = s, e = e, text = replacement or "" }
+      return
+    end
     mark(row, s, { end_col = e, conceal = replacement or "", hl_group = group, priority = 300 })
   end
 end
@@ -523,6 +530,20 @@ function M.context(win, buf)
   }
   c.active_guide = c.mode == "live" and active_guide(doc, c.sel.srow) or nil
   return c
+end
+
+-- The ranges a window hides on a row exist only while it redraws, so this renders the row again to collect them.
+function M.hidden(win, buf, row)
+  local c = M.context(win, buf)
+  if not c then
+    return {}
+  end
+  c.capture = {}
+  local saved = ctx
+  ctx = c
+  pcall(render_row, row)
+  ctx = saved
+  return c.capture
 end
 
 function M.setup()

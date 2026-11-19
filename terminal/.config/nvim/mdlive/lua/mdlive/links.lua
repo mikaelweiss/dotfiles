@@ -4,6 +4,7 @@ local vault = require("mdlive.vault")
 local parse = require("mdlive.parse")
 local render = require("mdlive.render")
 local lists = require("mdlive.lists")
+local mouse = require("mdlive.mouse")
 
 local M = {}
 
@@ -215,37 +216,6 @@ local function feed(keys)
   api.nvim_feedkeys(api.nvim_replace_termcodes(keys, true, false, true), "n", false)
 end
 
-local function clicked()
-  local pos = vim.fn.getmousepos()
-  if pos.winid == 0 or pos.line == 0 then
-    return nil
-  end
-  local buf = api.nvim_win_get_buf(pos.winid)
-  local b = state.get(buf)
-  if not (b and b.enabled and b.mode ~= "source") then
-    return nil
-  end
-  return pos.winid, buf, b, render.context(pos.winid, buf)
-end
-
--- getmousepos ignores concealed text, but Neovim's own click lands on the character drawn under the mouse.
--- virtualedit=all marks clicks past the end of the line with a virtual offset.
-local function native_click(win)
-  local opt = { scope = "local", win = win }
-  local ve = api.nvim_get_option_value("virtualedit", opt)
-  api.nvim_set_option_value("virtualedit", "all", opt)
-  vim.cmd("normal! " .. api.nvim_replace_termcodes("<LeftMouse>", true, false, true))
-  api.nvim_set_option_value("virtualedit", ve, opt)
-  local p = vim.fn.getcurpos()
-  local row, col = p[2] - 1, p[3] - 1
-  local line = api.nvim_get_current_line()
-  if p[4] > 0 then
-    api.nvim_win_set_cursor(0, { row + 1, math.max(math.min(col, #line - 1), 0) })
-  end
-  local on_text = p[4] == 0 and col < #line and not line:sub(col + 1, col + 1):match("%s")
-  return on_text, row, col
-end
-
 -- Ghostty opens web links on Cmd+click, so a plain click only follows links to files.
 local function is_file_link(sp)
   if sp.t == "wikilink" or sp.t == "embed" then
@@ -255,41 +225,47 @@ local function is_file_link(sp)
 end
 
 -- A click on a rendered file link or checkbox acts on it and leaves the cursor where it was.
+-- Any other click moves the cursor to the character drawn under the mouse.
 function M.click()
-  local win, buf, b, ctx = clicked()
-  if not win then
+  local pos = vim.fn.getmousepos()
+  local win = pos.winid
+  local buf = win ~= 0 and api.nvim_win_get_buf(win)
+  local b = buf and state.get(buf)
+  if not (b and b.enabled and b.mode ~= "source" and pos.line > 0) then
     return feed("<LeftMouse>")
   end
-  local prev_win = api.nvim_get_current_win()
-  local cursor = api.nvim_win_get_cursor(win)
-  local on_text, row, col = native_click(win)
-  if not on_text then
-    return
-  end
-  local function restore()
-    api.nvim_win_set_cursor(win, cursor)
+  local ctx = render.context(win, buf)
+  local row, col, on_text = mouse.locate(b, win, buf, pos)
+  if not row then
+    return feed("<LeftMouse>")
   end
   local sel = ctx.sel
-  local info = ctx.doc.rows[row]
-  if info and info.list and info.list.cb then
-    local L = info.list
-    local box_s = L.ordered and L.cb_s or L.marker_s
-    local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sel.scol <= L.cb_e and sel.ecol >= L.marker_s
-    if not active and col >= box_s and col <= box_s + 1 then
-      restore()
-      api.nvim_set_current_win(prev_win)
-      toggle_box(buf, row)
-      return
+  if on_text then
+    local info = ctx.doc.rows[row]
+    if info and info.list and info.list.cb then
+      local L = info.list
+      local box_s = L.ordered and L.cb_s or L.marker_s
+      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sel.scol <= L.cb_e and sel.ecol >= L.marker_s
+      if not active and col >= box_s and col <= box_s + 1 then
+        toggle_box(buf, row)
+        return
+      end
+    end
+    local sp = M.span_at(ctx.doc, row, col)
+    if sp and is_file_link(sp) then
+      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
+      if not active then
+        api.nvim_set_current_win(win)
+        M.follow(sp, b, row)
+        return
+      end
     end
   end
-  local sp = M.span_at(ctx.doc, row, col)
-  if sp and is_file_link(sp) then
-    local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
-    if not active then
-      restore()
-      M.follow(sp, b, row)
-    end
+  if api.nvim_get_mode().mode:sub(1, 1) == "n" then
+    vim.cmd("normal! " .. api.nvim_replace_termcodes("<LeftMouse>", true, false, true))
   end
+  api.nvim_set_current_win(win)
+  api.nvim_win_set_cursor(win, { row + 1, col })
 end
 
 return M
