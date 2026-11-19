@@ -9,7 +9,6 @@ local lists = require("mdlive.lists")
 local edit = require("mdlive.edit")
 local links = require("mdlive.links")
 local fold = require("mdlive.fold")
-local center = require("mdlive.center")
 
 local M = {}
 
@@ -257,7 +256,6 @@ function M.attach(buf)
   vim.schedule(function()
     static.refresh(buf, true)
   end)
-  center.schedule()
 end
 
 local function attached(buf)
@@ -315,7 +313,6 @@ end
 function M.setup()
   palette.apply()
   render.setup()
-  center.setup(group)
 
   api.nvim_create_autocmd("FileType", {
     group = group,

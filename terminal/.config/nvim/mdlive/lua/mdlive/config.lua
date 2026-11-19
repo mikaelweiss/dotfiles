@@ -5,7 +5,6 @@ M.defaults = {
   useTab = true,
   tabSize = 4,
   showInlineTitle = true,
-  readableLineLength = true,
   autoPairBrackets = true,
   autoPairMarkdown = true,
   smartIndentList = true,
