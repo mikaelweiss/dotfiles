@@ -238,29 +238,38 @@ local function clicked()
   return pos, buf, b, render.context(pos.winid, buf), pos.line - 1, pos.column - 1
 end
 
--- A click on a rendered checkbox toggles it without moving the cursor.
-function M.click()
-  local pos, buf, b, ctx, row, col = clicked()
-  local info = pos and ctx.doc.rows[row]
-  if info and info.list and info.list.cb and on_text(pos) then
-    local L = info.list
-    local box_s = L.ordered and L.cb_s or L.marker_s
-    local active = b.mode == "live" and ctx.sel.srow <= row and row <= ctx.sel.erow and ctx.sel.scol <= L.cb_e and ctx.sel.ecol >= L.marker_s
-    if not active and col >= box_s and col <= box_s + 1 then
-      toggle_box(buf, row)
-      return
-    end
+-- Ghostty opens web links on Cmd+click, so a plain click only follows links to files.
+local function is_file_link(sp)
+  if sp.t == "wikilink" or sp.t == "embed" then
+    return true
   end
-  feed("<LeftMouse>")
+  return (sp.t == "link" or sp.t == "image") and not sp.url:match("^%a[%w+.-]*:")
 end
 
-function M.ctrl_click()
-  local pos, _, b, ctx, row, col = clicked()
-  local sp = pos and on_text(pos) and M.span_at(ctx.doc, row, col)
-  if sp and sp.t ~= "tag" and sp.t ~= "footref" then
-    api.nvim_set_current_win(pos.winid)
-    M.follow(sp, b, row)
-    return
+-- A click on a rendered file link or checkbox acts on it without moving the cursor.
+function M.click()
+  local pos, buf, b, ctx, row, col = clicked()
+  if pos and on_text(pos) then
+    local info = ctx.doc.rows[row]
+    local sel = ctx.sel
+    if info and info.list and info.list.cb then
+      local L = info.list
+      local box_s = L.ordered and L.cb_s or L.marker_s
+      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sel.scol <= L.cb_e and sel.ecol >= L.marker_s
+      if not active and col >= box_s and col <= box_s + 1 then
+        toggle_box(buf, row)
+        return
+      end
+    end
+    local sp = M.span_at(ctx.doc, row, col)
+    if sp and is_file_link(sp) then
+      local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
+      if not active then
+        api.nvim_set_current_win(pos.winid)
+        M.follow(sp, b, row)
+        return
+      end
+    end
   end
   feed("<LeftMouse>")
 end
