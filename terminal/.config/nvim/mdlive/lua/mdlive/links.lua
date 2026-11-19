@@ -211,40 +211,58 @@ local function toggle_box(buf, row)
   api.nvim_buf_set_text(buf, row, s, row, s + #m.cb, { m.cb == " " and "x" or " " })
 end
 
--- A click on a rendered link or checkbox acts on it without moving the cursor.
-function M.click()
+local function feed(keys)
+  api.nvim_feedkeys(api.nvim_replace_termcodes(keys, true, false, true), "n", false)
+end
+
+-- getmousepos maps clicks in blank space to the nearest character, so the click must land on that character's cells.
+local function on_text(pos)
+  local line = api.nvim_buf_get_lines(api.nvim_win_get_buf(pos.winid), pos.line - 1, pos.line, false)[1] or ""
+  if pos.column > #line then
+    return false
+  end
+  local cell = vim.fn.screenpos(pos.winid, pos.line, pos.column)
+  return cell.row == pos.screenrow and cell.col <= pos.screencol and pos.screencol <= cell.endcol
+end
+
+local function clicked()
   local pos = vim.fn.getmousepos()
-  local win = pos.winid
-  if win ~= 0 and pos.line > 0 then
-    local buf = api.nvim_win_get_buf(win)
-    local b = state.get(buf)
-    if b and b.enabled and b.mode ~= "source" then
-      local ctx = render.context(win, buf)
-      local doc = ctx.doc
-      local row, col = pos.line - 1, pos.column - 1
-      local info = doc.rows[row]
-      if info and info.list and info.list.cb then
-        local L = info.list
-        local box_s = L.ordered and L.cb_s or L.marker_s
-        local active = b.mode == "live" and ctx.sel.srow <= row and row <= ctx.sel.erow and ctx.sel.scol <= L.cb_e and ctx.sel.ecol >= L.marker_s
-        if not active and col >= box_s and col <= box_s + 1 then
-          toggle_box(buf, row)
-          return
-        end
-      end
-      local sp = M.span_at(doc, row, col)
-      if sp and sp.t ~= "tag" and sp.t ~= "footref" then
-        local sel = ctx.sel
-        local active = b.mode == "live" and sel.srow <= row and row <= sel.erow and sp.s <= sel.scol and sel.scol <= sp.e
-        if not active then
-          api.nvim_set_current_win(win)
-          M.follow(sp, b, row)
-          return
-        end
-      end
+  if pos.winid == 0 or pos.line == 0 then
+    return nil
+  end
+  local buf = api.nvim_win_get_buf(pos.winid)
+  local b = state.get(buf)
+  if not (b and b.enabled and b.mode ~= "source") then
+    return nil
+  end
+  return pos, buf, b, render.context(pos.winid, buf), pos.line - 1, pos.column - 1
+end
+
+-- A click on a rendered checkbox toggles it without moving the cursor.
+function M.click()
+  local pos, buf, b, ctx, row, col = clicked()
+  local info = pos and ctx.doc.rows[row]
+  if info and info.list and info.list.cb and on_text(pos) then
+    local L = info.list
+    local box_s = L.ordered and L.cb_s or L.marker_s
+    local active = b.mode == "live" and ctx.sel.srow <= row and row <= ctx.sel.erow and ctx.sel.scol <= L.cb_e and ctx.sel.ecol >= L.marker_s
+    if not active and col >= box_s and col <= box_s + 1 then
+      toggle_box(buf, row)
+      return
     end
   end
-  api.nvim_feedkeys(api.nvim_replace_termcodes("<LeftMouse>", true, false, true), "n", false)
+  feed("<LeftMouse>")
+end
+
+function M.ctrl_click()
+  local pos, _, b, ctx, row, col = clicked()
+  local sp = pos and on_text(pos) and M.span_at(ctx.doc, row, col)
+  if sp and sp.t ~= "tag" and sp.t ~= "footref" then
+    api.nvim_set_current_win(pos.winid)
+    M.follow(sp, b, row)
+    return
+  end
+  feed("<LeftMouse>")
 end
 
 return M
