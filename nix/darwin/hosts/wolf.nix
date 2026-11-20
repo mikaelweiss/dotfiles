@@ -46,6 +46,8 @@ in
     StandardErrorPath = "/tmp/node-exporter.log";
   };
 
+  users.users.mikaelweiss.openssh.authorizedKeys.keys = import ../../hub-keys.nix;
+
   # pip pushes its Postgres dumps to /private/var/pip/pg-backup over sftp. The
   # chroot keeps its unattended key away from every other file on wolf.
   users.knownUsers = [ "pip" ];
