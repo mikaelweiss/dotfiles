@@ -8,14 +8,14 @@ if [[ "$1" != "--new" ]]; then
 fi
 
 if [[ -z "$fpr" ]]; then
-  status=$(mktemp "${TMPDIR:-/tmp}/setup-pass.XXXXXX") || exit 1
+  status_file=$(mktemp "${TMPDIR:-/tmp}/setup-pass.XXXXXX") || exit 1
   # Naming an algo skips the encryption subkey that pass requires.
-  gpg --batch --passphrase "" --yes --status-file "$status" --quick-generate-key "$uid" default default 2y || {
-    rm -f "$status"
+  gpg --batch --passphrase "" --yes --status-file "$status_file" --quick-generate-key "$uid" default default 2y || {
+    rm -f "$status_file"
     exit 1
   }
-  fpr=$(awk '/KEY_CREATED/ {print $4}' "$status")
-  rm -f "$status"
+  fpr=$(awk '/KEY_CREATED/ {print $4}' "$status_file")
+  rm -f "$status_file"
 fi
 
 if [[ -z "$fpr" ]]; then
