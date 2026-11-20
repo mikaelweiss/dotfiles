@@ -40,7 +40,11 @@ in
   # connections to unsigned nix binaries, so it listens on localhost and
   # `tailscale serve --bg --tcp 9100 tcp://127.0.0.1:9100` exposes it to the tailnet.
   launchd.daemons.node-exporter.serviceConfig = {
-    ProgramArguments = [ "${pkgs.prometheus-node-exporter}/bin/node_exporter" "--web.listen-address=127.0.0.1:9100" ];
+    ProgramArguments = [
+      "/bin/sh"
+      "-c"
+      "/bin/wait4path /nix/store && exec ${pkgs.prometheus-node-exporter}/bin/node_exporter --web.listen-address=127.0.0.1:9100"
+    ];
     RunAtLoad = true;
     KeepAlive = true;
     StandardErrorPath = "/tmp/node-exporter.log";
