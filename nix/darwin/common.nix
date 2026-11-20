@@ -41,10 +41,6 @@ in
   documentation.doc.enable = false;
   system.tools.darwin-uninstaller.enable = false;
 
-  # Lix binary cache (prebuilt Lix instead of compiling from source)
-  nix.settings.extra-substituters = [ "https://cache.lix.systems" ];
-  nix.settings.extra-trusted-public-keys = [ "cache.lix.systems:aBnZUw8zA7H35Cz2RyKFVs3H4PlGTLawyY5KRbvJR8o=" ];
-
   # Garbage collection Sunday 2am, store dedup Sunday 3am
   nix.gc.interval = { Weekday = 0; Hour = 2; Minute = 0; };
   nix.optimise = {
@@ -89,16 +85,6 @@ in
       StandardErrorPath = "/tmp/sync-resolve.log";
     };
   };
-
-  system.activationScripts.postActivation.text = ''
-    # Claude Code writes its browser extension host only for browsers it knows, and Dia is not one.
-    launchctl asuser "$(id -u mikaelweiss)" sudo --set-home --user=mikaelweiss -- sh -c '
-      hosts="/Users/mikaelweiss/Library/Application Support/Dia/User Data/NativeMessagingHosts"
-      mkdir -p "$hosts"
-      ln -sfn "/Users/mikaelweiss/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json" \
-        "$hosts/com.anthropic.claude_code_browser_extension.json"
-    ' || echo "Dia native host link failed"
-  '';
 
   # Key-only SSH. Loads before /etc/ssh/sshd_config, and sshd keeps the first value it reads.
   services.openssh.extraConfig = ''
@@ -170,18 +156,13 @@ in
       "gcloud-cli" # Play Developer API tokens without key files
       # "openmtp" # Android file transfer
       # Apps
-      "thebrowsercompany-dia"
       # "chatgpt"
       # "grandperspective"
       # "obs"
       # "obsidian"
-      "raycast"
-      "ollama-app"
       # "notion"
       # Dev tools
       "ghostty"
-      "sf-symbols"
-      "font-sf-mono" # Obsidian's default monospace font, used in Ghostty
       # "cmux" #fork of Ghostty, built agents first
       # "bruno"
       # "rapidapi"

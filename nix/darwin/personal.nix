@@ -16,10 +16,10 @@
     swiftlint # Swift linter
     xcbeautify # Beautifier tool for Xcode
     xcodegen # Swift CLI for generating Xcode projects
-    cbonsai # Generates ascii bonsai
-    cmatrix # Generates ascii matrix
-    asciiquarium # Generates an ascii aquarium
-    asciinema # Record and play back a terminal session, can turn it into a gif
+    # cbonsai # Generates ascii bonsai
+    # cmatrix # Generates ascii matrix
+    # asciiquarium # Generates an ascii aquarium
+    # asciinema # Record and play back a terminal session, can turn it into a gif
     # croc # File sharing
     # ttyd # open a terminal from another computer
     # jrnl # Light weight journaling app

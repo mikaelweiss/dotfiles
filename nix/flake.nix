@@ -33,9 +33,9 @@
   in
   {
     darwinConfigurations = {
-      "Mikaels-MacBook-Air" = mac [ ./darwin/personal.nix ./darwin/hosts/macbook-air.nix ];
+      "Mikaels-MacBook-Air" = mac [ ./darwin/personal.nix ./darwin/desktop.nix ./darwin/hosts/macbook-air.nix ];
       "wolf" = mac [ ./darwin/personal.nix ./darwin/hosts/wolf.nix ];
-      "Mikaels-MacBook-Pro" = mac [ ./darwin/hosts/macbook-pro.nix ];
+      "Mikaels-MacBook-Pro" = mac [ ./darwin/desktop.nix ./darwin/hosts/macbook-pro.nix ];
     };
 
     nixosConfigurations = {
