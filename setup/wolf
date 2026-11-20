@@ -1,0 +1,223 @@
+#!/bin/zsh
+# Sets up a fresh Mac mini as wolf. Run it on the Mac, logged in as mikaelweiss:
+#   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/MikaelWeiss/dotfiles/main/setup/wolf)"
+# Every step skips itself when it is already done, so rerun it after a failure.
+set -euo pipefail
+
+host=wolf
+user=mikaelweiss
+github_user=MikaelWeiss
+dotfiles=$HOME/code/dotfiles
+rotate=$HOME/.local/share/claude-rotate
+
+step() { print -P "\n%F{blue}==>%f %B$1%b" }
+note() { print -P "%F{yellow}$1%f" }
+pause() { print -P "%F{yellow}$1%f"; read -r "?Press Enter to continue. " }
+ask() { local reply; read -r "reply?$1 [y/N] "; [[ $reply == [yY]* ]] }
+remote_login_on() { nc -z -G 2 localhost 22 >/dev/null 2>&1 }
+
+[[ $(uname) == Darwin ]] || { echo "Run this on the Mac mini."; exit 1 }
+[[ $(id -un) == $user ]] || { echo "Log in as $user and run it again."; exit 1 }
+
+sudo -v
+while true; do sudo -n true; sleep 50; kill -0 $$ 2>/dev/null || exit; done 2>/dev/null &
+
+step "Name this Mac $host"
+for key in ComputerName LocalHostName HostName; do
+  [[ $(scutil --get $key 2>/dev/null) == $host ]] || sudo scutil --set $key $host
+done
+
+step "Homebrew"
+[[ -x /opt/homebrew/bin/brew ]] ||
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+step "Lix"
+[[ -x /nix/var/nix/profiles/default/bin/nix ]] ||
+  curl -sSf -L https://install.lix.systems/lix | sh -s -- install --no-confirm
+set +u
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+set -u
+
+step "Dotfiles"
+if [[ ! -d $dotfiles/.git ]]; then
+  mkdir -p ${dotfiles:h}
+  git clone https://github.com/$github_user/dotfiles.git $dotfiles
+fi
+# The build runs as root against a repo mikaelweiss owns, which git refuses by default.
+safe=$(sudo -H git config --global --get-all safe.directory 2>/dev/null || true)
+[[ $safe == *$dotfiles* ]] || sudo -H git config --global --add safe.directory $dotfiles
+
+step "Remote Login"
+until remote_login_on; do
+  sudo systemsetup -setremotelogin on >/dev/null 2>&1 || true
+  remote_login_on && break
+  open "x-apple.systempreferences:com.apple.Sharing-Settings.extension"
+  pause "Turn on Remote Login in System Settings > General > Sharing."
+done
+# wolf's activation adds pip to this group, and fails when the group is missing.
+# Creating it with admin inside keeps Remote Login to admins, plus pip.
+if ! dscl . -read /Groups/com.apple.access_ssh >/dev/null 2>&1; then
+  sudo dseditgroup -o create -q com.apple.access_ssh
+  sudo dseditgroup -o edit -a admin -t group com.apple.access_ssh
+fi
+
+step "nix-darwin"
+if [[ ! -x /run/current-system/sw/bin/darwin-rebuild ]]; then
+  for f in /etc/nix/nix.conf /etc/nix/nix.custom.conf; do
+    if [[ -e $f && ! -L $f ]]; then sudo mv $f $f.before-nix-darwin; fi
+  done
+  sudo /nix/var/nix/profiles/default/bin/nix --extra-experimental-features 'nix-command flakes' \
+    run nix-darwin/master#darwin-rebuild -- switch --flake $dotfiles/nix#$host
+fi
+export PATH=/run/current-system/sw/bin:$PATH
+
+step "Link dotfiles"
+for f in $HOME/.zshrc $HOME/.gitconfig; do
+  if [[ -e $f && ! -L $f ]]; then mv $f $f.before-dotfiles; fi
+done
+(cd $dotfiles && stow agents claude codex git terminal)
+
+step "oh-my-zsh and Powerlevel10k"
+[[ -d $HOME/.oh-my-zsh ]] ||
+  KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+p10k=$HOME/.oh-my-zsh/custom/themes/powerlevel10k
+[[ -d $p10k ]] || git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $p10k
+
+step "GitHub"
+mkdir -p -m 700 $HOME/.ssh
+[[ -f $HOME/.ssh/id_ed25519 ]] || ssh-keygen -q -t ed25519 -N "" -C "$user@$host" -f $HOME/.ssh/id_ed25519
+grep -q '^github.com ' $HOME/.ssh/known_hosts 2>/dev/null ||
+  curl -fsSL https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com " + .' >> $HOME/.ssh/known_hosts
+gh auth status >/dev/null 2>&1 || gh auth login --hostname github.com --git-protocol ssh --web
+git -C $dotfiles remote set-url origin git@github.com:$github_user/dotfiles.git
+
+step "Let your other machines ssh in"
+touch $HOME/.ssh/authorized_keys
+chmod 600 $HOME/.ssh/authorized_keys
+curl -fsSL https://github.com/$github_user.keys | while read -r key; do
+  grep -qxF "$key" $HOME/.ssh/authorized_keys || print -r -- "$key" >> $HOME/.ssh/authorized_keys
+done
+
+step "Tailscale"
+[[ $(sudo brew services info tailscale --json | jq -r '.[0].running') == true ]] ||
+  sudo brew services start tailscale
+for i in {1..30}; do
+  ts=$(tailscale status 2>&1 || true)
+  [[ $ts == *"failed to connect"* ]] || break
+  sleep 1
+done
+if ! tailscale status >/dev/null 2>&1; then
+  pause "Delete the old wolf at https://login.tailscale.com/admin/machines first, so this Mac gets the name wolf."
+  sudo tailscale up
+fi
+dns=$(tailscale status --json | jq -r .Self.DNSName)
+[[ $dns == $host.* ]] || note "Tailscale named this Mac ${dns%%.*}. Rename it to $host in the admin console."
+# The macOS firewall drops inbound connections to nix binaries, so these
+# services listen on localhost and Tailscale carries the tailnet's traffic in.
+for port in 8484 9100; do
+  tailscale serve status --json 2>/dev/null | jq -e ".TCP[\"$port\"]" >/dev/null ||
+    sudo tailscale serve --bg --tcp $port tcp://127.0.0.1:$port
+done
+
+step "Record the new wolf in the dotfiles"
+host_key=$(awk '{print $1 " " $2}' /etc/ssh/ssh_host_ed25519_key.pub)
+tailnet_ip=$(tailscale ip -4)
+lan_ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)
+user_key=$(awk '{print $1 " " $2}' $HOME/.ssh/id_ed25519.pub)
+
+sed -i '' -E "/knownHosts\.wolf/,/};/{
+  s|\"wolf\" \"[0-9.]+\"|\"wolf\" \"$tailnet_ip\"|
+  s|publicKey = \"[^\"]*\"|publicKey = \"$host_key\"|
+}" $dotfiles/nix/shared.nix
+if [[ -n $lan_ip ]]; then
+  sed -i '' -E "s|\"[0-9.]+ wolf\"|\"$lan_ip wolf\"|" $dotfiles/nix/nixos/hosts/pika/default.nix
+else
+  note "No LAN address found. Set wolf's address in nix/nixos/hosts/pika/default.nix by hand."
+fi
+grep -qF "${user_key#* }" $dotfiles/nix/nixos/common.nix ||
+  KEY="$user_key $user@$host" perl -0pi -e 's/(openssh\.authorizedKeys\.keys = \[\n)/$1      "$ENV{KEY}"\n/' \
+    $dotfiles/nix/nixos/common.nix
+
+git -C $dotfiles add nix/shared.nix nix/nixos/hosts/pika/default.nix nix/nixos/common.nix
+if ! git -C $dotfiles diff --cached --quiet; then
+  git -C $dotfiles commit -q -m "chore: trust the new wolf"
+  git -C $dotfiles pull -q --rebase
+  git -C $dotfiles push -q
+fi
+pause "Run nix-rebuild on elm, pika, oak, sparrow, and your Macs so they trust the new wolf."
+
+step "Sync with elm"
+until ssh -o ConnectTimeout=5 elm true; do
+  pause "elm doesn't accept wolf's key yet. Run nix-rebuild on elm, then continue."
+done
+$dotfiles/terminal/bin/sync-setup
+
+step "Codex"
+codex login status >/dev/null 2>&1 || codex login
+
+step "Claude proxy"
+mkdir -p $rotate
+[[ -f $rotate/rotator.py ]] || pause "Copy rotator.py and the tokens folder into $rotate."
+if [[ -f $rotate/rotator.py ]]; then
+  sudo launchctl kickstart -k system/org.nixos.claude-rotate
+else
+  note "Skipped: $rotate/rotator.py is missing. Rerun this script once it's there."
+fi
+
+step "Log in automatically after a restart"
+# Docker Desktop and the runners only run inside a logged-in session.
+if [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null) != $user ]]; then
+  if fdesetup isactive >/dev/null 2>&1; then
+    note "FileVault is on, which blocks automatic login. Turn it off in System Settings > Privacy & Security, then rerun."
+  else
+    open "x-apple.systempreferences:com.apple.Users-Groups-Settings.extension"
+    pause "Set 'Automatically log in as' to $user in System Settings > Users & Groups."
+  fi
+fi
+
+step "Docker Desktop"
+if ! docker info >/dev/null 2>&1; then
+  open -a Docker
+  pause "Accept Docker Desktop's terms, then turn on Settings > General > 'Start Docker Desktop when you sign in'."
+fi
+
+step "GitHub Actions runners"
+if ask "Register GitHub Actions runners on wolf?"; then
+  read -r "url?Repository or organization URL: "
+  read -r "token?Registration token (the repo or org's Settings > Actions > Runners > New self-hosted runner): "
+  read -r "count?How many runners? [2] "
+  read -r "labels?Extra labels, comma separated (blank for none): "
+  count=${count:-2}
+  extra=()
+  if [[ -n $labels ]]; then extra=(--labels $labels); fi
+  version=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
+  version=${version#v}
+  for n in $(seq 1 $count); do
+    dir=$HOME/actions-runner-$n
+    if [[ -f $dir/.runner ]]; then
+      echo "$dir is already registered."
+      continue
+    fi
+    mkdir -p $dir
+    curl -fsSL https://github.com/actions/runner/releases/download/v$version/actions-runner-osx-arm64-$version.tar.gz | tar xz -C $dir
+    (
+      cd $dir
+      ./config.sh --unattended --replace --url $url --token $token --name $host-$n $extra
+      print "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" >> .env
+      ./svc.sh install
+      ./svc.sh start
+    )
+  done
+fi
+
+step "Xcode"
+[[ -d /Applications/Xcode.app ]] || note "Install Xcode from the App Store for iOS builds."
+
+step "pass"
+if [[ ! -d $HOME/.password-store ]] && ask "Set up pass on wolf?"; then
+  $dotfiles/terminal/bin/setup-pass
+fi
+
+step "Done"
+print "Restart wolf once to check that everything comes back on its own."
