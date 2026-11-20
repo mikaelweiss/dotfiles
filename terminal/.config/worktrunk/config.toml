@@ -323,18 +323,16 @@ cd = false   # the post-switch hooks own navigation; pass --cd to override
 #
 # See `wt hook` (https://worktrunk.dev/hook/) for hook types, execution order, template variables, and examples. User hooks apply to all projects; project hooks (https://worktrunk.dev/config/#project-configuration) apply only to that repository.
 
-# Each worktree lives in a dedicated herdr tab / Herdr app tab / rex tab
-# named after its branch: switch to it if it exists, otherwise open one at
-# the worktree path. Only the innermost mux reacts: herdr beats the Herdr app
-# and rex, which are GUI apps and so always the outermost.
+# Each worktree lives in a dedicated herdr tab or Herdr app tab named after
+# its branch: switch to it if it exists, otherwise open one at the worktree
+# path. Only the innermost mux reacts: herdr beats the Herdr app, which is a
+# GUI app and so always the outermost.
 # The Herdr app runs on herdr-core, not the herdr TUI server, so it has its
 # own CLI (herdr-app) and marks its terminals with HC_TERMINAL_ID instead of
 # HERDR_ENV. The tab opens in the space holding the terminal wt runs in.
 # herdr-app do prints errors on stdout, so its output is shown only on failure.
 # The herdr CLI reports failures as JSON on stderr and still exits 0, so the
 # hook reads stderr and aborts loudly instead of quietly opening nothing.
-# Rex shows a tab only when the app that owns the calling pane selects it,
-# which needs Remote Control on in Rex.app's Settings under Rex Server.
 [[post-switch]]
 herdr-tab = '''
 [ -n "${HERDR_ENV:-}" ] || exit 0
@@ -358,34 +356,10 @@ else
   out=$(herdr-app do tab.new --name {{ branch }} --space "$space" --folder {{ worktree_path }})
 fi || { printf '%s\n' "$out" >&2; exit 1; }
 '''
-rex-tab = '''
-[ -n "${REX_SESSION:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
-rex="$REX_BIN_DIR/rex"
-windows=$("$rex" window ls -s "$REX_SESSION" --json) || exit 1
-win=$(printf '%s' "$windows" | jq -r --arg b {{ branch }} '.windows[] | select(.label == $b) | .window_id' | head -n1)
-[ -n "$win" ] || win=$("$rex" window new -s "$REX_SESSION" {{ branch }} -c {{ worktree_path }} --json | jq -r '.window_id // empty')
-[ -n "$win" ] || { echo 'rex window new failed' >&2; exit 1; }
-"$rex" focus -s "$REX_SESSION" "$win"
-app=$("$rex" block inspect "$REX_BLOCK" --json | jq -r '.block.owner')
-"$rex" -C "$app" do session.select session_id="$REX_SESSION" window_id="$win"
-'''
-[ -n "${REX_SESSION:-}" ] && [ -z "${HERDR_ENV:-}" ] || exit 0
-[ "$(hostname -s | tr A-Z a-z)" = "mikaels-macbook-air" ] || exit 0
-[ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0
-rex="$REX_BIN_DIR/rex"
-windows=$("$rex" window ls -s "$REX_SESSION" --json) || exit 1
-tab=$(printf '%s' "$windows" | jq -c --arg b {{ branch }} '[.windows[] | select(.label == $b)][0] // empty')
-[ -n "$tab" ] || exit 0
-printf '%s' "$tab" | jq -e '.layers[].blocks[] | select(.label == "wolf")' >/dev/null && exit 0
-root=$(printf '%s' "$tab" | jq -r '.layers[0].blocks[0].block_id')
-"$rex" split -s "$REX_SESSION" -b "$root" --split=right --label wolf -c {{ worktree_path }} --json -- \
-  "$HOME/code/dotfiles/terminal/bin/wolf-attach" {{ worktree_path }} {{ branch | sanitize }} >/dev/null
-'''
 
 # Once a worktree is gone (wt remove, or wt merge with removal), close its
-# herdr tab / Herdr app tab / rex tab. The script no-ops while
-# the worktree still exists locally, so merges with --no-remove leave
-# everything open.
+# herdr tab or Herdr app tab. The script no-ops while the worktree still
+# exists locally, so merges with --no-remove leave everything open.
 [post-remove]
 cleanup = '''
 [ "{{ worktree_path }}" = "{{ primary_worktree_path }}" ] && exit 0

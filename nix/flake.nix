@@ -14,8 +14,6 @@
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
     # Pi 5 kernel and firmware. Its own nixpkgs pin matches its binary cache, so nothing follows ours.
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
-    # Snapshot matches the builds the Rex Mac app ships.
-    rex.url = "https://pkgs.superlogical.com/rex/nix/snapshot.tar.gz";
     # Private. Each machine fetches it with the read-only deploy key in /etc/status.
     status.url = "git+ssh://git@github.com/mikaelweiss/status";
     status.inputs.nixpkgs.follows = "nixpkgs-stable";

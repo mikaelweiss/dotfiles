@@ -6,20 +6,13 @@
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
     ../../modules/aspen-runner.nix
-    inputs.rex.nixosModules.default
   ];
-
-  services.rex.loginServer = {
-    enable = true;
-    accounts.mikaelweiss.principals = [ "tailscale:campingmikael@icloud.com" ];
-    tailscaleServe.enable = true;
-  };
 
   networking.hostName = "elm";
 
   services.weiss-status.agent = {
     enable = true;
-    units = [ "jellyfin" "ilovemywife" "github-runner-aspen-linux-1" "github-runner-aspen-linux-2" "rex-login-server" "aspen-machine-host" "docker" ];
+    units = [ "jellyfin" "ilovemywife" "github-runner-aspen-linux-1" "github-runner-aspen-linux-2" "aspen-machine-host" "docker" ];
     logUnits = [ "jellyfin" "ilovemywife" ];
     gpu = true;
   };

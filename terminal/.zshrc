@@ -14,8 +14,6 @@ export MAX_MCP_OUTPUT_TOKENS=250000
 export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1
 export CLAUDE_CODE_NO_FLICKER=1
 export PI_LENS_STARTUP_MODE=quick
-# Claude Code computer use only knows a fixed list of terminals. Naming Rex lets it keep the Rex window out of screenshots.
-[[ "$TERM_PROGRAM" == rex ]] && export __CFBundleIdentifier=com.superlogical.rex
 
 # Alias'
 alias gs="git status"
@@ -184,8 +182,6 @@ export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 export PATH="/opt/homebrew/opt/erlang@28/bin:$PATH"
 # Local bin
 export PATH="$HOME/.local/bin:$PATH"
-# Rex CLI, matched to the server the Rex app runs
-export PATH="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS:$PATH"
 
 # pnpm
 export PNPM_HOME="/Users/mikaelweiss/Library/pnpm"

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Closes the herdr tab / Herdr app tab / rex tab of a worktree
+# Closes the herdr tab or Herdr app tab of a worktree
 # that is gone (wt remove, or wt merge with removal), so it doesn't linger.
 # Idempotent, so it is safe to fire from both post-remove and post-merge.
 # Usage: worktree-cleanup <branch> <worktree_path>
@@ -27,17 +27,6 @@ if [ -n "${HERDR_ENV:-}" ]; then
 elif [ -n "${HC_TERMINAL_ID:-}" ] && command -v herdr-app >/dev/null; then
   tab_id=$(herdr-app ls | jq -r --arg t "$HC_TERMINAL_ID" --arg b "$branch" '[.spaces[] | select(any(.tabs[].terminals[]; .terminal == $t)) | .tabs[] | select(.name == $b)][0].id // empty')
   [ -n "$tab_id" ] && nohup herdr-app do tab.close --id "$tab_id" --confirmed true >/dev/null 2>&1 &
-elif [ -n "${REX_SESSION:-}" ]; then
-  rex="$REX_BIN_DIR/rex"
-  windows=$("$rex" window ls -s "$REX_SESSION" --json)
-  win=$(printf '%s' "$windows" | jq -r --arg b "$branch" '.windows[] | select(.label == $b) | .window_id' | head -n1)
-  main=$(printf '%s' "$windows" | jq -r '.windows[] | select(.label == "main") | .window_id' | head -n1)
-  if [ -n "$win" ] && [ -n "$main" ]; then
-    "$rex" focus -s "$REX_SESSION" "$main"
-    app=$("$rex" block inspect "$REX_BLOCK" --json | jq -r '.block.owner')
-    "$rex" -C "$app" do session.select session_id="$REX_SESSION" window_id="$main" >/dev/null
-  fi
-  [ -n "$win" ] && nohup "$rex" window close -s "$REX_SESSION" "$win" >/dev/null 2>&1 &
 fi
 
 exit 0
