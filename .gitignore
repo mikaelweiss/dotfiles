@@ -256,3 +256,6 @@ claude/.claude/mods/*/.claude-plugin/types/
 
 # Built on wolf from its source. The Full Disk Access grant follows the build.
 actions-runner/actions-runner-hooks/mount-runner-cache
+
+# yutu OAuth client secret and token
+terminal/.config/yutu/

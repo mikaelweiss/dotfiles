@@ -331,3 +331,8 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
   use_nvmrc_node
 fi
 # <<< command-nvm-directory-switch <<<
+
+# yutu resolves credential paths relative to YUTU_ROOT and refuses files outside it
+export YUTU_ROOT="$HOME/.config/yutu"
+export YUTU_CREDENTIAL="$YUTU_ROOT/client_secret.json"
+export YUTU_CACHE_TOKEN="$YUTU_ROOT/youtube.token.json"

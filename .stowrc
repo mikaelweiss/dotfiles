@@ -7,7 +7,7 @@
 --ignore='\.specs'
 --ignore='docs'
 --ignore='\.cmuxterm'
---ignore='\.config/(anthropic|cagent|cliproxy|codexbar|composer|gcloud|gh|herd-lite|intelephense|psysh|qBittorrent|raycast|strive)'
+--ignore='\.config/(anthropic|cagent|cliproxy|codexbar|composer|gcloud|gh|herd-lite|intelephense|psysh|qBittorrent|raycast|strive|yutu)'
 --ignore='\.config/herdr/(?!config\.toml\z)[^/]+'
 --ignore='\.config/opencode/(?!(opencode\.jsonc|plugins)\z)[^/]+'
 --ignore='\.config/worktrunk/(?!config\.toml\z)[^/]+'
