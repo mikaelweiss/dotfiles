@@ -78,7 +78,7 @@ alias :q='exit'
 nix-update() {
   local repo=~/code/dotfiles
   git -C $repo pull -q --ff-only || return 1
-  nix flake update --flake $repo/nix || return 1
+  nix flake update --flake $repo/nix --option access-tokens "github.com=$(gh auth token)" || return 1
   git -C $repo diff --quiet -- nix/flake.lock && return
   git -C $repo commit -q -m "chore: update flake inputs" -- nix/flake.lock || return 1
   git -C $repo push -q
