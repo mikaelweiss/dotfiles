@@ -50,6 +50,7 @@
     extraGroups = [ "networkmanager" "wheel" ];
     shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0J9Num98WtcHsDbuHYL7y7/dix31L723xLqrgpgybY mikaelweiss@wolf"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICglGGyl2P6zOGxx8jH7kYBfCiWd2252i+w6t8MMvR7j campingmikael@icloud.com"
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDnCZPFOyD9SPjgpnCjoeYCRVobhW/I9VUKF/x8wBW/Y mikaelweiss@Mikaels-MacBook-Pro.local"
     ];

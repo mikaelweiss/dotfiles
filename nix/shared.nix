@@ -81,7 +81,7 @@
   '';
 
   programs.ssh.knownHosts.wolf = {
-    hostNames = [ "wolf" "100.112.196.57" ];
-    publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJYqIHOimV6RsqDeYDo4Et4er9co7WVSr+Gv4gy1g1Gm";
+    hostNames = [ "wolf" "100.87.200.112" ];
+    publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHu9HP0gsvP11kVcUSyuf51eTO/2h7tShsCZiDfbNbnm";
   };
 }

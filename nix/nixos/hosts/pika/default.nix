@@ -146,7 +146,7 @@ in
         "192.168.0.5 mikaels-iphone"
         "192.168.0.7 mikaels-macbook-pro"
         "192.168.0.9 mikaels-macbook-air"
-        "192.168.0.13 wolf"
+        "192.168.0.50 wolf"
         "192.168.0.14 hannahs-iphone"
         "192.168.0.16 epson-printer"
         "192.168.0.23 roku"
