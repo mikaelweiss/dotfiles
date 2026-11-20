@@ -145,6 +145,7 @@ step "Record the new wolf in the dotfiles"
 host_key=$(awk '{print $1 " " $2}' /etc/ssh/ssh_host_ed25519_key.pub)
 tailnet_ip=$(tailscale ip -4)
 lan_ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)
+user_key=$(awk '{print $1 " " $2}' $HOME/.ssh/id_ed25519.pub)
 
 sed -i '' -E "/knownHosts\.wolf/,/};/{
   s|\"wolf\" \"[0-9.]+\"|\"wolf\" \"$tailnet_ip\"|
@@ -155,13 +156,23 @@ if [[ -n $lan_ip ]]; then
 else
   note "No LAN address found. Set wolf's address in nix/nixos/hosts/pika/default.nix by hand."
 fi
-git -C $dotfiles add nix/shared.nix nix/nixos/hosts/pika/default.nix
+grep -qF "${user_key#* }" $dotfiles/nix/nixos/common.nix ||
+  KEY="$user_key $user@$host" perl -0pi -e 's/(openssh\.authorizedKeys\.keys = \[\n)/$1      "$ENV{KEY}"\n/' \
+    $dotfiles/nix/nixos/common.nix
+
+git -C $dotfiles add nix/shared.nix nix/nixos/hosts/pika/default.nix nix/nixos/common.nix
 if ! git -C $dotfiles diff --cached --quiet; then
   git -C $dotfiles commit -q -m "chore: trust the new wolf"
   git -C $dotfiles pull -q --rebase --autostash
   git -C $dotfiles push -q
   pause "Run nix-rebuild on elm, pika, oak, sparrow, and your Macs so they trust the new wolf."
 fi
+
+step "Sync with elm"
+until ssh -o ConnectTimeout=5 elm true; do
+  pause "elm doesn't accept wolf's key yet. Run nix-rebuild on elm, then continue."
+done
+$dotfiles/terminal/bin/sync-setup
 
 step "Codex"
 codex login status >/dev/null 2>&1 || codex login
@@ -226,31 +237,34 @@ while true; do
     read -r "name?Account name: "
     [[ -n $name ]] || continue
   fi
+  # A narrow terminal wraps the token, so give setup-token a wide one.
   env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN script -q $token_out zsh -c 'stty cols 400; exec claude setup-token'
   grep -ao 'sk-ant-oat01-[A-Za-z0-9_-]*' $token_out | tail -1 | (cd $rotate && ./setup.sh add-account $name)
   : > $token_out
   accounts=$(( accounts + 1 ))
 done
 rm -f $token_out
-minted=()
 for machine in $claude_machines; do
-  [[ -n $(device_key $machine) ]] && continue
-  (cd $rotate && ./setup.sh add-device $machine >/dev/null)
-  [[ $machine == $host ]] || minted+=($machine)
+  [[ -n $(device_key $machine) ]] || (cd $rotate && ./setup.sh add-device $machine >/dev/null)
 done
 sudo launchctl kickstart -k system/org.nixos.claude-rotate
 
-# wolf never sshes into other machines, so each one fetches its env from here.
-envs=$HOME/.local/state/claude-rotate
-mkdir -p -m 700 $envs/devices
+unreached=()
 for machine in $claude_machines; do
   if [[ $machine == $host ]]; then
-    url=http://127.0.0.1:8484 file=$envs/env
+    url=http://127.0.0.1:8484
   else
-    url=http://wolf:8484 file=$envs/devices/$machine.env
+    url=http://wolf:8484
   fi
-  (umask 077 && print -r -- "export ANTHROPIC_BASE_URL=$url
-export CLAUDE_CODE_OAUTH_TOKEN=$(device_key $machine)" > $file)
+  envfile="export ANTHROPIC_BASE_URL=$url
+export CLAUDE_CODE_OAUTH_TOKEN=$(device_key $machine)"
+  if [[ $machine == $host ]]; then
+    mkdir -p $HOME/.local/state/claude-rotate
+    (umask 077 && print -r -- "$envfile" > $HOME/.local/state/claude-rotate/env)
+  elif ! print -r -- "$envfile" | ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new $machine \
+      'mkdir -p ~/.local/state/claude-rotate && umask 077 && cat > ~/.local/state/claude-rotate/env' 2>/dev/null; then
+    unreached+=($machine)
+  fi
 done
 
 step "GitHub Actions runners"
@@ -318,6 +332,7 @@ dotfiles_linked() { [[ $(readlink $HOME/.zshrc) == *code/dotfiles/terminal/.zshr
 tailscale_named() { [[ $(tailscale status --json | jq -r .Self.DNSName) == $host.* ]] }
 served() { tailscale serve status --json | jq -e ".TCP[\"$1\"]" }
 recorded() { grep -qF "${host_key#* }" $dotfiles/nix/shared.nix && grep -qF "\"$tailnet_ip\"" $dotfiles/nix/shared.nix }
+syncs_dotfiles_only() { [[ $(mutagen sync list --template '{{range .}}{{.Name}} {{end}}') == "dotfiles " ]] }
 auto_login() { [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser) == $user ]] }
 filevault_off() { ! fdesetup isactive }
 proxy_answers() { [[ $(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(device_key $host)" http://127.0.0.1:8484/rotate/status) == 200 ]] }
@@ -336,7 +351,8 @@ check "Tailscale serves the claude proxy (8484)" served 8484
 check "Tailscale serves the health sensor (9100)" served 9100
 check "health sensor answers" curl -sf http://127.0.0.1:9100/metrics
 check "new host key and IP recorded in shared.nix" recorded
-check "no mutagen sync" test -z "$(mutagen sync list --template '{{range .}}{{.Name}}{{end}}')"
+check "elm accepts wolf" ssh -o BatchMode=yes -o ConnectTimeout=5 elm true
+check "mutagen syncs only dotfiles" syncs_dotfiles_only
 check "Codex logged in" codex login status
 check "claude proxy answers" proxy_answers
 check "FileVault off" filevault_off
@@ -350,9 +366,11 @@ for spec in $runner_specs; do
 done
 check "Xcode installed" test -d /Applications/Xcode.app
 
-if (( ${#minted} )); then
-  note "\nOn ${(j:, :)minted}, run this once to point claude at the proxy:"
-  note '  mkdir -p ~/.local/state/claude-rotate && ssh wolf cat .local/state/claude-rotate/devices/$(hostname -s | tr A-Z a-z).env > ~/.local/state/claude-rotate/env'
+if (( ${#unreached} )); then
+  note "\nCouldn't reach ${(j:, :)unreached} to point claude at the proxy. On each one, write"
+  note "~/.local/state/claude-rotate/env with these two lines (its key is in $rotate/config.json):"
+  note "  export ANTHROPIC_BASE_URL=http://wolf:8484"
+  note "  export CLAUDE_CODE_OAUTH_TOKEN=<that machine's key>"
 fi
 if (( failed )); then
   note "\nSomething failed. Fix it, or rerun this script."
