@@ -310,9 +310,15 @@ if [[ ! -d $HOME/.password-store ]] && ask "Set up pass on wolf?"; then
 fi
 
 step "Xcode"
-if [[ ! -d /Applications/Xcode.app ]]; then
+until [[ -d /Applications/Xcode.app ]]; do
   open "macappstores://apps.apple.com/app/id497799835"
-  pause "Install Xcode from the App Store. It runs in the background, so continue whenever."
+  pause "Install Xcode from the App Store, then continue once it finishes."
+done
+xcode=/Applications/Xcode.app/Contents/Developer
+if [[ $(xcode-select -p) != $xcode ]]; then
+  sudo xcode-select -s $xcode
+  sudo xcodebuild -license accept
+  sudo xcodebuild -runFirstLaunch
 fi
 
 step "Checks"
@@ -364,7 +370,7 @@ check "pip can reach its backups over sftp" pip_can_sftp
 for spec in $runner_specs; do
   check "runner ${spec#*:} online for ${spec%%:*}" runner_online ${spec%%:*} ${spec#*:}
 done
-check "Xcode installed" test -d /Applications/Xcode.app
+check "Xcode selected for the runners" xcodebuild -version
 
 if (( ${#unreached} )); then
   note "\nCouldn't reach ${(j:, :)unreached} to point claude at the proxy. On each one, write"
