@@ -167,13 +167,7 @@ fi
 alias tm='tmux new-session -A -s main'
 alias stopheat='xcrun simctl shutdown all'
 
-# Wolf (Mac mini): attach this directory's session there (deps auto-install,
-# then a plain shell); pass a command to run instead, e.g. `wolf claude`.
-# wolf-attach reconnects automatically when the link drops (lid close).
 export PATH="$HOME/code/dotfiles/terminal/bin:$PATH"
-wolf() {
-  ~/code/dotfiles/terminal/bin/wolf-attach "$PWD" "${PWD:t}" $*
-}
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

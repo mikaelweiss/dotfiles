@@ -160,7 +160,6 @@ in
       "mole"
       # "mise" # node/python/etc version manager, per-project pinning
       "herdr"
-      "pngpaste"
       "modem-dev/tap/hunk"
       "getsentry/xcodebuildmcp/mobilebuildmcp" # Lets agents build, run, and drive the iOS Simulator
       "python@3.13" # gcloud-cli needs it. Without it, cleanup tries to remove mpdecimal and sqlite and fails.
