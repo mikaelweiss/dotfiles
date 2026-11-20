@@ -71,6 +71,13 @@ in
     dseditgroup -o edit -a pip -t user com.apple.access_ssh
   '';
 
+  # The runners need Docker after every restart. Docker's own start-at-login
+  # setting lives in a Group Container that macOS blocks Terminal from writing.
+  launchd.user.agents.docker-desktop.serviceConfig = {
+    ProgramArguments = [ "/usr/bin/open" "-g" "-a" "Docker" ];
+    RunAtLoad = true;
+  };
+
   homebrew.brews = [
     "tailscale"
     "openjdk@21" # setup/wolf points the runners' JAVA_HOME here for the Android builds

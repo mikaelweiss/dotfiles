@@ -193,20 +193,10 @@ if ! fdesetup isactive >/dev/null 2>&1 &&
 fi
 
 step "Docker Desktop"
-docker_settings="$HOME/Library/Group Containers/group.com.docker/settings-store.json"
 if ! docker info >/dev/null 2>&1; then
-  if ! jq -e '.LicenseTermsVersion' "$docker_settings" >/dev/null 2>&1; then
+  [[ -f "$HOME/Library/Group Containers/group.com.docker/settings-store.json" ]] ||
     sudo /Applications/Docker.app/Contents/MacOS/install --accept-license --user=$user
-  fi
   open -a Docker
-fi
-for i in {1..30}; do
-  if [[ -f $docker_settings ]]; then break; fi
-  sleep 2
-done
-if [[ -f $docker_settings ]]; then
-  jq '.AutoStart = true' "$docker_settings" > "$docker_settings.new"
-  mv "$docker_settings.new" "$docker_settings"
 fi
 
 step "Claude proxy"
@@ -357,6 +347,7 @@ check "claude proxy answers" proxy_answers
 check "FileVault off" filevault_off
 check "logs in automatically" auto_login
 check "Docker running" docker info
+check "Docker starts at login" test -f $HOME/Library/LaunchAgents/org.nixos.docker-desktop.plist
 check "Go build cache on the internal disk" go_cache_local
 check "pip can reach its backups over sftp" pip_can_sftp
 for spec in $runner_specs; do
