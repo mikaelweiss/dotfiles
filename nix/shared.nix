@@ -25,7 +25,6 @@
     gh
     flyctl
     lazygit
-    tmux
     tldr
     stow
     bun

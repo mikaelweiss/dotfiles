@@ -133,8 +133,8 @@ in
   environment.variables = {
     ANDROID_HOME = "/opt/homebrew/share/android-commandlinetools";
     JAVA_HOME = "${pkgs.jdk25.home}";
-    # `ssh wolf tmux attach` runs no login shell, and without a UTF-8 locale
-    # tmux draws every icon as an underscore.
+    # A command run over ssh gets no login shell, and without a UTF-8 locale
+    # terminal UIs draw every icon as an underscore.
     LANG = "en_US.UTF-8";
   };
   programs.zsh.interactiveShellInit = ''

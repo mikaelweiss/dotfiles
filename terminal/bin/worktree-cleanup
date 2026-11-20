@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Closes the tmux window / herdr tab / Herdr app tab / rex tab of a worktree
+# Closes the herdr tab / Herdr app tab / rex tab of a worktree
 # that is gone (wt remove, or wt merge with removal), so it doesn't linger.
 # Idempotent, so it is safe to fire from both post-remove and post-merge.
 # Usage: worktree-cleanup <branch> <worktree_path>
@@ -24,8 +24,6 @@ fi
 if [ -n "${HERDR_ENV:-}" ]; then
   tab_id=$(herdr tab list --workspace "$HERDR_WORKSPACE_ID" | jq -r --arg b "$branch" '.result.tabs[] | select(.label == $b) | .tab_id' | head -n1)
   [ -n "$tab_id" ] && nohup sh -c "herdr tab close $tab_id" >/dev/null 2>&1 &
-elif [ -n "${TMUX:-}" ]; then
-  nohup sh -c "tmux kill-window -t '=$branch'" >/dev/null 2>&1 &
 elif [ -n "${HC_TERMINAL_ID:-}" ] && command -v herdr-app >/dev/null; then
   tab_id=$(herdr-app ls | jq -r --arg t "$HC_TERMINAL_ID" --arg b "$branch" '[.spaces[] | select(any(.tabs[].terminals[]; .terminal == $t)) | .tabs[] | select(.name == $b)][0].id // empty')
   [ -n "$tab_id" ] && nohup herdr-app do tab.close --id "$tab_id" --confirmed true >/dev/null 2>&1 &

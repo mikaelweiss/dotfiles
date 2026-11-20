@@ -164,7 +164,6 @@ if [[ "$OSTYPE" == darwin* ]]; then
 else
   alias clean='nix-clean'
 fi
-alias tm='tmux new-session -A -s main'
 alias stopheat='xcrun simctl shutdown all'
 
 export PATH="$HOME/code/dotfiles/terminal/bin:$PATH"

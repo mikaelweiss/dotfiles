@@ -8,9 +8,6 @@
 codex/.codex/config.toml
 terminal/.config/codexbar/config.json
 
-# tmux plugins (installed by TPM)
-terminal/.config/tmux/plugins/*
-!terminal/.config/tmux/plugins/.gitkeep
 
 # Node.js
 node_modules/
