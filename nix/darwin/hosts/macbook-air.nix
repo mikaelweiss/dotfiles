@@ -7,6 +7,7 @@
     "deno"
     "yt-dlp"
     "python@3.15" # yt-dlp needs it. Without it, cleanup tries to remove it and fails.
+    "yutu"
   ];
 
   homebrew.casks = [
