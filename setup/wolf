@@ -1,7 +1,9 @@
 #!/bin/zsh
-# Sets up a fresh Mac mini as wolf. Run it on the Mac, logged in as mikaelweiss:
+# Sets up a Mac mini as wolf, then checks every piece. Run it on the Mac,
+# logged in as mikaelweiss:
 #   /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/MikaelWeiss/dotfiles/main/setup/wolf)"
-# Every step skips itself when it is already done, so rerun it after a failure.
+# Every step skips what is already done and repairs what isn't, so rerun it
+# whenever a check fails or the config changes.
 set -euo pipefail
 
 host=wolf
@@ -9,12 +11,25 @@ user=mikaelweiss
 github_user=MikaelWeiss
 dotfiles=$HOME/code/dotfiles
 rotate=$HOME/.local/share/claude-rotate
+runners=$HOME/actions-runners
+java_home=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+
+# Every machine's claude reaches the proxy on wolf with its own device key.
+claude_machines=(wolf mikaels-macbook-pro mikaels-macbook-air elm sparrow oak pika)
+# repo:runner-name, matching the runners the old wolf served.
+runner_specs=(
+  mikaelweiss/aspen-grove:wolf
+  mikaelweiss/aspen-grove:wolf-2
+  mikaelweiss/aspen-grove:wolf-3
+  mikaelweiss/timbre:wolf-timbre
+)
 
 step() { print -P "\n%F{blue}==>%f %B$1%b" }
 note() { print -P "%F{yellow}$1%f" }
 pause() { print -P "%F{yellow}$1%f"; read -r "?Press Enter to continue. " }
 ask() { local reply; read -r "reply?$1 [y/N] "; [[ $reply == [yY]* ]] }
 remote_login_on() { nc -z -G 2 localhost 22 >/dev/null 2>&1 }
+device_key() { /usr/bin/python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('devices', {}).get(sys.argv[2], ''))" $rotate/config.json $1 }
 
 [[ $(uname) == Darwin ]] || { echo "Run this on the Mac mini."; exit 1 }
 [[ $(id -un) == $user ]] || { echo "Log in as $user and run it again."; exit 1 }
@@ -40,7 +55,9 @@ source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 set -u
 
 step "Dotfiles"
-if [[ ! -d $dotfiles/.git ]]; then
+if [[ -d $dotfiles/.git ]]; then
+  git -C $dotfiles pull -q --rebase --autostash
+else
   mkdir -p ${dotfiles:h}
   git clone https://github.com/$github_user/dotfiles.git $dotfiles
 fi
@@ -51,7 +68,7 @@ safe=$(sudo -H git config --global --get-all safe.directory 2>/dev/null || true)
 step "Remote Login"
 until remote_login_on; do
   sudo systemsetup -setremotelogin on >/dev/null 2>&1 || true
-  remote_login_on && break
+  if remote_login_on; then break; fi
   open "x-apple.systempreferences:com.apple.Sharing-Settings.extension"
   pause "Turn on Remote Login in System Settings > General > Sharing."
 done
@@ -63,7 +80,9 @@ if ! dscl . -read /Groups/com.apple.access_ssh >/dev/null 2>&1; then
 fi
 
 step "nix-darwin"
-if [[ ! -x /run/current-system/sw/bin/darwin-rebuild ]]; then
+if [[ -x /run/current-system/sw/bin/darwin-rebuild ]]; then
+  sudo /run/current-system/sw/bin/darwin-rebuild switch --flake $dotfiles/nix#$host
+else
   for f in /etc/nix/nix.conf /etc/nix/nix.custom.conf; do
     if [[ -e $f && ! -L $f ]]; then sudo mv $f $f.before-nix-darwin; fi
   done
@@ -71,6 +90,10 @@ if [[ ! -x /run/current-system/sw/bin/darwin-rebuild ]]; then
     run nix-darwin/master#darwin-rebuild -- switch --flake $dotfiles/nix#$host
 fi
 export PATH=/run/current-system/sw/bin:$PATH
+
+step "Go build cache on the internal disk"
+go_cache=$HOME/Library/Caches/go-build
+if [[ -L $go_cache ]]; then rm $go_cache; fi
 
 step "Link dotfiles"
 for f in $HOME/.zshrc $HOME/.gitconfig; do
@@ -111,8 +134,6 @@ if ! tailscale status >/dev/null 2>&1; then
   pause "Delete the old wolf at https://login.tailscale.com/admin/machines first, so this Mac gets the name wolf."
   sudo tailscale up
 fi
-dns=$(tailscale status --json | jq -r .Self.DNSName)
-[[ $dns == $host.* ]] || note "Tailscale named this Mac ${dns%%.*}. Rename it to $host in the admin console."
 # The macOS firewall drops inbound connections to nix binaries, so these
 # services listen on localhost and Tailscale carries the tailnet's traffic in.
 for port in 8484 9100; do
@@ -142,10 +163,10 @@ grep -qF "${user_key#* }" $dotfiles/nix/nixos/common.nix ||
 git -C $dotfiles add nix/shared.nix nix/nixos/hosts/pika/default.nix nix/nixos/common.nix
 if ! git -C $dotfiles diff --cached --quiet; then
   git -C $dotfiles commit -q -m "chore: trust the new wolf"
-  git -C $dotfiles pull -q --rebase
+  git -C $dotfiles pull -q --rebase --autostash
   git -C $dotfiles push -q
+  pause "Run nix-rebuild on elm, pika, oak, sparrow, and your Macs so they trust the new wolf."
 fi
-pause "Run nix-rebuild on elm, pika, oak, sparrow, and your Macs so they trust the new wolf."
 
 step "Sync with elm"
 until ssh -o ConnectTimeout=5 elm true; do
@@ -156,68 +177,201 @@ $dotfiles/terminal/bin/sync-setup
 step "Codex"
 codex login status >/dev/null 2>&1 || codex login
 
-step "Claude proxy"
-mkdir -p $rotate
-[[ -f $rotate/rotator.py ]] || pause "Copy rotator.py and the tokens folder into $rotate."
-if [[ -f $rotate/rotator.py ]]; then
-  sudo launchctl kickstart -k system/org.nixos.claude-rotate
-else
-  note "Skipped: $rotate/rotator.py is missing. Rerun this script once it's there."
-fi
-
 step "Log in automatically after a restart"
 # Docker Desktop and the runners only run inside a logged-in session.
-if [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null) != $user ]]; then
-  if fdesetup isactive >/dev/null 2>&1; then
-    note "FileVault is on, which blocks automatic login. Turn it off in System Settings > Privacy & Security, then rerun."
-  else
-    open "x-apple.systempreferences:com.apple.Users-Groups-Settings.extension"
-    pause "Set 'Automatically log in as' to $user in System Settings > Users & Groups."
+if fdesetup isactive >/dev/null 2>&1; then
+  if ask "FileVault is on, which blocks automatic login. Turn it off now?"; then
+    sudo fdesetup disable
   fi
+fi
+if ! fdesetup isactive >/dev/null 2>&1 &&
+   [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null) != $user ]]; then
+  read -rs "password?Password for $user (turns on automatic login): "
+  print
+  sudo sysadminctl -autologin set -userName $user -password "$password"
+  unset password
 fi
 
 step "Docker Desktop"
+docker_settings="$HOME/Library/Group Containers/group.com.docker/settings-store.json"
 if ! docker info >/dev/null 2>&1; then
+  if ! jq -e '.LicenseTermsVersion' "$docker_settings" >/dev/null 2>&1; then
+    sudo /Applications/Docker.app/Contents/MacOS/install --accept-license --user=$user
+  fi
   open -a Docker
-  pause "Accept Docker Desktop's terms, then turn on Settings > General > 'Start Docker Desktop when you sign in'."
 fi
+for i in {1..30}; do
+  if [[ -f $docker_settings ]]; then break; fi
+  sleep 2
+done
+if [[ -f $docker_settings ]]; then
+  jq '.AutoStart = true' "$docker_settings" > "$docker_settings.new"
+  mv "$docker_settings.new" "$docker_settings"
+fi
+
+step "Claude proxy"
+if [[ ! -d $rotate/.git ]]; then
+  if [[ -d $rotate && -z $(ls -A $rotate) ]]; then rmdir $rotate; fi
+  if [[ -e $rotate ]]; then
+    mv $rotate $rotate.before-setup
+    note "Moved the old $rotate aside to $rotate.before-setup."
+  fi
+  git clone -q https://github.com/doxaras/claude-rotate.git $rotate
+else
+  git -C $rotate pull -q --ff-only
+fi
+if [[ ! -f $rotate/config.json ]]; then
+  (cd $rotate && ./setup.sh >/dev/null)
+fi
+# The example config ships placeholder accounts and devices.
+/usr/bin/python3 - $rotate <<'EOF'
+import json, os, sys
+root = sys.argv[1]
+path = os.path.join(root, "config.json")
+cfg = json.load(open(path))
+cfg["accounts"] = [a for a in cfg.get("accounts", []) if os.path.exists(os.path.join(root, a["token_file"]))]
+cfg["devices"] = {k: v for k, v in cfg.get("devices", {}).items() if "REPLACE-WITH" not in v}
+cfg["public_url"] = "http://wolf:8484"
+json.dump(cfg, open(path, "w"), indent=2)
+EOF
+accounts=$(/usr/bin/python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))['accounts']))" $rotate/config.json)
+if (( accounts == 0 )); then
+  note "Add each Claude account. For each one, run 'claude setup-token' in a browser logged into it."
+fi
+while true; do
+  if (( accounts > 0 )); then
+    read -r "name?Another Claude account to add (blank to skip): "
+    [[ -n $name ]] || break
+  else
+    read -r "name?Account name: "
+    [[ -n $name ]] || continue
+  fi
+  (cd $rotate && ./setup.sh add-account $name)
+  accounts=$(( accounts + 1 ))
+done
+for machine in $claude_machines; do
+  [[ -n $(device_key $machine) ]] || (cd $rotate && ./setup.sh add-device $machine >/dev/null)
+done
+sudo launchctl kickstart -k system/org.nixos.claude-rotate
+
+unreached=()
+for machine in $claude_machines; do
+  if [[ $machine == $host ]]; then
+    url=http://127.0.0.1:8484
+  else
+    url=http://wolf:8484
+  fi
+  envfile="export ANTHROPIC_BASE_URL=$url
+export CLAUDE_CODE_OAUTH_TOKEN=$(device_key $machine)"
+  if [[ $machine == $host ]]; then
+    mkdir -p $HOME/.local/state/claude-rotate
+    (umask 077 && print -r -- "$envfile" > $HOME/.local/state/claude-rotate/env)
+  elif ! print -r -- "$envfile" | ssh -o BatchMode=yes -o ConnectTimeout=5 $machine \
+      'mkdir -p ~/.local/state/claude-rotate && umask 077 && cat > ~/.local/state/claude-rotate/env' 2>/dev/null; then
+    unreached+=($machine)
+  fi
+done
 
 step "GitHub Actions runners"
-if ask "Register GitHub Actions runners on wolf?"; then
-  read -r "url?Repository or organization URL: "
-  read -r "token?Registration token (the repo or org's Settings > Actions > Runners > New self-hosted runner): "
-  read -r "count?How many runners? [2] "
-  read -r "labels?Extra labels, comma separated (blank for none): "
-  count=${count:-2}
-  extra=()
-  if [[ -n $labels ]]; then extra=(--labels $labels); fi
-  version=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
-  version=${version#v}
-  for n in $(seq 1 $count); do
-    dir=$HOME/actions-runner-$n
-    if [[ -f $dir/.runner ]]; then
-      echo "$dir is already registered."
-      continue
-    fi
-    mkdir -p $dir
-    curl -fsSL https://github.com/actions/runner/releases/download/v$version/actions-runner-osx-arm64-$version.tar.gz | tar xz -C $dir
+mkdir -p $runners
+for dir in $HOME/actions-runner-<->(N/); do
+  url=$(/usr/bin/python3 -c "import json,sys; print(json.load(open(sys.argv[1], encoding='utf-8-sig')).get('gitHubUrl', ''))" $dir/.runner 2>/dev/null || true)
+  if ask "Remove the runner in $dir${url:+ (registered to $url)}? It came from the first run of this script."; then
+    path=${url#https://github.com/}
+    if [[ $path == */* ]]; then api=repos/$path; else api=orgs/$path; fi
     (
       cd $dir
-      ./config.sh --unattended --replace --url $url --token $token --name $host-$n $extra
-      print "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" >> .env
-      ./svc.sh install
-      ./svc.sh start
+      ./svc.sh stop >/dev/null 2>&1 || true
+      ./svc.sh uninstall >/dev/null 2>&1 || true
+      if [[ -n $url ]]; then
+        ./config.sh remove --token "$(gh api -X POST $api/actions/runners/remove-token --jq .token)"
+      fi
     )
-  done
-fi
-
-step "Xcode"
-[[ -d /Applications/Xcode.app ]] || note "Install Xcode from the App Store for iOS builds."
+    rm -rf $dir
+  fi
+done
+version=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
+version=${version#v}
+for spec in $runner_specs; do
+  repo=${spec%%:*}
+  name=${spec#*:}
+  dir=$runners/$name
+  if [[ -f $dir/.runner ]]; then continue; fi
+  mkdir -p $dir
+  curl -fsSL https://github.com/actions/runner/releases/download/v$version/actions-runner-osx-arm64-$version.tar.gz | tar xz -C $dir
+  token=$(gh api -X POST repos/$repo/actions/runners/registration-token --jq .token)
+  (
+    cd $dir
+    ./config.sh --unattended --replace --url https://github.com/$repo --token $token --name $name
+    print "JAVA_HOME=$java_home" >> .env
+    ./svc.sh install
+    ./svc.sh start
+  )
+done
 
 step "pass"
 if [[ ! -d $HOME/.password-store ]] && ask "Set up pass on wolf?"; then
   $dotfiles/terminal/bin/setup-pass
 fi
 
-step "Done"
-print "Restart wolf once to check that everything comes back on its own."
+step "Checks"
+failed=0
+check() {
+  local label=$1; shift
+  if "$@" >/dev/null 2>&1; then
+    print -P "%F{green}ok%f    $label"
+  else
+    print -P "%F{red}FAIL%f  $label"
+    failed=1
+  fi
+}
+is_host_name() { [[ $(scutil --get ComputerName) == $host && $(scutil --get LocalHostName) == $host && $(scutil --get HostName) == $host ]] }
+never_sleeps() { [[ $(pmset -g | awk '$1 == "sleep" {print $2}') == 0 ]] }
+dotfiles_linked() { [[ $(readlink $HOME/.zshrc) == *code/dotfiles/terminal/.zshrc ]] }
+tailscale_named() { [[ $(tailscale status --json | jq -r .Self.DNSName) == $host.* ]] }
+served() { tailscale serve status --json | jq -e ".TCP[\"$1\"]" }
+recorded() { grep -qF "${host_key#* }" $dotfiles/nix/shared.nix && grep -qF "\"$tailnet_ip\"" $dotfiles/nix/shared.nix }
+syncs_dotfiles_only() { [[ $(mutagen sync list --template '{{range .}}{{.Name}} {{end}}') == "dotfiles " ]] }
+auto_login() { [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser) == $user ]] }
+filevault_off() { ! fdesetup isactive }
+proxy_answers() { [[ $(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(device_key $host)" http://127.0.0.1:8484/rotate/status) == 200 ]] }
+go_cache_local() { [[ ! -L $go_cache ]] }
+pip_can_sftp() { dseditgroup -o checkmember -m pip com.apple.access_ssh }
+runner_online() { [[ $(gh api repos/$1/actions/runners --jq ".runners[] | select(.name == \"$2\") | .status") == online ]] }
+
+check "named $host" is_host_name
+check "Remote Login on" remote_login_on
+check "never sleeps" never_sleeps
+check "dotfiles linked" dotfiles_linked
+check "oh-my-zsh and Powerlevel10k" test -d $p10k
+check "GitHub login" gh auth status
+check "Tailscale named $host" tailscale_named
+check "Tailscale serves the claude proxy (8484)" served 8484
+check "Tailscale serves the health sensor (9100)" served 9100
+check "health sensor answers" curl -sf http://127.0.0.1:9100/metrics
+check "new host key and IP recorded in shared.nix" recorded
+check "elm accepts wolf" ssh -o BatchMode=yes -o ConnectTimeout=5 elm true
+check "mutagen syncs only dotfiles" syncs_dotfiles_only
+check "Codex logged in" codex login status
+check "claude proxy answers" proxy_answers
+check "FileVault off" filevault_off
+check "logs in automatically" auto_login
+check "Docker running" docker info
+check "Go build cache on the internal disk" go_cache_local
+check "pip can reach its backups over sftp" pip_can_sftp
+for spec in $runner_specs; do
+  check "runner ${spec#*:} online for ${spec%%:*}" runner_online ${spec%%:*} ${spec#*:}
+done
+check "Xcode installed" test -d /Applications/Xcode.app
+
+if (( ${#unreached} )); then
+  note "\nCouldn't reach ${(j:, :)unreached} to point claude at the proxy. On each one, write"
+  note "~/.local/state/claude-rotate/env with these two lines (its key is in $rotate/config.json):"
+  note "  export ANTHROPIC_BASE_URL=http://wolf:8484"
+  note "  export CLAUDE_CODE_OAUTH_TOKEN=<that machine's key>"
+fi
+if (( failed )); then
+  note "\nSomething failed. Fix it, or rerun this script."
+  exit 1
+fi
+print "\nEverything checks out. Restart wolf once to confirm it all comes back on its own."
