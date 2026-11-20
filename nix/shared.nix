@@ -3,7 +3,7 @@
 { pkgs, ... }:
 
 {
-  imports = [ ./modules/node.nix ./modules/npm-globals.nix ];
+  imports = [ ./modules/node.nix ./modules/npm-globals.nix ./modules/claude-home-trust.nix ];
 
   nixpkgs.config.allowUnfree = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
