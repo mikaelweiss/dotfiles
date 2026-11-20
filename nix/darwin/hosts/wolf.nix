@@ -5,9 +5,13 @@ let
   rotateDir = "/Users/mikaelweiss/.local/share/claude-rotate";
 in
 {
-  environment.systemPackages = with pkgs; [
-    python311
-  ];
+  networking.hostName = "wolf";
+  networking.computerName = "wolf";
+  networking.localHostName = "wolf";
+
+  # It sits on a shelf, so it never sleeps and comes back on its own after an outage.
+  power.sleep.computer = "never";
+  power.restartAfterPowerFailure = true;
 
   # Every machine's claude talks to this proxy, which rotates across the
   # subscription tokens in rotateDir/tokens. Kept out of ~/code so mutagen
@@ -65,24 +69,11 @@ in
     install -d -m 0700 -o pip -g staff /private/var/pip/pg-backup
     # Remote Login admits admins only, so pip joins its access group.
     dseditgroup -o edit -a pip -t user com.apple.access_ssh
-
-    # Every Go build on wolf shares CI's cache in the runner image on The Vault,
-    # since Go's default cache on the internal disk fills it.
-    if [ ! -L /Users/mikaelweiss/Library/Caches/go-build ]; then
-      rm -rf /Users/mikaelweiss/Library/Caches/go-build
-      sudo -u mikaelweiss ln -s /Volumes/RunnerCache/go-build /Users/mikaelweiss/Library/Caches/go-build
-    fi
-  '';
-
-  programs.zsh.interactiveShellInit = ''
-    # LM Studio CLI
-    export PATH="$PATH:/Users/mikaelweiss/.lmstudio/bin"
   '';
 
   homebrew.brews = [
     "tailscale"
-    "flyctl"
-    "openjdk@21" # JAVA_HOME in actions-runner-2 and -3's .env for the Android builds
+    "openjdk@21" # setup/wolf points the runners' JAVA_HOME here for the Android builds
   ];
 
   homebrew.casks = [
