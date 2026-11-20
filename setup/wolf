@@ -256,7 +256,7 @@ export CLAUDE_CODE_OAUTH_TOKEN=$(device_key $machine)"
   if [[ $machine == $host ]]; then
     mkdir -p $HOME/.local/state/claude-rotate
     (umask 077 && print -r -- "$envfile" > $HOME/.local/state/claude-rotate/env)
-  elif ! print -r -- "$envfile" | ssh -o BatchMode=yes -o ConnectTimeout=5 $machine \
+  elif ! print -r -- "$envfile" | ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new $machine \
       'mkdir -p ~/.local/state/claude-rotate && umask 077 && cat > ~/.local/state/claude-rotate/env' 2>/dev/null; then
     unreached+=($machine)
   fi
@@ -280,7 +280,7 @@ for dir in $HOME/actions-runner-<->(N/); do
     rm -rf $dir
   fi
 done
-version=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)
+version=$(gh api repos/actions/runner/releases/latest --jq .tag_name)
 version=${version#v}
 for spec in $runner_specs; do
   repo=${spec%%:*}
@@ -302,6 +302,12 @@ done
 step "pass"
 if [[ ! -d $HOME/.password-store ]] && ask "Set up pass on wolf?"; then
   $dotfiles/terminal/bin/setup-pass
+fi
+
+step "Xcode"
+if [[ ! -d /Applications/Xcode.app ]]; then
+  open "macappstores://apps.apple.com/app/id497799835"
+  pause "Install Xcode from the App Store. It runs in the background, so continue whenever."
 fi
 
 step "Checks"
