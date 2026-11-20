@@ -226,7 +226,7 @@ while true; do
     read -r "name?Account name: "
     [[ -n $name ]] || continue
   fi
-  env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN script -q $token_out claude setup-token
+  env -u ANTHROPIC_BASE_URL -u CLAUDE_CODE_OAUTH_TOKEN script -q $token_out zsh -c 'stty cols 400; exec claude setup-token'
   grep -ao 'sk-ant-oat01-[A-Za-z0-9_-]*' $token_out | tail -1 | (cd $rotate && ./setup.sh add-account $name)
   : > $token_out
   accounts=$(( accounts + 1 ))
