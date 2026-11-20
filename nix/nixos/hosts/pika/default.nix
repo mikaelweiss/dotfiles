@@ -12,10 +12,7 @@ in
     sd-image
     ../../modules/gitri.nix
     ../../modules/backups.nix
-    # 26.05's list setup fails on every run after the first, so reboots and weekly refreshes report failure.
-    "${inputs.nixpkgs-master}/nixos/modules/services/networking/pihole-ftl.nix"
   ];
-  disabledModules = [ "services/networking/pihole-ftl.nix" ];
 
   networking.hostName = "pika";
 
@@ -156,11 +153,13 @@ in
     };
   };
 
-  # The module's query uses strftime('%s'), and systemd expands %s to the user's shell, so every run fails.
-  systemd.services.pihole-ftl-log-deleter.serviceConfig.ExecStart = let cfg = config.services.pihole-ftl; in lib.mkForce [
-    "${pkgs.coreutils}/bin/echo 'Deleting query logs older than ${toString cfg.queryLogDeleter.age} days'"
-    "${lib.getExe cfg.package} sqlite3 ${cfg.settings.files.database} \"DELETE FROM query_storage WHERE timestamp <= unixepoch('now', '-${toString cfg.queryLogDeleter.age} day'); select changes() from query_storage limit 1\""
-  ];
+  # 26.05's list setup fails on every run after the first, so reboots and weekly refreshes report failure.
+  # Master's whole module expects master's Pi-hole packages, so only its setup script comes from there.
+  systemd.services.pihole-ftl-setup.script = lib.mkForce (import
+    "${inputs.nixpkgs-master}/nixos/modules/services/networking/pihole-ftl-setup-script.nix" {
+      inherit config lib pkgs;
+      cfg = config.services.pihole-ftl;
+    });
 
   # The Pi has no RTC battery and boots with a stale clock, so list downloads fail TLS until NTP syncs.
   systemd.additionalUpstreamSystemUnits = [ "systemd-time-wait-sync.service" ];
