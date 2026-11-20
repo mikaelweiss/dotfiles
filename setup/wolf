@@ -99,7 +99,8 @@ step "Link dotfiles"
 for f in $HOME/.zshrc $HOME/.gitconfig; do
   if [[ -e $f && ! -L $f ]]; then mv $f $f.before-dotfiles; fi
 done
-(cd $dotfiles && stow agents claude codex git terminal)
+mkdir -p $HOME/.gemini/config
+(cd $dotfiles && stow agents claude codex gemini git terminal)
 
 step "oh-my-zsh and Powerlevel10k"
 [[ -d $HOME/.oh-my-zsh ]] ||
