@@ -74,11 +74,15 @@
     isSystemUser = true;
     group = "homecloud";
   };
+  # A switch restarts tailscaled, so the Tailscale IP can vanish while the
+  # keeper starts. FreeBind holds the port without the IP being assigned yet.
+  systemd.sockets.homecloud-keeper = {
+    wantedBy = [ "sockets.target" ];
+    listenStreams = [ "100.91.63.11:8446" ];
+    socketConfig.FreeBind = true;
+  };
   systemd.services.homecloud-keeper = {
     description = "Homecloud backup keeper";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" "tailscaled.service" ];
-    wants = [ "network-online.target" ];
     unitConfig.ConditionPathExists = "/var/lib/homecloud-keeper/bin/rest-server";
     serviceConfig = {
       User = "homecloud";
