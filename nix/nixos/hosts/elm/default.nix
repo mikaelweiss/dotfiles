@@ -6,6 +6,7 @@
     ../../modules/backups.nix
     ../../modules/dvd-ripping.nix
     ../../modules/aspen-runner.nix
+    ../../modules/antigravity-cli.nix
   ];
 
   networking.hostName = "elm";

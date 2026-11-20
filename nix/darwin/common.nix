@@ -114,6 +114,7 @@ in
     casks = [
       # AI Tools
       "codex"
+      "antigravity-cli"
       # "cursor"
       # Android Development
       "android-commandlinetools"
