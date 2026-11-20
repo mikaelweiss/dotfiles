@@ -67,6 +67,7 @@ alias gcpd='git deleteCheckpoint'
 alias gcpld='git loadCheckpoint'
 alias minecraftskins='open Library/Application\ Support/minecraft/assets/skins'
 alias minecraft='open Library/Application\ Support/minecraft'
+alias youtube='cd "$HOME/Library/CloudStorage/Homecloud-mikaelweiss/YouTube"'
 
 # Random
 alias icloud='cd ~/Library/Mobile\ Documents/com\~apple\~CloudDocs'
