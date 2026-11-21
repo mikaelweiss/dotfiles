@@ -32,9 +32,17 @@
     zstd # Aspen's Kata updater unpacks .tar.zst bundles
   ];
 
-  virtualisation.docker.daemon.settings.runtimes.aspen-kata = {
-    runtimeType = "/opt/aspen/kata/bin/containerd-shim-kata-v2";
-    options.ConfigPath = "/opt/aspen/kata/configuration.toml";
+  virtualisation.docker = {
+    autoPrune = {
+      enable = true;
+      dates = "daily";
+      # Keep aspen-machine-host containers untouched by periodic pruning.
+      flags = [ "--all" "--filter=until=24h" "--filter=label!=aspen.computer" ];
+    };
+    daemon.settings.runtimes.aspen-kata = {
+      runtimeType = "/opt/aspen/kata/bin/containerd-shim-kata-v2";
+      options.ConfigPath = "/opt/aspen/kata/configuration.toml";
+    };
   };
 
   fileSystems."/mnt/backup" = {
@@ -63,6 +71,16 @@
     fsType = "ext4";
     options = [ "defaults" "nofail" ];
   };
+
+  # Bind-mount instead of data-root so aspen-machine-host's /var/lib/docker stat reads /mnt/nvme.
+  fileSystems."/var/lib/docker" = {
+    device = "/mnt/nvme/docker";
+    fsType = "none";
+    options = [ "bind" "nofail" ];
+    depends = [ "/mnt/nvme" ];
+  };
+
+  systemd.services.docker.unitConfig.RequiresMountsFor = "/var/lib/docker";
 
   services.cockpit = {
     enable = true;
