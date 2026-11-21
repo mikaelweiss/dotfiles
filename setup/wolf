@@ -162,6 +162,12 @@ if ! git -C $dotfiles diff --cached --quiet; then
   pause "Run nix-rebuild on elm, pika, oak, sparrow, and your Macs so they trust the new wolf."
 fi
 
+step "Sync with elm"
+until ssh -o ConnectTimeout=5 elm true; do
+  pause "elm doesn't accept wolf's key yet. Run nix-rebuild on elm, then continue."
+done
+$dotfiles/terminal/bin/sync-setup
+
 step "Codex"
 codex login status >/dev/null 2>&1 || codex login
 
@@ -313,6 +319,7 @@ never_sleeps() { [[ $(pmset -g | awk '$1 == "sleep" {print $2}') == 0 ]] }
 dotfiles_linked() { [[ $(readlink $HOME/.zshrc) == *code/dotfiles/terminal/.zshrc ]] }
 tailscale_named() { [[ $(tailscale status --json | jq -r .Self.DNSName) == $host.* ]] }
 served() { tailscale serve status --json | jq -e ".TCP[\"$1\"]" }
+syncs_dotfiles_only() { [[ $(mutagen sync list --template '{{range .}}{{.Name}} {{end}}') == "dotfiles " ]] }
 recorded() { grep -qF "${host_key#* }" $dotfiles/nix/shared.nix && grep -qF "\"$tailnet_ip\"" $dotfiles/nix/shared.nix }
 auto_login() { [[ $(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser) == $user ]] }
 filevault_off() { ! fdesetup isactive }
@@ -332,6 +339,8 @@ check "Tailscale serves the claude proxy (8484)" served 8484
 check "Tailscale serves the health sensor (9100)" served 9100
 check "health sensor answers" curl -sf http://127.0.0.1:9100/metrics
 check "new host key and IP recorded in shared.nix" recorded
+check "elm accepts wolf" ssh -o BatchMode=yes -o ConnectTimeout=5 elm true
+check "mutagen syncs only dotfiles" syncs_dotfiles_only
 check "only the Air and Pro can ssh in" test ! -e $HOME/.ssh/authorized_keys
 check "Codex logged in" codex login status
 check "claude proxy answers" proxy_answers

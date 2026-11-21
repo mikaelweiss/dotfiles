@@ -11,6 +11,11 @@
 
   networking.hostName = "elm";
 
+  # wolf syncs its dotfiles through elm like the Air and the Pro.
+  users.users.mikaelweiss.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE0J9Num98WtcHsDbuHYL7y7/dix31L723xLqrgpgybY mikaelweiss@wolf"
+  ];
+
   services.weiss-status.agent = {
     enable = true;
     units = [ "jellyfin" "ilovemywife" "github-runner-aspen-linux-1" "github-runner-aspen-linux-2" "aspen-machine-host" "docker" ];
