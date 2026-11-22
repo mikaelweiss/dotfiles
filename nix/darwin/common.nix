@@ -29,6 +29,8 @@ in
     dust # Du, but better
     tree # See the directories
     mas # CLI to manage Mac Apps from the App Store
+    awscli2
+    uv
   ];
 
   # Terminal font. Registers the family "MesloLGS Nerd Font Mono".

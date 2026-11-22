@@ -30,6 +30,9 @@
     postgresql
     cockpit
     zstd # Aspen's Kata updater unpacks .tar.zst bundles
+    # Stable's awscli2 lacks `aws agent-toolkit`.
+    inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.awscli2
+    uv
   ];
 
   virtualisation.docker = {
