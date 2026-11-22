@@ -42,6 +42,10 @@ let
     hash = "sha256-cSN9YR3oGlVj7l7MSttROeDe6EHmTdDlsbOi8p/Tavg=";
   };
 
+  # Falling trees only for players tagged with /tag <player> add fallingtree.
+  # The mod fills in its defaults around this on first start and keeps it.
+  fallingTreeConfig = pkgs.writeText "fallingtree.json" (builtins.toJSON { player.allowedTags = [ "fallingtree" ]; });
+
   # Upstream Geyser kicks a console when a second split-screen player joins.
   # The patch ports GeyserMC/Geyser#6689 onto this commit. docs/the-shire
   # covers updating it and removing it once Geyser merges split screen.
@@ -223,7 +227,7 @@ in
         TYPE = "FABRIC";
         MEMORY = "4G";
         VERSION = version;
-        MODRINTH_PROJECTS = "floodgate,fabric-api,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat,jamlib,rightclickharvest";
+        MODRINTH_PROJECTS = "floodgate,fabric-api,fallingtree,journeymap,appleskin,x-to-xray,lithium,krypton,simple-voice-chat,jamlib,rightclickharvest";
         MODRINTH_ALLOWED_VERSION_TYPE = "beta";
         ENFORCE_SECURE_PROFILE = "false";
         MOTD = "The Shire";
@@ -337,6 +341,8 @@ in
       + setConfig "the-shire" "config/Geyser-Fabric/extensions/mcxboxbroadcast/config.yml"
         "s/^  auto-friend: true$/  auto-friend: false/; s/^    enabled: true$/    enabled: false/"
       + ''
+        [ -f ${dataRoot}/the-shire/data/config/fallingtree.json ] || install -D -m 0644 -o minecraft -g minecraft \
+          ${fallingTreeConfig} ${dataRoot}/the-shire/data/config/fallingtree.json
         install -D -m 0644 -o minecraft -g minecraft ${xboxBroadcast} \
           ${dataRoot}/the-shire/data/config/Geyser-Fabric/extensions/MCXboxBroadcastExtension.jar
         install -D -m 0644 -o minecraft -g minecraft ${geyserJar} \
