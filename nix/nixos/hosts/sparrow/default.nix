@@ -26,10 +26,17 @@
     servers = [ "the-shire" "rexburg-friends" "skyblock" "minecraft-server" ];
   in {
     enable = true;
-    units = sites ++ [ "postgresql" "cloudflared-tunnel-a799dbbd-a209-44f5-a997-e4b90226ece9" "podman-the-shire" ]
+    units = sites ++ [ "postgresql" "cloudflared-tunnel-a799dbbd-a209-44f5-a997-e4b90226ece9" "podman-the-shire" "weiss-status-server" "weiss-status-console" ]
       ++ map (n: "lazymc-${n}") (lib.remove "the-shire" servers);
     logUnits = sites;
     minecraft = map (n: { id = n; container = n; data = "/var/lib/minecraft/${n}/data"; }) servers;
+  };
+
+  # Stores what oak reports, sends alerts, and serves status.weissfamily.us through the tunnel.
+  # Its secrets live in /etc/status/server.env.
+  services.weiss-status.server = {
+    enable = true;
+    minuteRetentionDays = 0;
   };
 
   # Elm pulls disc rips from sparrow.

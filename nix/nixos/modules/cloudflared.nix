@@ -28,6 +28,7 @@ in
         "orbit.weisssolutions.org" = "http://localhost:4011";
         "standardworkscorpus.org" = "http://localhost:4012";
         "api.standardworkscorpus.org" = "http://localhost:4012";
+        "status.weissfamily.us" = "http://localhost:8470";
       };
     };
   };
