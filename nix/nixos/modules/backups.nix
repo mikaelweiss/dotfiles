@@ -52,10 +52,13 @@ let
     rm -rf ${stateDir}
     install -d -m 700 -o mikaelweiss ${stateDir} ${stateDir}/etc
     ${pkgs.util-linux}/bin/runuser -u postgres -- ${config.services.postgresql.package}/bin/pg_dumpall > ${stateDir}/pg_dumpall.sql
-    for d in portfolio weisssolutions lunchninja asher parlance corpus cloudflared restic webhook; do
+    for d in portfolio weisssolutions lunchninja asher parlance corpus cloudflared restic webhook status; do
       [ -d /etc/$d ] && cp -a /etc/$d ${stateDir}/etc/
     done
     [ -d /var/lib/parlance/backups ] && cp -a /var/lib/parlance/backups ${stateDir}/parlance
+    # .backup reads a consistent copy while the status server keeps writing.
+    status_db=/var/lib/private/weiss-status-server/status.db
+    [ -f $status_db ] && ${pkgs.sqlite}/bin/sqlite3 $status_db ".backup ${stateDir}/status.db"
     chown -R mikaelweiss ${stateDir}
   '';
 
@@ -73,7 +76,7 @@ in
       default = null;
       description = "Minecraft data dir to back up, or null to skip.";
     };
-    sparrowState = lib.mkEnableOption "Postgres + site-secret backup";
+    sparrowState = lib.mkEnableOption "Postgres, status database and site-secret backup";
     gitea = lib.mkEnableOption "Gitea repos + database backup";
     server = lib.mkEnableOption "the append-only repo server the other hosts back up to";
   };
@@ -151,7 +154,7 @@ in
       })
       (lib.mkIf cfg.sparrowState {
         sparrow-state-backup = baseService {
-          description = "Restic backup of Postgres dump and site secrets";
+          description = "Restic backup of Postgres dump, status database and site secrets";
           preStart = stageState;
           scriptBody = resticTo { repo = "sparrow/state"; path = "${stateDir} /var/lib/asher/uploads"; };
         };
