@@ -5,6 +5,7 @@
     ./hardware.nix
     ./disko.nix
     ../../modules/backups.nix
+    ../../modules/pihole.nix
   ];
 
   resticBackups.server = true;
@@ -29,6 +30,10 @@
       pika = "http://pika:9101/";
     };
   };
+
+  # Pika's backup for the tailnet. resolved keeps 127.0.0.53, so FTL binds each address instead of the
+  # wildcard, and picks up tailscale0 whenever it appears.
+  services.pihole-ftl.settings.misc.dnsmasq_lines = [ "bind-dynamic" ];
 
   # Agents run on the Macs and elm. Every npm global is supply chain exposure
   # on a server that never uses it.
