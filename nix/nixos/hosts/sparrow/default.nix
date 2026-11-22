@@ -34,10 +34,7 @@
 
   # Stores what oak reports, sends alerts, and serves status.weissfamily.us through the tunnel.
   # Its secrets live in /etc/status/server.env.
-  services.weiss-status.server = {
-    enable = true;
-    minuteRetentionDays = 0;
-  };
+  services.weiss-status.server.enable = true;
 
   # Elm pulls disc rips from sparrow.
   users.users.mikaelweiss.openssh.authorizedKeys.keys = [
