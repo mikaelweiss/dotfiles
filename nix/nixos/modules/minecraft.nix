@@ -43,7 +43,7 @@ let
   };
 
   # Falling trees only for players tagged with /tag <player> add fallingtree.
-  # The mod fills in its defaults around this on first start and keeps it.
+  # The mod fills in its defaults around this on first start.
   fallingTreeConfig = pkgs.writeText "fallingtree.json" (builtins.toJSON { player.allowedTags = [ "fallingtree" ]; });
 
   # Upstream Geyser kicks a console when a second split-screen player joins.
@@ -340,6 +340,7 @@ in
       # Mikael accepts the bot's friend requests himself, and friends stay through breaks.
       + setConfig "the-shire" "config/Geyser-Fabric/extensions/mcxboxbroadcast/config.yml"
         "s/^  auto-friend: true$/  auto-friend: false/; s/^    enabled: true$/    enabled: false/"
+      + setConfig "the-shire" "config/fallingtree.json" "s/\"allowedTags\": \\[\\]/\"allowedTags\": [\"fallingtree\"]/"
       + ''
         [ -f ${dataRoot}/the-shire/data/config/fallingtree.json ] || install -D -m 0644 -o minecraft -g minecraft \
           ${fallingTreeConfig} ${dataRoot}/the-shire/data/config/fallingtree.json
