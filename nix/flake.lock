@@ -219,11 +219,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794007459,
-        "narHash": "sha256-tQspxv0JGSXS2ND0+sw9nObLX0gjWMeW/KypkQRZlag=",
+        "lastModified": 1795355388,
+        "narHash": "sha256-pDmVAMynBvs432DeOWQJUuvAuxEdBv9lIB/mdJOdaCk=",
         "ref": "refs/heads/main",
-        "rev": "e1668bec7e68daed2852221ca974c125d8f6ef80",
-        "revCount": 14,
+        "rev": "79eb2ac60cc2ee272bf8bd0ef7cc4765a2804767",
+        "revCount": 16,
         "type": "git",
         "url": "ssh://git@github.com/mikaelweiss/status"
       },
