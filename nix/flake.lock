@@ -138,11 +138,11 @@
     },
     "nixpkgs-makemkv": {
       "locked": {
-        "lastModified": 1795357862,
-        "narHash": "sha256-fqpz5pHbVEnpp0FpdcXBNWRwMjYwAY796B1aEMWOMlY=",
+        "lastModified": 1795362277,
+        "narHash": "sha256-DR6G61hcB1664hyWy/Ck4zEdvte260uDnhHjUt88Y2w=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b6b35a08154b27b19c9fb97c890ec8c6d3e02bb1",
+        "rev": "115e6883e728972d58041c1fb2dd9142ae283b43",
         "type": "github"
       },
       "original": {
@@ -154,11 +154,11 @@
     },
     "nixpkgs-master": {
       "locked": {
-        "lastModified": 1795357862,
-        "narHash": "sha256-fqpz5pHbVEnpp0FpdcXBNWRwMjYwAY796B1aEMWOMlY=",
+        "lastModified": 1795362277,
+        "narHash": "sha256-DR6G61hcB1664hyWy/Ck4zEdvte260uDnhHjUt88Y2w=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b6b35a08154b27b19c9fb97c890ec8c6d3e02bb1",
+        "rev": "115e6883e728972d58041c1fb2dd9142ae283b43",
         "type": "github"
       },
       "original": {
@@ -219,11 +219,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795358926,
-        "narHash": "sha256-HyC2mCDkNfOj9W3ssesNo9/Z0zzleILLxq2nqWRlz1I=",
+        "lastModified": 1795392191,
+        "narHash": "sha256-7+DEupKVvfd99obDeO9Pmq1V/QcSzNYYqLylU1VFd4E=",
         "ref": "refs/heads/main",
-        "rev": "5486513a4d36cdf403fab6051ca0722ece8d07e6",
-        "revCount": 18,
+        "rev": "1e9640b3f187056753ac12fc284d135992e046c5",
+        "revCount": 20,
         "type": "git",
         "url": "ssh://git@github.com/mikaelweiss/status"
       },
