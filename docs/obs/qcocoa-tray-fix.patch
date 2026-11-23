@@ -1,0 +1,42 @@
+--- a/src/plugins/platforms/cocoa/qcocoahelpers.h
++++ b/src/plugins/platforms/cocoa/qcocoahelpers.h
+@@ -73,6 +73,7 @@
+ Qt::MouseButton cocoaButton2QtButton(NSEvent *event);
+ 
+ QEvent::Type cocoaEvent2QtMouseEvent(NSEvent *event);
++bool qt_mac_isMouseEvent(NSEvent *event);
+ 
+ Qt::MouseButtons cocoaMouseButtons2QtMouseButtons(NSInteger pressedMouseButtons);
+ Qt::MouseButtons currentlyPressedMouseButtons();
+--- a/src/plugins/platforms/cocoa/qcocoahelpers.mm
++++ b/src/plugins/platforms/cocoa/qcocoahelpers.mm
+@@ -309,6 +309,11 @@
+     return QEvent::None;
+ }
+ 
++bool qt_mac_isMouseEvent(NSEvent *event)
++{
++    return cocoaEvent2QtMouseEvent(event) != QEvent::None;
++}
++
+ /*!
+   \fn Qt::MouseButtons cocoaMouseButtons2QtMouseButtons(NSInteger pressedMouseButtons)
+ 
+--- a/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
++++ b/src/plugins/platforms/cocoa/qcocoasystemtrayicon.mm
+@@ -244,6 +244,15 @@
+ 
+ void QCocoaSystemTrayIcon::emitActivated()
+ {
++    // NSControls are driven by gesture recognizers in macOS 27,
++    // which means NSApp.currentEvent may not be a mouse event
++    // at the point when we receive the status bar button's
++    // action callback. This is a quick fix to avoid crashing.
++    if (!qt_mac_isMouseEvent(NSApp.currentEvent)) {
++        emit activated(QPlatformSystemTrayIcon::Unknown);
++        return;
++    }
++
+     auto *mouseEvent = NSApp.currentEvent;
+ 
+     auto activationReason = QPlatformSystemTrayIcon::Unknown;

@@ -1,0 +1,42 @@
+#!/bin/bash
+# Reinstalls the patched Qt plugin that stops OBS crashing when its menu bar icon is clicked.
+# docs/obs/README.md explains the crash and how to rebuild the plugin.
+set -euo pipefail
+
+app=/Applications/OBS.app
+plugin="$app/Contents/PlugIns/platforms/libqcocoa.dylib"
+patched="$HOME/code/dotfiles/docs/obs/libqcocoa.dylib"
+qtcore="$app/Contents/Frameworks/QtCore.framework/Versions/A/QtCore"
+# The patched plugin only loads against the exact QtCore build it was compiled with.
+expected_qtcore_uuid=65091AD4-3C58-308D-A415-74A63638F18D
+
+if [[ ! -d $app ]]; then
+  echo "OBS isn't installed at $app." >&2
+  exit 1
+fi
+
+if cmp -s "$patched" "$plugin"; then
+  echo "OBS already has the fix."
+  exit 0
+fi
+
+qtcore_uuid=$(dwarfdump --uuid -arch arm64 "$qtcore" | awk '{print $2}')
+if [[ $qtcore_uuid != "$expected_qtcore_uuid" ]]; then
+  qt_version=$(defaults read "$app/Contents/Frameworks/QtCore.framework/Resources/Info.plist" CFBundleVersion)
+  echo "OBS now bundles a different Qt build (Qt $qt_version), so the saved fix doesn't fit it." >&2
+  echo "Qt 6.11.3 and later include the fix. If the tray icon still crashes, rebuild the plugin: see ~/code/dotfiles/docs/obs/README.md." >&2
+  exit 1
+fi
+
+if pgrep -xq OBS; then
+  echo "Quit OBS first, then run fix-obs again." >&2
+  exit 1
+fi
+
+if ! cp "$patched" "$plugin" 2>/dev/null; then
+  echo "macOS blocked writing into OBS.app." >&2
+  echo "Turn on your terminal app in System Settings > Privacy & Security > App Management, restart the terminal, and run fix-obs again." >&2
+  exit 1
+fi
+
+echo "Fixed. Clicking the OBS menu bar icon won't crash it anymore."
