@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "figcraft": {
+      "command": "/Users/mikaelweiss/.local/bin/figcraft-cli",
+      "args": [
+        "mcp",
+        "--automation-write-root",
+        "/Users/mikaelweiss/Library/CloudStorage/Homecloud-mikaelweiss/FigCraft"
+      ]
+    }
+  }
+}
