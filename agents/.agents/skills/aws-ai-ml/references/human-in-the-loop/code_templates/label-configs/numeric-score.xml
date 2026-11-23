@@ -1,5 +1,0 @@
-<View>
-  <Text name="text" value="$text"/>
-  <Header value="Score the text on the 1-5 scale"/>
-  <Number name="score" toName="text" min="1" max="5" required="true"/>
-</View>

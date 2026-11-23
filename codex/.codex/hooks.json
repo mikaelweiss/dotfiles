@@ -31,16 +31,6 @@
             "type": "command"
           }
         ]
-      },
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "aws agent-toolkit update-skill --hook --agent codex --no-cli-auto-prompt || true",
-            "timeout": 60
-          }
-        ]
       }
     ]
   }
