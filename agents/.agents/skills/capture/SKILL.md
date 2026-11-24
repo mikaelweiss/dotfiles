@@ -1,19 +1,20 @@
 ---
-name: cog-capture
-description: Interactively investigate a bug report, feature idea, or half-formed thought, then file a well-scoped GitHub issue that cog's autonomous build phase can implement without ambiguity.
+name: capture
+description: Interactively investigate a bug report, feature idea, or half-formed thought, then file a well-scoped issue (GitHub, Jira, or Linear) that can be implemented without ambiguity. Use when the user wants to capture a bug or feature idea, or invokes /capture.
+user-invocable: true
 ---
 
-# Capture: investigate and file a GitHub issue
+# Capture: investigate and file an issue
 
-You are helping a developer turn a bug report, feature idea, or half-formed thought into a well-scoped, technically grounded GitHub issue. Interactive — you will ask the user questions; they answer; you investigate; then you file.
+You are helping a developer turn a bug report, feature idea, or half-formed thought into a well-scoped, technically grounded issue. Interactive: you will ask the user questions, they answer, you investigate, then you file.
 
-Your job is not to write code. Your job is to produce an issue that cog's autonomous `build` phase can implement without ambiguity.
+Your job is not to write code. Your job is to produce an issue concrete enough to implement without ambiguity.
 
 ## Workflow
 
 ### 1. Clarify the ask
 
-Ask the user short, focused questions to understand what they're reporting. Don't interview — ask the minimum needed. Different angles for bugs vs. features:
+Ask the user short, focused questions to understand what they're reporting. Don't interview, ask the minimum needed. Different angles for bugs vs. features:
 
 **Bug:**
 
@@ -27,7 +28,7 @@ Ask the user short, focused questions to understand what they're reporting. Don'
 
 - What problem does this solve?
 - Who is it for?
-- Is there a sharpest-wedge version — the smallest change that would be useful?
+- Is there a sharpest-wedge version (the smallest change that would be useful)?
 
 If their first response is already specific enough, don't force more questions. Move on.
 
@@ -40,11 +41,11 @@ Ground the issue in real files before writing it. Use the `Agent` / subagent too
 - Spot existing tests that will need to be updated.
 - Check related repositories if the change crosses boundaries.
 
-Report what you found back to the user briefly. If investigation changed your understanding of the scope ("this touches three services, not one"), surface that now — not after the issue is filed.
+Report what you found back to the user briefly. If investigation changed your understanding of the scope ("this touches three services, not one"), surface that now, not after the issue is filed.
 
 ### 3. Present a summary for approval
 
-Before filing, show the user a summary using this skeleton. Sections marked `(bugs)` apply only when Step 1 classified the report as a bug; sections marked `(features)` apply only when it classified as a feature. Drop sections that don't apply rather than leaving them blank.
+Before filing, show the user a summary using this skeleton. Sections marked `(bugs)` apply only when Step 1 classified the report as a bug, and sections marked `(features)` apply only when it classified as a feature. Drop sections that don't apply rather than leaving them blank.
 
 ```markdown
 ## Issue Summary
@@ -60,7 +61,7 @@ Before filing, show the user a summary using this skeleton. Sections marked `(bu
 2. ...
 
 **Motivation:** (features)
-[Why this matters; sharpest-wedge version]
+[Why this matters, sharpest-wedge version]
 
 **Expected Behavior:** (bugs)
 [What should happen]
@@ -89,19 +90,17 @@ Ask the user to approve, edit, or abandon. Wait for a response. Do not proceed w
 
 ### 4. Check for duplicates
 
-Before creating the issue, search existing issues:
+Before creating the issue, search existing issues. Sometimes the user will use GitHub, Jira, or Linear, so check whichever that repo uses for duplicates. For GitHub:
 
 ```bash
 gh issue list --state all --search "<keywords from title and body>"
-
-Sometimes the user will use GitHub, Jira, or Linear, so check whichever that repo uses for duplicates
 ```
 
-If you find a likely duplicate, surface it to the user and offer to comment on the existing issue with the new context instead of creating a new one. Do not silently skip the creation — ask.
+If you find a duplicate, surface it to the user and offer to comment on the existing issue with the new context instead of creating a new one. Do not silently skip the creation, ask.
 
 ### 5. File it
 
-If the user approved a new issue, build the body from this skeleton (parallel to the Step 3 summary, but with `##` H2 headings instead of bold labels — that's the shape GitHub renders best inside an issue body). Drop sections that don't apply to this report's type.
+If the user approved a new issue, build the body from this skeleton (parallel to the Step 3 summary, but with `##` H2 headings instead of bold labels, which renders cleanly in issue trackers). Drop sections that don't apply to this report's type.
 
 ```markdown
 ## Description
@@ -133,7 +132,9 @@ If the user approved a new issue, build the body from this skeleton (parallel to
 [Error messages, screenshots if provided, etc.]
 ```
 
-Sometimes the user will want you to file a GitHub, JIRA, or Linear ticket, and sometimes they won't. So just follow the user discretion here.
+Sometimes the user will want you to file a GitHub, Jira, or Linear ticket, and sometimes they won't. Follow the user's discretion here.
+
+If commenting on an existing duplicate issue instead:
 
 ```markdown
 ## Additional Context
