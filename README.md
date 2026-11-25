@@ -11,7 +11,7 @@ end, and rerunning it repairs whatever failed:
 ```
 
 On any other Mac, clone this repo to `~/code/dotfiles` and run
-`mkdir -p ~/.gemini/config && stow agents claude codex gemini git terminal` from it.
+`mkdir -p ~/.gemini/config ~/.gemini/antigravity-cli && stow agents claude codex gemini git terminal` from it.
 
 ## Nix
 

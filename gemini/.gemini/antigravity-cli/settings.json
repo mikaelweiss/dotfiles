@@ -1,0 +1,28 @@
+{
+  "agentMode": "accept-edits",
+  "allowNonWorkspaceAccess": true,
+  "artifactReviewPolicy": "always-proceed",
+  "enableTerminalSandbox": false,
+  "model": "Gemini 4 Neon (High)",
+  "permissions": {
+    "allow": [
+      "command(*)",
+      "read_file(*)",
+      "write_file(*)",
+      "read_url(*)",
+      "execute_url(*)",
+      "mcp(*)"
+    ]
+  },
+  "toolPermission": "always-proceed",
+  "trustedWorkspaces": [
+    "/Users/mikaelweiss/code/river-finance",
+    "/Users/mikaelweiss/code/aspen-grove",
+    "/Users/mikaelweiss/.worktrees/strive/ui-unification",
+    "/Users/mikaelweiss/.worktrees/strive/wrapped",
+    "/Users/mikaelweiss/code/timbre",
+    "/Users/mikaelweiss/.worktrees/strive/design-doc-requests",
+    "/Users/mikaelweiss/code/sift",
+    "/Users/mikaelweiss"
+  ]
+}
